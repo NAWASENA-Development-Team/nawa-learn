@@ -1,19 +1,22 @@
 @import "tailwindcss";
 
-/* ── Enable class-based dark mode for Tailwind v4 ── */
+/* -- Enable class-based dark mode for Tailwind v4 -- */
 @custom-variant dark (&:where(.dark, .dark *));
 
 html {
   scroll-behavior: smooth;
 }
 
-/* ── Smooth theme transitions ── */
+/* -- Smooth theme transitions -- */
 *, *::before, *::after {
   transition: background-color 0.25s ease, border-color 0.25s ease, color 0.15s ease;
 }
 
-/* ── Custom scrollbar ── */
+/* -- Custom scrollbar -- */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: oklch(50% 0 0 / 0.3); border-radius: 9999px; }
 ::-webkit-scrollbar-thumb:hover { background: oklch(50% 0 0 / 0.5); }
+
+
+

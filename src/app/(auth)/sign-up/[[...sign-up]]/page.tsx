@@ -6,7 +6,7 @@ export default function SignUpPage() {
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-zinc-950 dark:via-indigo-950/20 dark:to-purple-950/20 py-12 px-4 sm:px-6 lg:px-8">
       
-      {/* ── Playful Floating Shapes ── */}
+      {/* -- Playful Floating Shapes -- */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
         {/* Floating Bubble 1 */}
         <div className="absolute top-[10%] left-[5%] w-72 h-72 rounded-full bg-indigo-300/30 dark:bg-indigo-500/10 blur-2xl animate-[pulse_6s_infinite]" />
@@ -29,7 +29,7 @@ export default function SignUpPage() {
 
       <div className="relative z-10 w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl border border-white/60 dark:border-zinc-800/40 rounded-3xl p-6 sm:p-8 lg:p-10 shadow-2xl shadow-indigo-500/5">
         
-        {/* ── Playful Left Panel ── */}
+        {/* -- Playful Left Panel -- */}
         <div className="lg:col-span-5 flex flex-col justify-between h-full space-y-8 pr-0 lg:pr-6">
           <div className="space-y-4">
             <Link 
@@ -66,11 +66,11 @@ export default function SignUpPage() {
           </div>
 
           <div className="text-xs font-semibold text-zinc-400 dark:text-zinc-500">
-            Dibuat dengan penuh ⚡ oleh Bidang TIK OSIS NAWASENA SMAN 2 Jonggol.
+            Dibuat dengan penuh ⚡ oleh OSIS NAWASENA SMAN 2 Jonggol.
           </div>
         </div>
 
-        {/* ── Clerk Sign-Up Component Panel ── */}
+        {/* -- Clerk Sign-Up Component Panel -- */}
         <div className="lg:col-span-7 flex justify-center items-center w-full">
           <div className="w-full max-w-[440px] relative">
             {/* Colorful Glow behind the auth card */}

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { SignInButton, Show } from "@clerk/nextjs";
 import { useEffect, useRef, useState } from "react";
 
-/* ─────────────── Animated counter ─────────────── */
+/* --------------- Animated counter --------------- */
 function Counter({ target, suffix = "" }: { target: number; suffix?: string }) {
   const [count, setCount] = useState(0);
   const ref = useRef<HTMLSpanElement>(null);
@@ -149,7 +149,7 @@ export default function LandingClient({ stats, sampleModules }: LandingClientPro
   return (
     <div className="relative overflow-x-hidden">
 
-      {/* ── Decorative orbs (positioned precisely to not bleed into content) ── */}
+      {/* -- Decorative orbs (positioned precisely to not bleed into content) -- */}
       <div aria-hidden className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
         <div className="absolute -top-32 right-0 h-[480px] w-[480px] rounded-full bg-indigo-400/10 blur-[100px] dark:bg-indigo-500/15" />
         <div className="absolute top-[60%] -left-32 h-[360px] w-[360px] rounded-full bg-violet-400/8 blur-[80px] dark:bg-violet-500/10" />

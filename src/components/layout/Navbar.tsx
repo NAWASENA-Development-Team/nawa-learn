@@ -63,6 +63,7 @@ export default function Navbar() {
                   { href: "/leaderboard", label: "Peringkat" },
                   { href: "/submit", label: "Upload" },
                   { href: "/moderator", label: "Moderator" },
+                  { href: "/profile", label: "Profil Saya" },
                 ].map((item) => (
                   <Link
                     key={item.href}
