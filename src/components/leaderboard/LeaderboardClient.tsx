@@ -340,13 +340,39 @@ export default function LeaderboardClient({
           {filteredUsers.map((user, index) => {
             const rank = index + 1;
             const isPodium = rank <= 3;
+            const isTop10 = rank <= 10;
+            const isTop50 = rank <= 50;
+
+            // Row accent: border-left color based on tier
+            const rowAccent = loggedInUser && loggedInUser.id === user.id
+              ? "bg-amber-500/5 dark:bg-amber-500/5 border-l-4 border-amber-500"
+              : rank === 1
+                ? "border-l-4 border-yellow-400"
+                : rank === 2
+                  ? "border-l-4 border-zinc-400"
+                  : rank === 3
+                    ? "border-l-4 border-orange-400"
+                    : isTop10
+                      ? "border-l-4 border-purple-400/60"
+                      : isTop50
+                        ? "border-l-4 border-cyan-400/40"
+                        : "";
+
+            // Frame pill label for special tiers
+            const framePill = rank === 1
+              ? <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-gradient-to-r from-amber-400 to-yellow-500 text-zinc-900 ml-1 shrink-0 animate-pulse">GOLD</span>
+              : rank <= 3
+                ? <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-gradient-to-r from-orange-400 to-amber-500 text-white ml-1 shrink-0">TOP 3</span>
+                : isTop10
+                  ? <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-gradient-to-r from-purple-500 to-indigo-500 text-white ml-1 shrink-0">TOP 10</span>
+                  : isTop50
+                    ? <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-gradient-to-r from-cyan-500 to-teal-500 text-white ml-1 shrink-0">TOP 50</span>
+                    : null;
             
             return (
               <div 
                 key={user.id} 
-                className={`grid grid-cols-12 items-center p-4 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors group ${
-                  loggedInUser && loggedInUser.id === user.id ? "bg-amber-500/5 dark:bg-amber-500/5 border-l-4 border-amber-500" : ""
-                }`}
+                className={`grid grid-cols-12 items-center p-4 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors group ${rowAccent}`}
               >
                 {/* Position column */}
                 <div className="col-span-2 sm:col-span-1 flex justify-center">
@@ -354,6 +380,8 @@ export default function LeaderboardClient({
                     ${rank === 1 ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-500" : 
                       rank === 2 ? "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400" : 
                       rank === 3 ? "bg-orange-100 text-orange-850 dark:bg-orange-900/30 dark:text-orange-500" : 
+                      isTop10 ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" :
+                      isTop50 ? "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400" :
                       "bg-zinc-100 text-zinc-500 dark:bg-zinc-900 dark:text-zinc-650"}`}
                   >
                     {rank}
@@ -363,11 +391,14 @@ export default function LeaderboardClient({
                 {/* Name & Details column */}
                 <div className="col-span-7 sm:col-span-8 pl-2">
                   <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
-                    <h3 className="font-extrabold text-sm text-zinc-900 dark:text-zinc-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                      <Link href={`/profile/${user.id}`}>
-                        {user.name}
-                      </Link>
-                    </h3>
+                    <div className="flex items-center gap-1">
+                      <h3 className="font-extrabold text-sm text-zinc-900 dark:text-zinc-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                        <Link href={`/profile/${user.id}`}>
+                          {user.name}
+                        </Link>
+                      </h3>
+                      {framePill}
+                    </div>
                     
                     <div className="flex gap-1.5 items-center">
                       <span className="text-[9px] bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-1.5 py-0.5 rounded text-zinc-550 dark:text-zinc-400 font-bold shrink-0">
@@ -391,7 +422,11 @@ export default function LeaderboardClient({
                   <div className={`text-lg sm:text-xl font-black ${
                     isPodium 
                       ? "text-amber-600 dark:text-yellow-500" 
-                      : "text-indigo-600 dark:text-indigo-500 group-hover:scale-105 transition-transform"
+                      : isTop10
+                        ? "text-purple-600 dark:text-purple-400"
+                        : isTop50
+                          ? "text-cyan-600 dark:text-cyan-400"
+                          : "text-indigo-600 dark:text-indigo-500 group-hover:scale-105 transition-transform"
                   }`}>
                     {user.points}
                   </div>

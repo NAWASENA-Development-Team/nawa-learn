@@ -1,7 +1,7 @@
 // components/profile/ProfileClient.tsx
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { 
   Trophy, 
@@ -26,7 +26,11 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  Zap
+  Zap,
+  Camera,
+  Star,
+  Crown,
+  Flame
 } from "lucide-react";
 import { BADGES, Badge, getDaysOldAccount, getRarityColor, getRarityTextColor, BadgeUnlockData } from "@/lib/badges";
 
@@ -172,6 +176,150 @@ export default function ProfileClient({
   const progressPercent = Math.min(100, Math.floor((pointsInCurrentLevel / POINTS_PER_LEVEL) * 100));
   const pointsNeededForNext = POINTS_PER_LEVEL - pointsInCurrentLevel;
 
+  // Animated progress bar: starts at 0, animates to actual value after mount
+  const [displayProgress, setDisplayProgress] = useState(0);
+  useEffect(() => {
+    const t = setTimeout(() => setDisplayProgress(progressPercent), 400);
+    return () => clearTimeout(t);
+  }, [progressPercent]);
+
+  // Custom photo upload state (Top 10 perk)
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [customPhoto, setCustomPhoto] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem(`nawa_photo_${user.id}`);
+    }
+    return null;
+  });
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Ukuran foto maksimal 2MB!");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setCustomPhoto(dataUrl);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(`nawa_photo_${user.id}`, dataUrl);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+  const handleRemovePhoto = () => {
+    setCustomPhoto(null);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(`nawa_photo_${user.id}`);
+    }
+  };
+
+  // === REWARD SYSTEM HELPERS ===
+
+  // Get avatar frame style based on rank
+  const getAvatarFrame = (rank: number) => {
+    if (rank <= 3) return {
+      ring: "ring-4 ring-offset-2 ring-offset-indigo-950",
+      ringColor: "ring-amber-400",
+      glow: "shadow-[0_0_30px_rgba(251,191,36,0.6)]",
+      label: "Top 3 Champion",
+      animate: "animate-pulse",
+    };
+    if (rank <= 10) return {
+      ring: "ring-4 ring-offset-2 ring-offset-indigo-950",
+      ringColor: "ring-purple-400",
+      glow: "shadow-[0_0_20px_rgba(192,132,252,0.5)]",
+      label: "Top 10 Elite",
+      animate: "",
+    };
+    if (rank <= 50) return {
+      ring: "ring-2 ring-offset-1 ring-offset-indigo-950",
+      ringColor: "ring-cyan-400",
+      glow: "shadow-[0_0_15px_rgba(34,211,238,0.4)]",
+      label: "Top 50 Rising",
+      animate: "",
+    };
+    return null;
+  };
+
+  // Get specialty badge for Top 3 (based on contribution type)
+  const getSpecialtyBadge = () => {
+    if (user.rank > 3) return null;
+    const hardQuizzes = pointLogs.filter(l =>
+      l.action === "quiz_completed_sulit" || l.action === "quiz_completed_sangat sulit"
+    ).length;
+    const approvedMods = userModules.filter(m => m.status === "approved").length;
+    const quizTotal = pointLogs.filter(l => l.action.startsWith("quiz_completed")).length;
+    const diverseSubjects = new Set(userModules.filter(m => m.status === "approved").map(m => m.subject)).size;
+
+    if (hardQuizzes >= 2) return {
+      name: "Rule Breaker",
+      desc: "Penakluk Ujian Sulit",
+      gradient: "from-red-500 via-orange-500 to-yellow-400",
+      border: "border-orange-400/50",
+      icon: "⚡",
+      glow: "shadow-orange-500/40",
+    };
+    if (approvedMods >= 3) return {
+      name: "Grand Archivist",
+      desc: "Penjaga Arsip Agung NAWA-LEARN",
+      gradient: "from-indigo-500 via-purple-500 to-pink-500",
+      border: "border-purple-400/50",
+      icon: "📚",
+      glow: "shadow-purple-500/40",
+    };
+    if (diverseSubjects >= 3) return {
+      name: "Scholar Prime",
+      desc: "Kontributor Multi-Disiplin",
+      gradient: "from-emerald-400 via-teal-500 to-cyan-500",
+      border: "border-teal-400/50",
+      icon: "🧠",
+      glow: "shadow-teal-500/40",
+    };
+    if (quizTotal >= 5) return {
+      name: "Quiz Dominator",
+      desc: "Maestro Latihan CBT SMAN 2",
+      gradient: "from-cyan-500 via-blue-500 to-indigo-600",
+      border: "border-cyan-400/50",
+      icon: "🎯",
+      glow: "shadow-cyan-500/40",
+    };
+    return {
+      name: "Legend Scholar",
+      desc: "Legenda Platform NAWA-LEARN",
+      gradient: "from-amber-400 via-yellow-400 to-amber-300",
+      border: "border-amber-400/50",
+      icon: "👑",
+      glow: "shadow-amber-400/40",
+    };
+  };
+
+  // Get secret achievement for Top 100
+  const getSecretAchievement = () => {
+    if (user.rank > 100) return null;
+    const quizTotal = pointLogs.filter(l => l.action.startsWith("quiz_completed")).length;
+    const hardQuizzes = pointLogs.filter(l =>
+      l.action === "quiz_completed_sulit" || l.action === "quiz_completed_sangat sulit"
+    ).length;
+    const approvedMods = userModules.filter(m => m.status === "approved").length;
+    const diverseSubjects = new Set(userModules.filter(m => m.status === "approved").map(m => m.subject)).size;
+    const totalDownloads = userModules.reduce((a, m) => a + m.downloads, 0);
+
+    if (hardQuizzes >= 5) return { name: "Bane of Easy Mode", desc: "Menyelesaikan 5+ kuis sulit", icon: "💀", color: "text-red-400", bg: "bg-red-950/30 border-red-900/50" };
+    if (approvedMods >= 5) return { name: "Living Library", desc: "5+ modul disetujui", icon: "🏛️", color: "text-purple-400", bg: "bg-purple-950/30 border-purple-900/50" };
+    if (totalDownloads >= 100) return { name: "Viral Scholar", desc: "Modul diunduh 100+ kali", icon: "🌊", color: "text-cyan-400", bg: "bg-cyan-950/30 border-cyan-900/50" };
+    if (diverseSubjects >= 4) return { name: "Polymath Prodigy", desc: "Kontribusi di 4+ mata pelajaran", icon: "🔬", color: "text-green-400", bg: "bg-green-950/30 border-green-900/50" };
+    if (quizTotal >= 10) return { name: "Eternal Student", desc: "Menyelesaikan 10+ kuis", icon: "🔄", color: "text-blue-400", bg: "bg-blue-950/30 border-blue-900/50" };
+    if (user.rank <= 10) return { name: "The Chosen Few", desc: "Masuk dalam 10 besar", icon: "🌟", color: "text-amber-400", bg: "bg-amber-950/30 border-amber-900/50" };
+    if (user.rank <= 50) return { name: "Silent Powerhouse", desc: "Masuk dalam 50 besar", icon: "⚡", color: "text-indigo-400", bg: "bg-indigo-950/30 border-indigo-900/50" };
+    return { name: "The Century Club", desc: "Masuk dalam 100 besar", icon: "🎖️", color: "text-zinc-300", bg: "bg-zinc-800/50 border-zinc-700/50" };
+  };
+
+  const avatarFrame = getAvatarFrame(user.rank);
+  const specialtyBadge = getSpecialtyBadge();
+  const secretAchievement = getSecretAchievement();
+
   // Save selected avatar
   const handleSelectAvatar = (avatar: typeof AVATAR_OPTIONS[0]) => {
     setSelectedAvatar(avatar);
@@ -252,20 +400,41 @@ export default function ProfileClient({
           
           {/* Playful Interactive Avatar Component */}
           <div className="relative shrink-0 group">
-            <div className={`w-32 h-32 rounded-3xl bg-gradient-to-br ${selectedAvatar.bg} flex items-center justify-center shadow-lg border-4 border-white/10 relative transition-transform duration-300 group-hover:scale-105 group-hover:rotate-3 shadow-indigo-500/20 overflow-hidden`}>
-              {(selectedAvatar as any).svg ? (
+            {/* Avatar frame ring for ranked players */}
+            {avatarFrame && (
+              <div className={`absolute -inset-1.5 rounded-[28px] bg-gradient-to-br ${
+                user.rank <= 3 ? "from-amber-400 via-yellow-300 to-amber-500" :
+                user.rank <= 10 ? "from-purple-400 via-fuchsia-400 to-purple-600" :
+                "from-cyan-400 via-blue-400 to-cyan-600"
+              } ${user.rank <= 3 ? "animate-[spin_4s_linear_infinite]" : ""} opacity-80`} />
+            )}
+            <div className={`w-32 h-32 rounded-3xl bg-gradient-to-br ${selectedAvatar.bg} flex items-center justify-center shadow-lg border-4 border-white/10 relative transition-transform duration-300 group-hover:scale-105 group-hover:rotate-3 overflow-hidden ${avatarFrame ? avatarFrame.glow : "shadow-indigo-500/20"}`}>
+              {/* Custom photo takes priority over SVG avatar */}
+              {customPhoto ? (
+                <img src={customPhoto} alt="Custom photo" className="w-full h-full object-cover" />
+              ) : (selectedAvatar as any).svg ? (
                 <img src={(selectedAvatar as any).svg} alt={selectedAvatar.label} className="w-full h-full object-cover" />
               ) : (
                 <span className="text-6xl">{(selectedAvatar as any).emoji}</span>
               )}
               
-              {isOwnProfile && (
+              {isOwnProfile && !customPhoto && (
                 <button
                   onClick={() => setShowAvatarPicker(true)}
                   className="absolute -bottom-2 -right-2 bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-xl border border-white/20 shadow-md transition-all scale-90 opacity-0 group-hover:opacity-100 group-hover:scale-100 cursor-pointer"
                   title="Ganti Lencana Avatar"
                 >
                   <Edit3 className="h-4.5 w-4.5" />
+                </button>
+              )}
+              {/* Custom photo edit/remove button (Top 10 perk) */}
+              {isOwnProfile && user.rank <= 10 && customPhoto && (
+                <button
+                  onClick={handleRemovePhoto}
+                  className="absolute -bottom-2 -right-2 bg-red-600 hover:bg-red-700 text-white p-2 rounded-xl border border-white/20 shadow-md transition-all scale-90 opacity-0 group-hover:opacity-100 group-hover:scale-100 cursor-pointer"
+                  title="Hapus Foto"
+                >
+                  <XCircle className="h-4 w-4" />
                 </button>
               )}
             </div>
@@ -279,6 +448,12 @@ export default function ProfileClient({
             {user.role === "moderator" && (
               <span className="absolute -top-3 -right-3 bg-amber-500 text-white px-2 py-0.5 rounded-lg text-[10px] font-black tracking-wider uppercase border border-amber-400 flex items-center gap-0.5 shadow-md">
                 <UserCheck className="h-3 w-3" /> REVIEWER
+              </span>
+            )}
+            {/* Rank indicator badge */}
+            {user.rank <= 3 && (
+              <span className="absolute -top-3 -left-3 bg-gradient-to-r from-amber-400 to-yellow-500 text-zinc-900 px-2 py-0.5 rounded-lg text-[10px] font-black tracking-wider uppercase border border-amber-300 shadow-md shadow-amber-500/30">
+                #{user.rank} 🏆
               </span>
             )}
           </div>
@@ -298,6 +473,27 @@ export default function ProfileClient({
             <p className="text-indigo-400 font-bold text-sm sm:text-base mt-2 flex items-center gap-1.5 justify-center md:justify-start">
               <Award className="h-4.5 w-4.5 text-amber-400" /> {getPlayfulRankTitle(level, user.role)}
             </p>
+
+            {/* ⭐ TOP 3 SPECIALTY BADGE (below name) */}
+            {specialtyBadge && (
+              <div className={`inline-flex items-center gap-2 mt-3 px-4 py-1.5 rounded-full bg-gradient-to-r ${specialtyBadge.gradient} border ${specialtyBadge.border} shadow-lg ${specialtyBadge.glow} backdrop-blur-sm`}>
+                <span className="text-sm">{specialtyBadge.icon}</span>
+                <div className="text-left">
+                  <p className="text-xs font-black text-white tracking-wider uppercase">{specialtyBadge.name}</p>
+                  <p className="text-[9px] text-white/70 font-semibold">{specialtyBadge.desc}</p>
+                </div>
+                <Sparkles className="h-3.5 w-3.5 text-white/80 animate-pulse" />
+              </div>
+            )}
+
+            {/* 🎖️ SECRET ACHIEVEMENT (Top 100) */}
+            {secretAchievement && (
+              <div className={`inline-flex items-center gap-2 mt-2 px-3 py-1 rounded-full border text-xs font-bold ${secretAchievement.bg} ${secretAchievement.color}`}>
+                <span>{secretAchievement.icon}</span>
+                <span>{secretAchievement.name}</span>
+                <span className="text-[9px] font-normal opacity-70">— {secretAchievement.desc}</span>
+              </div>
+            )}
 
             {/* Playful Motto */}
             <p className="italic text-zinc-300 text-sm mt-3 bg-white/5 border border-white/5 px-4 py-2 rounded-2xl max-w-xl mx-auto md:mx-0 leading-relaxed font-sans">
@@ -334,6 +530,27 @@ export default function ProfileClient({
                 </button>
               )}
 
+              {/* 📸 CUSTOM PHOTO UPLOAD (Top 10 perk) */}
+              {isOwnProfile && user.rank <= 10 && (
+                <>
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => photoInputRef.current?.click()}
+                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700 text-white px-4 py-2.5 text-xs font-black shadow-lg shadow-purple-500/20 border border-purple-400/30 transition-all hover:scale-[1.02] active:scale-95 cursor-pointer"
+                    title="Unggah foto profil custom (Hak Istimewa Top 10)"
+                  >
+                    <Camera className="h-4 w-4" /> Foto Profil Custom
+                    <span className="text-[9px] bg-purple-400/30 px-1.5 py-0.5 rounded font-bold">TOP 10</span>
+                  </button>
+                </>
+              )}
+
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(typeof window !== "undefined" ? window.location.href : "");
@@ -356,8 +573,8 @@ export default function ProfileClient({
               {/* Level progress bar */}
               <div className="w-full h-3 bg-zinc-800 rounded-full overflow-hidden border border-zinc-700/50">
                 <div 
-                  className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full transition-all duration-1000"
-                  style={{ width: `${progressPercent}%` }}
+                  className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full transition-all duration-1000 ease-out"
+                  style={{ width: `${displayProgress}%` }}
                 />
               </div>
               <p className="text-[11px] text-zinc-400 mt-2 font-medium">
@@ -1097,17 +1314,17 @@ export default function ProfileClient({
                 <div className="h-12 flex items-center justify-center font-mono italic text-indigo-600/40 select-none text-base font-bold my-1">
                   ~ Ketua OSIS Nawasena ~
                 </div>
-                <p className="font-extrabold text-zinc-800 border-t border-zinc-200 pt-1 w-32">Rehan Alfarezel</p>
+                <p className="font-extrabold text-zinc-800 border-t border-zinc-200 pt-1 w-44 text-sm">Cecillia Natasya Sonthani</p>
                 <p className="text-[9px] text-zinc-450 mt-0.5">Ketua OSIS SMAN 2 Jonggol</p>
               </div>
 
               <div className="flex flex-col items-center">
-                <p className="text-zinc-400 font-semibold uppercase text-[9px] tracking-wider">SMAN 2 JONGGOL</p>
+                <p className="text-zinc-400 font-semibold uppercase text-[9px] tracking-wider">NAWASENA TEAM</p>
                 <div className="h-12 flex items-center justify-center font-mono italic text-indigo-600/40 select-none text-base font-bold my-1">
-                  ~ ICT Division ~
+                  ~ Team Developer ~
                 </div>
-                <p className="font-extrabold text-zinc-800 border-t border-zinc-200 pt-1 w-32">Faturrahman R.</p>
-                <p className="text-[9px] text-zinc-450 mt-0.5">Kepala Divisi ICT Nawasena</p>
+                <p className="font-extrabold text-zinc-800 border-t border-zinc-200 pt-1 w-44 text-sm">Maulana Ferdi Irawan</p>
+                <p className="text-[9px] text-zinc-450 mt-0.5">Kepala Nawasena Team Developer</p>
               </div>
             </div>
 
