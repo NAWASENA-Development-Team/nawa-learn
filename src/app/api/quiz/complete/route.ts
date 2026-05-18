@@ -10,6 +10,7 @@ const completeSchema = z.object({
   quizId: z.string().min(1),
   difficulty: z.string().min(1),
   score: z.number().min(0).max(100),
+  wrongAnswers: z.number().int().min(0).default(0),
 });
 
 // V-Point rewards by quiz difficulty
@@ -18,13 +19,13 @@ const QUIZ_POINTS: Record<string, number> = {
   "sedang": 25,
   "normal": 25,
   "sulit": 45,
-  "sangat sulit": 45,
+  "sangat sulit": 100,
   "bervariasi": 25,
 };
 
 function getPointsForDifficulty(difficulty: string): number {
   const key = difficulty.toLowerCase();
-  return QUIZ_POINTS[key] ?? 25; // default 25 if unknown
+  return QUIZ_POINTS[key] ?? 25;
 }
 
 export async function POST(req: Request) {
@@ -64,6 +65,11 @@ export async function POST(req: Request) {
     }
 
     const pointsAwarded = getPointsForDifficulty(validated.difficulty);
+    const wrongAnswers = validated.wrongAnswers ?? 0;
+
+    // Penalty: 2% of current total per wrong answer
+    const penaltyPoints = Math.floor(wrongAnswers * 0.02 * dbUser.points);
+    const netChange = pointsAwarded - penaltyPoints;
 
     // Award points for quiz completion
     await db.insert(pointsLog).values({
@@ -73,16 +79,28 @@ export async function POST(req: Request) {
       refId: null,
     });
 
-    // Increment user's total points
+    // Log penalty if any
+    if (penaltyPoints > 0) {
+      await db.insert(pointsLog).values({
+        userId: dbUser.id,
+        action: "quiz_wrong_answer_penalty",
+        delta: -penaltyPoints,
+        refId: null,
+      });
+    }
+
+    // Update total (floor at 0)
     await db.update(users)
-      .set({ points: sql`${users.points} + ${pointsAwarded}` })
+      .set({ points: sql`GREATEST(0, ${users.points} + ${netChange})` })
       .where(eq(users.id, dbUser.id));
 
-    const newTotal = dbUser.points + pointsAwarded;
+    const newTotal = Math.max(0, dbUser.points + netChange);
 
     return NextResponse.json({
       success: true,
       pointsAwarded,
+      penaltyPoints,
+      netPoints: netChange,
       newTotal,
       difficulty: validated.difficulty,
     }, { status: 200 });
