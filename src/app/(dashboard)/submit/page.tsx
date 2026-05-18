@@ -439,7 +439,7 @@ export default function SubmitModulePage() {
             <div className="bg-zinc-50 dark:bg-zinc-950 p-4 border border-zinc-200 dark:border-zinc-800 rounded-xl mb-6 flex items-center justify-between text-left">
               <div>
                 <p className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">POTENSI HADIAH</p>
-                <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400">+15 Poin OSIS</p>
+                <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400">+50 V-Point</p>
               </div>
               <div className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 text-xs px-2.5 py-1 rounded-md font-semibold border border-indigo-100 dark:border-indigo-950">
                 Peringkat Siswa
@@ -483,7 +483,7 @@ export default function SubmitModulePage() {
             <div className="bg-zinc-50 dark:bg-zinc-950 p-4 border border-zinc-200 dark:border-zinc-800 rounded-xl mb-6 flex items-center justify-between text-left">
               <div>
                 <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium">POTENSI HADIAH</p>
-                <p className="text-base font-bold text-indigo-650 dark:text-indigo-400">+10 Poin OSIS</p>
+                <p className="text-base font-bold text-indigo-650 dark:text-indigo-400">+20 V-Point</p>
               </div>
               <div className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 text-xs px-2.5 py-1 rounded-md font-semibold border border-indigo-100 dark:border-indigo-950">
                 Peringkat Kuis
@@ -606,7 +606,7 @@ export default function SubmitModulePage() {
           </h2>
           <p className="mt-3 text-base text-zinc-600 dark:text-zinc-400 leading-relaxed">
             {submitType === "module" 
-              ? "Unggah materi pembelajaran terbaikmu—baik itu ringkasan rumus matematika, rangkuman sosiologi, latihan soal olimpiade, atau catatan lainnya. Bantu teman-teman SMAN 2 Jonggol belajar lebih cepat dan kumpulkan poin kontribusimu!"
+              ? "Unggah materi pembelajaran terbaikmu—baik itu ringkasan rumus matematika, rangkuman sosiologi, latihan soal olimpiade, atau catatan lainnya. Bantu teman-teman SMAN 2 Jonggol belajar lebih cepat dan kumpulkan V-Point-mu!"
               : "Buat soal latihan buatanmu sendiri! Pertanyaan kuis yang Anda ajukan akan masuk antrean moderasi pengurus OSIS. Setelah disetujui, soal akan diterbitkan secara instan di halaman latihan."}
           </p>
         </div>

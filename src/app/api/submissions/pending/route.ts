@@ -10,16 +10,8 @@ export async function GET() {
     const { userId: clerkId } = await auth();
     if (!clerkId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const currentUser = await db.query.users.findFirst({
-      where: eq(users.clerkId, clerkId),
-      columns: { role: true }
-    });
-
-    if (!currentUser || (currentUser.role !== "moderator" && currentUser.role !== "admin")) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     // Fetch pending submissions and join with module and submitter data
+    // Access is controlled by the password gate in the moderator frontend
     const pendingQueue = await db.select({
       submissionId: submissions.id,
       submittedAt: submissions.submittedAt,

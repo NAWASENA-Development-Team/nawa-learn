@@ -124,6 +124,8 @@ export default function PracticeMode() {
   const [timeLeft, setTimeLeft] = useState(1200); // default 20 minutes (1200 seconds)
   const [isStarted, setIsStarted] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
+  const [pointsAwarded, setPointsAwarded] = useState<number | null>(null);
+  const [pointsLoading, setPointsLoading] = useState(false);
 
   // Initialize and load all quizzes, including student contributed ones from localStorage
   useEffect(() => {
@@ -250,12 +252,38 @@ export default function PracticeMode() {
     return correct;
   };
 
+  // Award V-Points when quiz is finished
+  useEffect(() => {
+    if (!isFinished || !selectedQuiz) return;
+    
+    setPointsLoading(true);
+    fetch("/api/quiz/complete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        quizId: selectedQuiz.id,
+        difficulty: selectedQuiz.difficulty,
+        score: finalScore,
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setPointsAwarded(data.pointsAwarded);
+        }
+      })
+      .catch((err) => console.error("Quiz point award error:", err))
+      .finally(() => setPointsLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFinished]);
+
   const handleRestart = () => {
     setAnswers({});
     setCurrentIndex(0);
     setTimeLeft(selectedQuiz ? selectedQuiz.durationMinutes * 60 : 1200);
     setIsStarted(false);
     setIsFinished(false);
+    setPointsAwarded(null);
   };
 
   const answeredCount = Object.keys(answers).length;
@@ -608,6 +636,31 @@ export default function PracticeMode() {
               </h4>
               <p className="text-xs text-zinc-455 dark:text-zinc-500 mt-1">Manajemen Waktu</p>
             </div>
+          </div>
+
+          {/* V-Point reward notification */}
+          <div className="max-w-2xl mx-auto mb-4">
+            {pointsLoading ? (
+              <div className="p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/30 flex items-center gap-3">
+                <div className="h-5 w-5 rounded-full border-2 border-indigo-300 border-t-indigo-600 animate-spin shrink-0" />
+                <p className="text-sm font-bold text-indigo-700 dark:text-indigo-300">Menambahkan V-Point ke profil Anda...</p>
+              </div>
+            ) : pointsAwarded !== null ? (
+              <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/30 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-amber-100 dark:bg-amber-950/50 text-amber-600 flex items-center justify-center text-lg shrink-0">
+                    ⭐
+                  </div>
+                  <div className="text-left">
+                    <p className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">V-Point Diterima!</p>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">
+                      Kuis <span className="font-bold">{selectedQuiz?.difficulty}</span> selesai
+                    </p>
+                  </div>
+                </div>
+                <span className="text-2xl font-black text-amber-600 dark:text-amber-400 shrink-0">+{pointsAwarded}</span>
+              </div>
+            ) : null}
           </div>
 
           {/* Dynamic feedback badge */}

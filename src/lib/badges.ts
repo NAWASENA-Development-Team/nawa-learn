@@ -37,7 +37,7 @@ export const BADGES: Badge[] = [
   {
     id: "first_step",
     title: "Langkah Pertama",
-    description: "Mendapatkan poin kontribusi pertamamu",
+    description: "Mendapatkan V-Point pertamamu",
     icon: "🌱",
     category: "contribution",
     rarity: "common",
@@ -400,7 +400,7 @@ export const BADGES: Badge[] = [
   {
     id: "fifty_points",
     title: "Lima Puluh Poin",
-    description: "Kumpulkan 50 poin kontribusi",
+    description: "Kumpulkan 50 V-Point",
     icon: "⭐",
     category: "milestone",
     rarity: "common",
@@ -410,7 +410,7 @@ export const BADGES: Badge[] = [
   {
     id: "hundred_points",
     title: "Seratus Poin",
-    description: "Kumpulkan 100 poin kontribusi",
+    description: "Kumpulkan 100 V-Point",
     icon: "💯",
     category: "milestone",
     rarity: "uncommon",
@@ -420,7 +420,7 @@ export const BADGES: Badge[] = [
   {
     id: "two_hundred_points",
     title: "Dua Ratus Poin",
-    description: "Kumpulkan 200 poin kontribusi",
+    description: "Kumpulkan 200 V-Point",
     icon: "🎯",
     category: "milestone",
     rarity: "uncommon",
@@ -430,7 +430,7 @@ export const BADGES: Badge[] = [
   {
     id: "five_hundred_points",
     title: "Lima Ratus Poin",
-    description: "Kumpulkan 500 poin kontribusi",
+    description: "Kumpulkan 500 V-Point",
     icon: "🏆",
     category: "milestone",
     rarity: "rare",
@@ -440,7 +440,7 @@ export const BADGES: Badge[] = [
   {
     id: "thousand_points",
     title: "Seribu Poin",
-    description: "Kumpulkan 1000 poin kontribusi",
+    description: "Kumpulkan 1000 V-Point",
     icon: "👑",
     category: "milestone",
     rarity: "epic",
@@ -450,7 +450,7 @@ export const BADGES: Badge[] = [
   {
     id: "two_thousand_points",
     title: "Dua Ribu Poin",
-    description: "Kumpulkan 2000 poin kontribusi",
+    description: "Kumpulkan 2000 V-Point",
     icon: "💎",
     category: "milestone",
     rarity: "legendary",
@@ -560,7 +560,7 @@ export const BADGES: Badge[] = [
   {
     id: "three_hundred_points",
     title: "Tiga Ratus Poin",
-    description: "Kumpulkan 300 poin kontribusi",
+    description: "Kumpulkan 300 V-Point",
     icon: "🎯",
     category: "milestone",
     rarity: "uncommon",
@@ -570,7 +570,7 @@ export const BADGES: Badge[] = [
   {
     id: "seven_hundred_fifty_points",
     title: "Tujuh Ratus Lima Puluh Poin",
-    description: "Kumpulkan 750 poin kontribusi",
+    description: "Kumpulkan 750 V-Point",
     icon: "🎪",
     category: "milestone",
     rarity: "rare",
@@ -580,7 +580,7 @@ export const BADGES: Badge[] = [
   {
     id: "fifteen_hundred_points",
     title: "Seribu Lima Ratus Poin",
-    description: "Kumpulkan 1500 poin kontribusi",
+    description: "Kumpulkan 1500 V-Point",
     icon: "💫",
     category: "milestone",
     rarity: "epic",

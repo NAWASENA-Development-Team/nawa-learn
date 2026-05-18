@@ -334,7 +334,7 @@ export default function LeaderboardClient({
           <div className="grid grid-cols-12 p-4 bg-zinc-50 dark:bg-zinc-900/50 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-zinc-400">
             <div className="col-span-2 sm:col-span-1 text-center">POSISI</div>
             <div className="col-span-7 sm:col-span-8 pl-2">KONTRIBUTOR</div>
-            <div className="col-span-3 text-right pr-4">POIN KONTRIBUSI</div>
+            <div className="col-span-3 text-right pr-4">V-POINT</div>
           </div>
 
           {filteredUsers.map((user, index) => {

@@ -110,7 +110,7 @@ const PLAYFUL_BIOS = [
   "Siswa teladan SMAN 2 Jonggol yang hobi belajar sambil dengerin lagu pop alternatif. 🎧",
   "Pencari ilmu sejati. Musuh bebuyutan soal kalkulus, tapi bersahabat baik dengan biologi sel. 🧬",
   "Menyelesaikan limit fungsi aljabar lebih cepat daripada menyeduh mi instan. ⚡",
-  "Kolektor poin kontribusi OSIS NAWASENA teraktif! Mari majukan literasi digital sekolah kita! 📚",
+  "Kolektor V-Point NAWA-LEARN teraktif! Mari majukan literasi digital sekolah kita! 📚",
   "Tidur nyenyak adalah mitos, rumus fisika adalah realitas. Pejuang UTBK jalur undangan! 🎓",
 ];
 
@@ -398,7 +398,7 @@ export default function ProfileClient({
             <div className="h-10 w-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-inner font-bold">
               <Trophy className="h-5 w-5" />
             </div>
-            <span className="text-xs font-bold text-zinc-550 dark:text-zinc-450 uppercase tracking-wider">Poin Kontribusi</span>
+            <span className="text-xs font-bold text-zinc-550 dark:text-zinc-450 uppercase tracking-wider">V-Point</span>
           </div>
           <p className="text-3xl sm:text-4xl font-black text-amber-600 dark:text-amber-400 group-hover:scale-105 transition-transform duration-200">
             {user.points}
@@ -719,7 +719,7 @@ export default function ProfileClient({
               <span className="text-4xl">📚</span>
               <h4 className="text-base font-extrabold text-zinc-900 dark:text-white mt-3">Belum ada modul yang diunggah</h4>
               <p className="text-xs text-zinc-500 mt-1 max-w-xs mx-auto">
-                Bagikan modul pelajaranmu sekarang dan dapatkan poin kontribusi apresiasi OSIS.
+                Bagikan modul pelajaranmu sekarang dan dapatkan V-Point dari komunitas NAWA-LEARN.
               </p>
               <Link 
                 href="/submit" 
@@ -882,7 +882,7 @@ export default function ProfileClient({
               ⏱️ Catatan Riwayat Perolehan Poin
             </h3>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-              Riwayat lengkap kapan dan bagaimana kamu mendapatkan poin kontribusi di platform.
+              Riwayat lengkap kapan dan bagaimana kamu mendapatkan V-Point di platform.
             </p>
           </div>
 
@@ -1078,8 +1078,8 @@ export default function ProfileClient({
               
               <div className="my-4 flex items-center justify-center gap-6">
                 <div className="bg-amber-50 border border-amber-200 px-4 py-2 rounded-xl text-center shadow-sm">
-                  <p className="text-[10px] text-amber-800 font-bold uppercase tracking-wider">Poin Kontribusi</p>
-                  <p className="text-xl font-black text-amber-700 mt-0.5">{user.points} POIN</p>
+                  <p className="text-[10px] text-amber-800 font-bold uppercase tracking-wider">V-Point</p>
+                  <p className="text-xl font-black text-amber-700 mt-0.5">{user.points} VP</p>
                 </div>
                 <div className="bg-indigo-50 border border-indigo-200 px-4 py-2 rounded-xl text-center shadow-sm">
                   <p className="text-[10px] text-indigo-800 font-bold uppercase tracking-wider">Level Scholar</p>
