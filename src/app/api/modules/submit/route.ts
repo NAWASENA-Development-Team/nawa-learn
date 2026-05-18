@@ -69,37 +69,42 @@ export async function POST(req: Request) {
       }, { status: 404 });
     }
 
-    // 4. Insert data using a database transaction to ensure atomicity
-    let result;
+    // 4. Insert module into database
+    // Note: neon-http driver does not support transactions, use sequential inserts
+    let newModule;
     try {
-      result = await db.transaction(async (tx) => {
-        // Insert the pending module
-        const [newModule] = await tx.insert(modules).values({
-          title: validatedData.title,
-          subject: validatedData.subject,
-          grade: validatedData.grade || "Umum",
-          category: validatedData.category,
-          contentUrl: validatedData.contentUrl,
-          uploaderId: dbUser.id,
-          status: "pending", 
-        }).returning({ id: modules.id });
-
-        // Insert the corresponding review submission record
-        await tx.insert(submissions).values({
-          type: "module",
-          refId: newModule.id,
-          submitterId: dbUser.id,
-          status: "pending",
-        });
-
-        return newModule;
-      });
-    } catch (transactionError) {
-      console.error("Transaction error:", transactionError);
+      const [insertedModule] = await db.insert(modules).values({
+        title: validatedData.title,
+        subject: validatedData.subject,
+        grade: validatedData.grade || "Umum",
+        category: validatedData.category,
+        contentUrl: validatedData.contentUrl,
+        uploaderId: dbUser.id,
+        status: "pending",
+      }).returning({ id: modules.id });
+      newModule = insertedModule;
+    } catch (moduleError) {
+      console.error("Module insert error:", moduleError);
       return NextResponse.json({ 
         error: "Failed to save module. Please try again." 
       }, { status: 500 });
     }
+
+    // 5. Insert submission record for moderation queue
+    try {
+      await db.insert(submissions).values({
+        type: "module",
+        refId: newModule.id,
+        submitterId: dbUser.id,
+        status: "pending",
+      });
+    } catch (submissionError) {
+      console.error("Submission record error:", submissionError);
+      // Module was inserted, still return success but log the issue
+      console.error("Warning: module inserted but submission record failed for moduleId:", newModule.id);
+    }
+
+    const result = newModule;
 
     return NextResponse.json({ success: true, moduleId: result.id }, { status: 201 });
 
