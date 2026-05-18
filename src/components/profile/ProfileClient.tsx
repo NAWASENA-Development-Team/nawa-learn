@@ -74,16 +74,33 @@ interface ProfileClientProps {
   isOwnProfile: boolean;
 }
 
-// Available custom avatar options (playful emoji characters)
+// Available custom avatar options (SVG-based characters)
 const AVATAR_OPTIONS = [
-  { emoji: "🧙‍♂️", bg: "from-purple-400 to-indigo-600", label: "Penyihir Rumus" },
-  { emoji: "🚀", bg: "from-rose-400 to-orange-500", label: "Roket Pengetahuan" },
-  { emoji: "🦁", bg: "from-amber-400 to-amber-600", label: "Singa Kelas" },
-  { emoji: "🐼", bg: "from-teal-400 to-emerald-600", label: "Panda Belajar" },
-  { emoji: "👾", bg: "from-blue-400 to-sky-600", label: "Monster Koding" },
-  { emoji: "🦄", bg: "from-pink-400 to-purple-600", label: "Scholar Unicorn" },
-  { emoji: "🦊", bg: "from-orange-400 to-red-500", label: "Rubah Cerdas" },
-  { emoji: "🐨", bg: "from-cyan-400 to-teal-600", label: "Koala Santai" },
+  // Fantasy Theme
+  { svg: "/avatars/wizard.svg", bg: "from-purple-400 to-indigo-600", label: "Penyihir Rumus" },
+  { svg: "/avatars/knight.svg", bg: "from-slate-400 to-slate-600", label: "Ksatria Baja" },
+  { svg: "/avatars/dragon.svg", bg: "from-red-400 to-red-600", label: "Naga Penjaga" },
+  { svg: "/avatars/elf.svg", bg: "from-green-400 to-green-600", label: "Peri Hutan" },
+  { svg: "/avatars/mage.svg", bg: "from-purple-400 to-purple-600", label: "Penyihir Rumus" },
+  { svg: "/avatars/archer.svg", bg: "from-amber-400 to-amber-600", label: "Pemanah Mahir" },
+  { svg: "/avatars/paladin.svg", bg: "from-yellow-400 to-yellow-600", label: "Kesatria Cahaya" },
+  { svg: "/avatars/rogue.svg", bg: "from-gray-400 to-gray-600", label: "Pencuri Bayangan" },
+  { svg: "/avatars/necromancer.svg", bg: "from-orange-800 to-gray-900", label: "Penyihir Gelap" },
+  { svg: "/avatars/bard.svg", bg: "from-pink-400 to-pink-600", label: "Penyanyi Legendaris" },
+  // Sci-Fi Theme
+  { svg: "/avatars/cyborg.svg", bg: "from-cyan-400 to-blue-600", label: "Cyborg Futuristik" },
+  { svg: "/avatars/alien.svg", bg: "from-green-400 to-green-600", label: "Makhluk Asing" },
+  { svg: "/avatars/robot.svg", bg: "from-amber-400 to-orange-600", label: "Robot Cerdas" },
+  { svg: "/avatars/astronaut.svg", bg: "from-indigo-400 to-indigo-600", label: "Penjelajah Angkasa" },
+  { svg: "/avatars/hacker.svg", bg: "from-gray-800 to-gray-900", label: "Hacker Jenius" },
+  { svg: "/avatars/pilot.svg", bg: "from-cyan-400 to-blue-600", label: "Pilot Pemberani" },
+  { svg: "/avatars/android.svg", bg: "from-purple-400 to-purple-600", label: "Android Canggih" },
+  { svg: "/avatars/spaceman.svg", bg: "from-red-400 to-red-600", label: "Prajurit Luar Angkasa" },
+  { svg: "/avatars/scientist.svg", bg: "from-green-400 to-green-600", label: "Ilmuwan Brilian" },
+  { svg: "/avatars/engineer.svg", bg: "from-amber-400 to-orange-600", label: "Insinyur Handal" },
+  { svg: "/avatars/explorer.svg", bg: "from-amber-700 to-amber-900", label: "Penjelajah Petualang" },
+  { svg: "/avatars/guardian.svg", bg: "from-pink-400 to-pink-600", label: "Penjaga Galaksi" },
+  { svg: "/avatars/mystic.svg", bg: "from-purple-400 to-purple-600", label: "Mistis Gaib" },
 ];
 
 // Playful Bios list for generator
@@ -108,7 +125,13 @@ export default function ProfileClient({
   const [selectedAvatar, setSelectedAvatar] = useState(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem(`nawa_avatar_${user.id}`);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          return AVATAR_OPTIONS[user.points % AVATAR_OPTIONS.length];
+        }
+      }
     }
     // Default avatar based on points
     return AVATAR_OPTIONS[user.points % AVATAR_OPTIONS.length];
@@ -253,8 +276,12 @@ export default function ProfileClient({
           
           {/* Playful Interactive Avatar Component */}
           <div className="relative shrink-0 group">
-            <div className={`w-32 h-32 rounded-3xl bg-gradient-to-br ${selectedAvatar.bg} flex items-center justify-center text-6xl shadow-lg border-4 border-white/10 relative transition-transform duration-300 group-hover:scale-105 group-hover:rotate-3 shadow-indigo-500/20`}>
-              {selectedAvatar.emoji}
+            <div className={`w-32 h-32 rounded-3xl bg-gradient-to-br ${selectedAvatar.bg} flex items-center justify-center shadow-lg border-4 border-white/10 relative transition-transform duration-300 group-hover:scale-105 group-hover:rotate-3 shadow-indigo-500/20 overflow-hidden`}>
+              {(selectedAvatar as any).svg ? (
+                <img src={(selectedAvatar as any).svg} alt={selectedAvatar.label} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-6xl">{(selectedAvatar as any).emoji}</span>
+              )}
               
               {isOwnProfile && (
                 <button
@@ -958,22 +985,28 @@ export default function ProfileClient({
               Lencana avatar lucu mencerminkan semangat belajarmu di SMAN 2 Jonggol!
             </p>
 
-            <div className="grid grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-4 gap-4 mb-6 max-h-96 overflow-y-auto">
               {AVATAR_OPTIONS.map((av, idx) => (
                 <button
                   key={idx}
                   onClick={() => handleSelectAvatar(av)}
-                  className={`group aspect-square rounded-2xl bg-gradient-to-br ${av.bg} flex flex-col items-center justify-center text-4xl shadow-md border-2 transition-all hover:scale-110 active:scale-95 cursor-pointer ${
-                    selectedAvatar.emoji === av.emoji 
+                  className={`group aspect-square rounded-2xl bg-gradient-to-br ${av.bg} flex flex-col items-center justify-center shadow-md border-2 transition-all hover:scale-110 active:scale-95 cursor-pointer overflow-hidden ${
+                    (selectedAvatar as any).svg === av.svg || (selectedAvatar as any).emoji === (av as any).emoji
                       ? "border-indigo-600 scale-105 shadow-lg shadow-indigo-600/10" 
                       : "border-transparent"
                   }`}
                   title={av.label}
                 >
-                  <span className="transition-transform group-hover:rotate-6">{av.emoji}</span>
-                  <span className="text-[8px] text-white/80 font-black tracking-tighter uppercase mt-1">
-                    {av.label.split(" ")[0]}
-                  </span>
+                  {av.svg ? (
+                    <img src={av.svg} alt={av.label} className="w-full h-full object-cover" />
+                  ) : (
+                    <>
+                      <span className="transition-transform group-hover:rotate-6 text-4xl">{(av as any).emoji}</span>
+                      <span className="text-[8px] text-white/80 font-black tracking-tighter uppercase mt-1">
+                        {av.label.split(" ")[0]}
+                      </span>
+                    </>
+                  )}
                 </button>
               ))}
             </div>
