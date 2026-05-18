@@ -25,8 +25,10 @@ import {
   UserCheck,
   CheckCircle2,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Zap
 } from "lucide-react";
+import { BADGES, Badge, getDaysOldAccount, getRarityColor, getRarityTextColor, BadgeUnlockData } from "@/lib/badges";
 
 interface UserProfile {
   id: string;
@@ -207,61 +209,35 @@ export default function ProfileClient({
     return "Pemula Berbakat 🌱";
   };
 
-  // Achievements evaluation list
-  const achievements = useMemo(() => {
-    return [
-      {
-        id: "first_point",
-        title: "Langkah Pertama",
-        desc: "Mendapatkan poin kontribusi pertamamu",
-        icon: "🌱",
-        unlocked: user.points > 0,
-        howToUnlock: "Bagikan modul pertama atau kerjakan kuis latihan."
-      },
-      {
-        id: "module_contributor",
-        title: "Pustakawan Sekolah",
-        desc: "Mengunggah minimal 1 modul yang disetujui",
-        icon: "📚",
-        unlocked: userModules.filter(m => m.status === "approved").length >= 1,
-        howToUnlock: "Upload 1 file rangkuman catatan atau modul pelajaran."
-      },
-      {
-        id: "knowledge_creator",
-        title: "Pencipta Soal",
-        desc: "Membuat minimal 3 latihan soal disetujui",
-        icon: "⚡",
-        unlocked: userQuestions.filter(q => q.status === "approved").length >= 3,
-        howToUnlock: "Kirim 3 pertanyaan latihan yang lolos verifikasi moderator."
-      },
-      {
-        id: "super_sharing",
-        title: "Guru Sebaya",
-        desc: "Mendapatkan total poin kontribusi di atas 100",
-        icon: "🏆",
-        unlocked: user.points >= 100,
-        howToUnlock: "Kumpulkan total 100 poin dari kontribusi belajar."
-      },
-      {
-        id: "top_rank",
-        title: "Puncak Prestasi",
-        desc: "Masuk peringkat 10 besar sekolah",
-        icon: "👑",
-        unlocked: user.rank <= 10 && user.points > 0,
-        howToUnlock: "Capai peringkat 10 teratas di Papan Peringkat NAWASENA."
-      },
-      {
-        id: "science_enthusiast",
-        title: "Pakar Sains",
-        desc: "Mengunggah materi Matematika/Fisika/Kimia/Biologi",
-        icon: "🧪",
-        unlocked: userModules.some(m => ["Matematika", "Fisika", "Kimia", "Biologi", "IPA"].includes(m.subject) && m.status === "approved"),
-        howToUnlock: "Upload modul sains (Matematika/Fisika/Kimia/Biologi) yang disetujui."
+  // Calculate badge unlock data
+  const badgeUnlockData = useMemo<BadgeUnlockData>(() => {
+    const modulesBySubject: Record<string, number> = {};
+    userModules.forEach(m => {
+      if (m.status === "approved") {
+        modulesBySubject[m.subject] = (modulesBySubject[m.subject] || 0) + 1;
       }
-    ];
-  }, [user.points, user.rank, userModules, userQuestions]);
+    });
 
-  const unlockedCount = achievements.filter(a => a.unlocked).length;
+    return {
+      points: user.points,
+      rank: user.rank,
+      totalStudents: user.totalStudents,
+      approvedModules: userModules.filter(m => m.status === "approved").length,
+      approvedQuestions: userQuestions.filter(q => q.status === "approved").length,
+      totalDownloads: userModules.reduce((acc, m) => acc + m.downloads, 0),
+      modulesBySubject,
+      questionsCreated: userQuestions.length,
+      accountAgeInDays: getDaysOldAccount(user.createdAt),
+      createdAt: user.createdAt
+    };
+  }, [user, userModules, userQuestions]);
+
+  // Evaluate which badges are unlocked
+  const unlockedBadges = useMemo(() => {
+    return BADGES.filter(badge => badge.unlockCondition(badgeUnlockData));
+  }, [badgeUnlockData]);
+
+  const unlockedCount = unlockedBadges.length;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -401,9 +377,9 @@ export default function ProfileClient({
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-[9px] text-zinc-400 font-bold uppercase">PRESTASI</p>
+                <p className="text-[9px] text-zinc-400 font-bold uppercase">LENCANA</p>
                 <p className="text-xs font-extrabold text-zinc-200 mt-0.5 text-indigo-300">
-                  🏆 {unlockedCount} / {achievements.length}
+                  🏆 {unlockedCount} / {BADGES.length}
                 </p>
               </div>
             </div>
@@ -551,45 +527,86 @@ export default function ProfileClient({
                   </p>
                 </div>
                 <span className="bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 text-xs px-3 py-1.5 rounded-xl font-bold border border-indigo-100 dark:border-indigo-950">
-                  {unlockedCount} / {achievements.length} Terbuka
+                  {unlockedCount} / {BADGES.length} Terbuka
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {achievements.map((ach) => (
-                  <div 
-                    key={ach.id} 
-                    className={`p-4 rounded-2xl border transition-all duration-350 relative group flex gap-3.5 items-start ${
-                      ach.unlocked 
-                        ? "bg-gradient-to-r from-white to-indigo-50/5 dark:from-zinc-900 dark:to-indigo-950/10 border-indigo-100 dark:border-zinc-800 hover:border-indigo-300 dark:hover:border-indigo-900" 
-                        : "bg-zinc-50/50 dark:bg-zinc-950/40 border-zinc-150 dark:border-zinc-850 opacity-60"
-                    }`}
-                  >
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 ${
-                      ach.unlocked 
-                        ? "bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 border border-indigo-100 dark:border-indigo-800 shadow-sm" 
-                        : "bg-zinc-200 dark:bg-zinc-800 text-zinc-400"
-                    }`}>
-                      {ach.unlocked ? ach.icon : <Lock className="h-5 w-5 text-zinc-400 dark:text-zinc-500" />}
-                    </div>
+              {/* Badge Categories */}
+              <div className="space-y-8">
+                {(["contribution", "learning", "milestone", "social", "special"] as const).map((category) => {
+                  const categoryBadges = BADGES.filter(b => b.category === category);
+                  const categoryUnlocked = unlockedBadges.filter(b => b.category === category);
+                  
+                  const categoryTitles: Record<typeof category, string> = {
+                    contribution: "🎁 Lencana Kontribusi",
+                    learning: "📚 Lencana Pembelajaran",
+                    milestone: "🎯 Lencana Pencapaian",
+                    social: "🤝 Lencana Sosial",
+                    special: "⭐ Lencana Khusus"
+                  };
 
-                    <div className="text-left flex-1 min-w-0">
-                      <h4 className="font-extrabold text-sm text-zinc-950 dark:text-zinc-100 flex items-center gap-1.5">
-                        {ach.title}
-                        {ach.unlocked && <span className="text-emerald-500 text-xs">✓</span>}
-                      </h4>
-                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-snug">
-                        {ach.desc}
-                      </p>
+                  return (
+                    <div key={category}>
+                      <div className="mb-4 flex items-center justify-between">
+                        <h3 className="text-base font-extrabold text-zinc-900 dark:text-white">
+                          {categoryTitles[category]}
+                        </h3>
+                        <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                          {categoryUnlocked.length} / {categoryBadges.length}
+                        </span>
+                      </div>
                       
-                      {!ach.unlocked && (
-                        <div className="mt-2 text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold bg-indigo-50/55 dark:bg-indigo-950/30 px-2 py-0.5 rounded-lg inline-block">
-                          Cara buka: {ach.howToUnlock}
-                        </div>
-                      )}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {categoryBadges.map((badge) => {
+                          const isUnlocked = unlockedBadges.some(b => b.id === badge.id);
+                          return (
+                            <div
+                              key={badge.id}
+                              className={`p-4 rounded-2xl border transition-all duration-300 relative group flex gap-3 items-start ${
+                                isUnlocked
+                                  ? `bg-gradient-to-br ${getRarityColor(badge.rarity)} border-opacity-50 border-white shadow-md hover:shadow-lg`
+                                  : "bg-zinc-50/50 dark:bg-zinc-950/40 border-zinc-150 dark:border-zinc-850 opacity-60"
+                              }`}
+                              title={badge.description}
+                            >
+                              <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 flex-none ${
+                                isUnlocked
+                                  ? "bg-white/20 text-white shadow-sm"
+                                  : "bg-zinc-200 dark:bg-zinc-800 text-zinc-400"
+                              }`}>
+                                {isUnlocked ? badge.icon : <Lock className="h-5 w-5 text-zinc-400 dark:text-zinc-500" />}
+                              </div>
+
+                              <div className="text-left flex-1 min-w-0">
+                                <h4 className={`font-extrabold text-sm flex items-center gap-1.5 ${
+                                  isUnlocked
+                                    ? "text-white"
+                                    : "text-zinc-950 dark:text-zinc-100"
+                                }`}>
+                                  {badge.title}
+                                  {isUnlocked && <span className="text-xs">✓</span>}
+                                </h4>
+                                <p className={`text-[11px] mt-0.5 leading-snug ${
+                                  isUnlocked
+                                    ? "text-white/80"
+                                    : "text-zinc-500 dark:text-zinc-400"
+                                }`}>
+                                  {badge.description}
+                                </p>
+                                
+                                {!isUnlocked && (
+                                  <div className="mt-2 text-[10px] text-zinc-600 dark:text-zinc-400 font-semibold bg-zinc-100/60 dark:bg-zinc-800/60 px-2 py-0.5 rounded-lg inline-block">
+                                    {badge.howToUnlock}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
             
