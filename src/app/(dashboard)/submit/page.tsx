@@ -338,12 +338,33 @@ export default function SubmitModulePage() {
         clearPhoto();
         setDirectDriveUrl("");
       } else {
-        const errData = await res.json();
-        alert(`Gagal mengirim: ${errData.error || "Kesalahan Tidak Diketahui"}`);
+        let errorMessage = "Kesalahan Tidak Diketahui";
+        
+        try {
+          const errData = await res.json();
+          errorMessage = errData.error || errorMessage;
+          
+          // Provide specific guidance for common errors
+          if (res.status === 401) {
+            errorMessage = "Anda belum login. Silakan refresh halaman dan login kembali.";
+          } else if (res.status === 404) {
+            errorMessage = "Profil Anda belum tersinkronisasi. Silakan logout dan login kembali.";
+          } else if (res.status === 400) {
+            errorMessage = `Data tidak valid: ${errorMessage}`;
+          } else if (res.status === 503) {
+            errorMessage = "Database sedang tidak tersedia. Silakan coba lagi dalam beberapa saat.";
+          } else if (res.status === 500) {
+            errorMessage = "Terjadi kesalahan server. Silakan coba lagi nanti.";
+          }
+        } catch (parseError) {
+          console.error("Error parsing response:", parseError);
+        }
+        
+        alert(`Gagal mengirim: ${errorMessage}`);
       }
     } catch (error) {
-      console.error(error);
-      alert("Terjadi kesalahan saat mengirim formulir.");
+      console.error("Network error:", error);
+      alert("Terjadi kesalahan jaringan. Pastikan Anda terhubung ke internet dan coba lagi.");
     } finally {
       setIsSubmitting(false);
     }
