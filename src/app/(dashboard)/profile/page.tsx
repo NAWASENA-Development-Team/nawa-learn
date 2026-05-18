@@ -123,6 +123,7 @@ export default async function OwnProfilePage() {
   // Prepare profile payload
   const profilePayload = {
     id: dbUser.id,
+    clerkId: dbUser.clerkId,
     name: dbUser.name,
     email: dbUser.email,
     role: dbUser.role as "guest" | "student" | "contributor" | "moderator" | "admin",

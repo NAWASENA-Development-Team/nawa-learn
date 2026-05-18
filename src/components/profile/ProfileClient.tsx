@@ -30,6 +30,7 @@ import {
 
 interface UserProfile {
   id: string;
+  clerkId: string;
   name: string;
   email: string;
   role: "guest" | "student" | "contributor" | "moderator" | "admin";

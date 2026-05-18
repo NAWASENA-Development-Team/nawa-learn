@@ -126,6 +126,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
   // Prepare profile payload
   const profilePayload = {
     id: dbUser.id,
+    clerkId: dbUser.clerkId,
     name: dbUser.name,
     email: isOwnProfile ? dbUser.email : "", // Hide other people's emails for privacy
     role: dbUser.role as "guest" | "student" | "contributor" | "moderator" | "admin",
