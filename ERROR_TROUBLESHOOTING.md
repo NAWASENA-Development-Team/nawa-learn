@@ -39,7 +39,74 @@ API endpoint `/api/modules/submit` mengalami error server. Kemungkinan:
 - Database connection error
 - Validation error
 - Clerk authentication error
+- User not synced to database
 - Transaction error
+
+### Quick Debug dengan Debug Endpoints
+
+Saya sudah membuat 3 debug endpoints untuk membantu troubleshooting:
+
+**1. Check Clerk Authentication**
+```
+GET /api/debug/auth
+```
+Ini akan menunjukkan:
+- Apakah Anda sudah login
+- Clerk ID Anda
+- Apakah user sudah di database
+- Status sinkronisasi
+
+**2. Check Database Connection**
+```
+GET /api/debug/db
+```
+Ini akan menunjukkan:
+- Apakah database terhubung
+- Berapa user di database
+- Apakah DATABASE_URL dikonfigurasi
+
+**3. Test Submit dengan Detailed Logging**
+```
+POST /api/debug/submit
+Content-Type: application/json
+
+{
+  "title": "Test Module",
+  "subject": "Matematika",
+  "grade": "XI",
+  "category": "Ringkasan",
+  "contentUrl": "https://drive.google.com/file/d/test/view"
+}
+```
+Ini akan menunjukkan:
+- Setiap step dari proses submit
+- Di mana error terjadi
+- Detailed error messages
+
+### Cara Menggunakan Debug Endpoints
+
+**1. Buka browser dan test auth:**
+```
+http://localhost:3000/api/debug/auth
+```
+
+**2. Test database:**
+```
+http://localhost:3000/api/debug/db
+```
+
+**3. Test submit dengan curl:**
+```bash
+curl -X POST http://localhost:3000/api/debug/submit \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Test Module",
+    "subject": "Matematika",
+    "grade": "XI",
+    "category": "Ringkasan",
+    "contentUrl": "https://drive.google.com/file/d/test/view"
+  }'
+```
 
 ### Debugging Steps
 
