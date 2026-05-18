@@ -13,7 +13,8 @@ import {
   CheckCircle2, 
   AlertCircle, 
   Award,
-  BookMarked
+  BookMarked,
+  Lock
 } from "lucide-react";
 
 type PendingSubmission = {
@@ -37,7 +38,12 @@ type PendingQuestion = {
   submitterName: string;
 };
 
+const MODERATOR_PASSWORD = "nawa2024"; // Change this to your desired password
+
 export default function ModeratorDashboard() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const [activeTab, setActiveTab] = useState<"modules" | "questions">("modules");
   
   // Modules State
@@ -50,9 +56,31 @@ export default function ModeratorDashboard() {
   const [processingQuestionId, setProcessingQuestionId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchPendingSubmissions();
-    loadPendingQuestions();
+    // Check if already authenticated from sessionStorage
+    const isAuth = sessionStorage.getItem("moderator_authenticated") === "true";
+    setIsAuthenticated(isAuth);
+    
+    if (isAuth) {
+      fetchPendingSubmissions();
+      loadPendingQuestions();
+    }
   }, []);
+
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError("");
+    
+    if (passwordInput === MODERATOR_PASSWORD) {
+      setIsAuthenticated(true);
+      sessionStorage.setItem("moderator_authenticated", "true");
+      setPasswordInput("");
+      fetchPendingSubmissions();
+      loadPendingQuestions();
+    } else {
+      setPasswordError("Password salah. Silakan coba lagi.");
+      setPasswordInput("");
+    }
+  };
 
   const fetchPendingSubmissions = async () => {
     try {
@@ -134,6 +162,59 @@ export default function ModeratorDashboard() {
       alert("Soal berhasil ditolak dan dihapus dari antrean.");
     }
   };
+
+  // If not authenticated, show password form
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 shadow-lg">
+            {/* Lock Icon */}
+            <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center mx-auto mb-6 border border-indigo-100/40">
+              <Lock className="h-8 w-8" />
+            </div>
+
+            <h1 className="text-2xl font-extrabold text-zinc-900 dark:text-white text-center mb-2">
+              Ruang Moderator
+            </h1>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center mb-6">
+              Halaman ini dilindungi. Masukkan password untuk melanjutkan.
+            </p>
+
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="password" className="block text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-2">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  placeholder="Masukkan password"
+                  className="w-full px-4 py-2.5 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  autoFocus
+                />
+              </div>
+
+              {passwordError && (
+                <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg">
+                  <p className="text-sm text-red-600 dark:text-red-400 font-medium">{passwordError}</p>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-2.5 rounded-xl transition-colors shadow-md shadow-indigo-600/10"
+              >
+                Masuk
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 mt-4 text-left">
