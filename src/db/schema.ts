@@ -14,6 +14,11 @@ export const users = pgTable("users", {
   role: roleEnum("role").default("student").notNull(),
   points: integer("points").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  // Profile customisation (server-persisted so other users can see them)
+  avatarIndex: integer("avatar_index"),        // index into AVATAR_OPTIONS[]
+  photoUrl: text("photo_url"),                 // base64 data-URL (Top-10 perk)
+  bio: text("bio"),
+  motto: varchar("motto", { length: 200 }),
 });
 
 export const modules = pgTable("modules", {

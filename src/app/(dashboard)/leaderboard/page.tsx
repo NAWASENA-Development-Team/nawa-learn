@@ -17,6 +17,8 @@ export default async function LeaderboardPage() {
       id: true,
       name: true,
       points: true,
+      avatarIndex: true,
+      photoUrl: true,
     }
   });
 
@@ -38,6 +40,8 @@ export default async function LeaderboardPage() {
         id: true,
         name: true,
         points: true,
+        avatarIndex: true,
+        photoUrl: true,
       }
     });
 
@@ -53,6 +57,8 @@ export default async function LeaderboardPage() {
         name: dbUser.name,
         points: dbUser.points,
         rank: (higherPointsResult?.value || 0) + 1,
+        avatarIndex: dbUser.avatarIndex ?? null,
+        photoUrl: dbUser.photoUrl ?? null,
       };
     }
   }

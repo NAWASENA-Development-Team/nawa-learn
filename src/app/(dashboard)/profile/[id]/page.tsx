@@ -134,6 +134,10 @@ export default async function PublicProfilePage({ params }: PageProps) {
     createdAt: dbUser.createdAt.toISOString(),
     rank,
     totalStudents,
+    avatarIndex: dbUser.avatarIndex ?? null,
+    photoUrl: dbUser.photoUrl ?? null,
+    bio: dbUser.bio ?? null,
+    motto: dbUser.motto ?? null,
   };
 
   return (

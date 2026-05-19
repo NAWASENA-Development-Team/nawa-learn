@@ -1,7 +1,7 @@
 // components/leaderboard/LeaderboardClient.tsx
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { 
   Trophy, 
@@ -18,6 +18,8 @@ interface LeaderboardUser {
   id: string;
   name: string;
   points: number;
+  avatarIndex: number | null;
+  photoUrl: string | null;
 }
 
 interface LoggedInUserStats {
@@ -25,6 +27,8 @@ interface LoggedInUserStats {
   name: string;
   points: number;
   rank: number;
+  avatarIndex: number | null;
+  photoUrl: string | null;
 }
 
 interface LeaderboardClientProps {
@@ -41,31 +45,14 @@ export default function LeaderboardClient({
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<"all" | "top3" | "top10">("all");
 
-  // ── Avatar state: read from localStorage (same logic as profile page) ──
-  interface PodiumAvatarData { avatar: AvatarOption; photo: string | null; }
-  const [podiumAvatars, setPodiumAvatars] = useState<Record<string, PodiumAvatarData>>({});
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const result: Record<string, PodiumAvatarData> = {};
-    topUsers.slice(0, 3).forEach(u => {
-      let avatar: AvatarOption = AVATAR_OPTIONS[u.points % AVATAR_OPTIONS.length];
-      try {
-        const saved = localStorage.getItem(`nawa_avatar_${u.id}`);
-        if (saved) avatar = JSON.parse(saved) as AvatarOption;
-      } catch {}
-      const photo = localStorage.getItem(`nawa_photo_${u.id}`);
-      result[u.id] = { avatar, photo };
-    });
-    setPodiumAvatars(result);
-  }, [topUsers]);
-
-  // Get avatar data for a podium user (with localStorage-aware fallback)
-  const getPodiumAvatar = (user: LeaderboardUser): PodiumAvatarData =>
-    podiumAvatars[user.id] ?? {
-      avatar: AVATAR_OPTIONS[user.points % AVATAR_OPTIONS.length],
-      photo: null,
-    };
+  // Resolve avatar + photo for a user using DB data (no localStorage needed)
+  const getPodiumAvatar = (user: LeaderboardUser): { avatar: AvatarOption; photo: string | null } => {
+    const avatar =
+      user.avatarIndex !== null && user.avatarIndex !== undefined
+        ? (AVATAR_OPTIONS[user.avatarIndex] ?? AVATAR_OPTIONS[user.points % AVATAR_OPTIONS.length])
+        : AVATAR_OPTIONS[user.points % AVATAR_OPTIONS.length];
+    return { avatar, photo: user.photoUrl ?? null };
+  };
 
   // ── Helpers matching ProfileClient ──
 

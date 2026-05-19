@@ -45,6 +45,11 @@ interface UserProfile {
   createdAt: string; // ISO string
   rank: number;
   totalStudents: number;
+  // Profile customisation — stored in DB so other users can see them
+  avatarIndex: number | null;
+  photoUrl: string | null;
+  bio: string | null;
+  motto: string | null;
 }
 
 interface UserModule {
@@ -100,25 +105,35 @@ export default function ProfileClient({
   isOwnProfile 
 }: ProfileClientProps) {
   
+  // Fire-and-forget helper: persist profile changes to DB so other users can see them
+  const saveToDb = (data: Partial<{ avatarIndex: number; photoUrl: string | null; bio: string; motto: string }>) => {
+    fetch('/api/profile/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }).catch(err => console.error('Profile save to DB failed:', err));
+  };
+
   // Local States
   const [activeTab, setActiveTab] = useState<"summary" | "modules" | "questions" | "logs">("summary");
   const [selectedAvatar, setSelectedAvatar] = useState<AvatarOption>(() => {
+    // Priority: DB (avatarIndex) → localStorage JSON → points-based default
+    if (user.avatarIndex !== null && user.avatarIndex !== undefined) {
+      return AVATAR_OPTIONS[user.avatarIndex] ?? AVATAR_OPTIONS[user.points % AVATAR_OPTIONS.length];
+    }
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem(`nawa_avatar_${user.id}`);
       if (saved) {
-        try {
-          return JSON.parse(saved) as AvatarOption;
-        } catch {
-          return AVATAR_OPTIONS[user.points % AVATAR_OPTIONS.length];
-        }
+        try { return JSON.parse(saved) as AvatarOption; } catch {}
       }
     }
-    // Default avatar based on points
     return AVATAR_OPTIONS[user.points % AVATAR_OPTIONS.length];
   });
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   
   const [bio, setBio] = useState(() => {
+    // Priority: DB → localStorage → role-based default
+    if (user.bio) return user.bio;
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem(`nawa_bio_${user.id}`);
       if (saved) return saved;
@@ -128,6 +143,8 @@ export default function ProfileClient({
       : "Siswa aktif SMAN 2 Jonggol. Senang berbagi catatan dan belajar bersama teman-teman.";
   });
   const [motto, setMotto] = useState(() => {
+    // Priority: DB → localStorage → default
+    if (user.motto) return user.motto;
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem(`nawa_motto_${user.id}`);
       if (saved) return saved;
@@ -160,6 +177,8 @@ export default function ProfileClient({
   // Custom photo upload state (Top 10 perk)
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [customPhoto, setCustomPhoto] = useState<string | null>(() => {
+    // Priority: DB → localStorage
+    if (user.photoUrl) return user.photoUrl;
     if (typeof window !== "undefined") {
       return localStorage.getItem(`nawa_photo_${user.id}`);
     }
@@ -179,6 +198,7 @@ export default function ProfileClient({
       if (typeof window !== "undefined") {
         localStorage.setItem(`nawa_photo_${user.id}`, dataUrl);
       }
+      saveToDb({ photoUrl: dataUrl });
     };
     reader.readAsDataURL(file);
   };
@@ -187,6 +207,7 @@ export default function ProfileClient({
     if (typeof window !== "undefined") {
       localStorage.removeItem(`nawa_photo_${user.id}`);
     }
+    saveToDb({ photoUrl: null });
   };
 
   // === REWARD SYSTEM HELPERS ===
@@ -301,6 +322,8 @@ export default function ProfileClient({
     if (typeof window !== "undefined") {
       localStorage.setItem(`nawa_avatar_${user.id}`, JSON.stringify(avatar));
     }
+    const idx = AVATAR_OPTIONS.findIndex(a => a.svg === avatar.svg);
+    if (idx !== -1) saveToDb({ avatarIndex: idx });
   };
 
   // Generate random bio
@@ -318,6 +341,7 @@ export default function ProfileClient({
       localStorage.setItem(`nawa_bio_${user.id}`, editBio);
       localStorage.setItem(`nawa_motto_${user.id}`, editMotto);
     }
+    saveToDb({ bio: editBio, motto: editMotto });
   };
 
   // Title rank based on levels

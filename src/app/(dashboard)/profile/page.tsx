@@ -29,7 +29,14 @@ export default async function OwnProfilePage() {
     }
 
     const email = clerkUser.emailAddresses[0]?.emailAddress;
-    const name = `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || "Student";
+    const isGoogleAuth = clerkUser.externalAccounts?.some(
+      (acc) => acc.provider === "google" || acc.provider === "oauth_google",
+    );
+    const name = isGoogleAuth && (clerkUser.firstName || clerkUser.lastName)
+      ? `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim()
+      : clerkUser.username
+        || `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim()
+        || "Student";
 
     try {
       const [insertedUser] = await db.insert(users).values({
@@ -131,6 +138,10 @@ export default async function OwnProfilePage() {
     createdAt: dbUser.createdAt.toISOString(),
     rank,
     totalStudents,
+    avatarIndex: dbUser.avatarIndex ?? null,
+    photoUrl: dbUser.photoUrl ?? null,
+    bio: dbUser.bio ?? null,
+    motto: dbUser.motto ?? null,
   };
 
   return (
