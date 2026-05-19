@@ -1192,7 +1192,7 @@ export default function PracticeMode() {
                       <div className="text-left">
                         <p className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">Penalti Jawaban Salah</p>
                         <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">
-                          {wrongCount} salah × 2% total V-Point
+                          {wrongCount} salah × 10% dari reward dasar ({pointsAwarded} VP)
                         </p>
                       </div>
                     </div>

@@ -93,8 +93,9 @@ export async function POST(req: Request) {
     const pointsAwarded = getPointsForDifficulty(validated.difficulty);
     const wrongAnswers = validated.wrongAnswers ?? 0;
 
-    // Penalty: 10% of current total per wrong answer
-    const penaltyPoints = Math.floor(wrongAnswers * 0.10 * dbUser.points);
+    // Penalty: 10% of the quiz's base reward per wrong answer
+    // e.g. Mudah (15 VP): 1 salah → 10% × 15 = 1.5 → rounded to 2
+    const penaltyPoints = Math.round(wrongAnswers * 0.10 * pointsAwarded);
     const netChange = pointsAwarded - penaltyPoints;
 
     // Log reward (action = completionAction, used as uniqueness key too)
