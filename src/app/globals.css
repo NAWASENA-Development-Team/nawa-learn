@@ -7,10 +7,27 @@ html {
   scroll-behavior: smooth;
 }
 
-/* -- Smooth theme transitions -- */
+/* ── Smooth theme colour transitions (fallback for non-VT browsers) ── */
 *, *::before, *::after {
-  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.15s ease;
+  transition:
+    background-color 0.3s ease,
+    border-color     0.3s ease,
+    color            0.2s ease,
+    fill             0.2s ease,
+    stroke           0.2s ease,
+    box-shadow       0.2s ease;
 }
+
+/* ── View Transitions: theme-ripple from toggle button ── */
+/* Disable the default cross-fade; we run our own clip-path animation via JS */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+/* New page sits on top so the clip-path reveals it over the frozen old snapshot */
+::view-transition-new(root) { z-index: 9999; }
+::view-transition-old(root) { z-index: 1;    }
 
 /* -- Custom scrollbar -- */
 ::-webkit-scrollbar { width: 6px; }

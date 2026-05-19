@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { Show, SignInButton, UserButton } from "@clerk/nextjs";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   BookOpen,
@@ -16,33 +16,93 @@ import {
   Menu,
   Sun,
   Moon,
-  Sparkles,
 } from "lucide-react";
+import NawaIcon from "@/components/icons/NawaIcon";
+
+// Local helper: call document.startViewTransition safely without conflicting
+// with any existing TS lib declarations (which may differ in optionality).
+type VTResult = { ready: Promise<void>; finished: Promise<void> };
+function startVT(cb: () => void): VTResult | null {
+  const fn = (document as unknown as { startViewTransition?: (cb: () => void) => VTResult })
+    .startViewTransition;
+  if (!fn) { cb(); return null; }   // Fallback: run callback directly, skip animation
+  return fn.call(document, cb);
+}
 
 // ── Theme Toggle ──────────────────────────────────────────────────────────────
 function ThemeToggle({ compact = false }: { compact?: boolean }) {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+
   useEffect(() => setMounted(true), []);
   if (!mounted) return <div className={compact ? "h-8 w-8" : "h-9 w-9"} />;
 
   const isDark = resolvedTheme === "dark";
+
+  const handleToggle = () => {
+    const el = btnRef.current;
+    const nextTheme = isDark ? "light" : "dark";
+
+    // Grab the centre of the toggle button — this becomes the ripple origin
+    if (!el) { setTheme(nextTheme); return; }
+
+    const { left, top, width, height } = el.getBoundingClientRect();
+    const x = left + width / 2;
+    const y = top + height / 2;
+
+    // Distance to the farthest corner of the viewport
+    const endRadius = Math.hypot(
+      Math.max(x, window.innerWidth  - x),
+      Math.max(y, window.innerHeight - y)
+    );
+
+    // Swap theme inside the transition; next-themes synchronously toggles
+    // the `.dark` class on <html>, which is all Tailwind CSS needs.
+    // startVT returns null on Firefox / Safari — falls back to instant swap.
+    const vt = startVT(() => setTheme(nextTheme));
+    if (!vt) return; // no VT support — theme was already set via direct cb call
+
+    // Once both snapshots exist, drive the clip-path circle that expands
+    // from the button outward — closest elements change first.
+    vt.ready
+      .then(() => {
+        document.documentElement.animate(
+          {
+            clipPath: [
+              `circle(0px at ${x}px ${y}px)`,
+              `circle(${endRadius}px at ${x}px ${y}px)`,
+            ],
+          },
+          {
+            duration: 600,
+            easing: "ease-in-out",
+            pseudoElement: "::view-transition-new(root)",
+          }
+        );
+      })
+      .catch(() => {
+        // Transition may be skipped (e.g. reduced-motion); theme already set — no-op
+      });
+  };
+
   return (
     <button
-      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      onClick={() => setTheme(isDark ? "light" : "dark")}
-      className={`relative inline-flex items-center justify-center rounded-xl border transition-all cursor-pointer
+      ref={btnRef}
+      aria-label={isDark ? "Ganti ke mode terang" : "Ganti ke mode gelap"}
+      onClick={handleToggle}
+      className={`relative inline-flex items-center justify-center rounded-xl border cursor-pointer
         ${compact ? "h-8 w-8" : "h-9 w-9"}
         border-zinc-200 bg-white/80 text-zinc-500 hover:border-indigo-300 hover:text-indigo-600
         dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-400 dark:hover:border-indigo-500 dark:hover:text-indigo-400`}
     >
-      <Sun className={`absolute h-4 w-4 transition-all duration-300 ${isDark ? "scale-0 opacity-0 rotate-90" : "scale-100 opacity-100"}`} />
+      <Sun  className={`absolute h-4 w-4 transition-all duration-300 ${isDark ? "scale-0 opacity-0 rotate-90" : "scale-100 opacity-100"}`} />
       <Moon className={`absolute h-4 w-4 transition-all duration-300 ${isDark ? "scale-100 opacity-100" : "scale-0 opacity-0 -rotate-90"}`} />
     </button>
   );
 }
 
-// ── Nav items definition ───────────────────────────────────────────────────────
+// ── Nav items ─────────────────────────────────────────────────────────────────
 const NAV_ITEMS = [
   { href: "/modules",            label: "Modul",        icon: BookOpen },
   { href: "/questions/practice", label: "Latihan Soal", icon: ClipboardList },
@@ -59,7 +119,7 @@ export default function Navbar() {
   // Close mobile menu on route change
   useEffect(() => { setMobileOpen(false); }, [pathname]);
 
-  // Prevent body scroll when menu is open
+  // Prevent body scroll when drawer is open
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
@@ -76,14 +136,10 @@ export default function Navbar() {
           <div className="flex h-16 items-center justify-between gap-4">
 
             {/* Left: Logo */}
-            <Link
-              href="/"
-              className="flex items-center gap-2 shrink-0 group"
-            >
+            <Link href="/" className="flex items-center gap-2 shrink-0 group">
               <div className="flex items-center gap-1.5">
-                <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md shadow-indigo-500/30">
-                  <Sparkles className="h-3.5 w-3.5 text-white" />
-                </div>
+                {/* NAWA icon — inline SVG, no extra HTTP request */}
+                <NawaIcon className="h-8 w-8 rounded-lg shadow-md shadow-indigo-500/20 transition-transform duration-200 group-hover:scale-105" />
                 <span className="font-black text-lg tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400 bg-clip-text text-transparent">
                   NAWA-LEARN
                 </span>
@@ -142,10 +198,7 @@ export default function Navbar() {
                   aria-label={mobileOpen ? "Tutup menu" : "Buka menu"}
                   className="md:hidden inline-flex items-center justify-center h-9 w-9 rounded-xl border border-zinc-200 bg-white/80 text-zinc-600 transition-all hover:border-indigo-300 hover:text-indigo-600 dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-400 dark:hover:border-indigo-500 dark:hover:text-indigo-400 cursor-pointer"
                 >
-                  {mobileOpen
-                    ? <X className="h-4.5 w-4.5" />
-                    : <Menu className="h-4.5 w-4.5" />
-                  }
+                  {mobileOpen ? <X className="h-4.5 w-4.5" /> : <Menu className="h-4.5 w-4.5" />}
                 </button>
               </Show>
             </div>
@@ -174,7 +227,7 @@ export default function Navbar() {
           }`}
         >
           <div className="mx-3 mt-1 rounded-2xl border border-zinc-200/80 bg-white/95 shadow-xl shadow-zinc-900/10 backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-950/95 dark:shadow-zinc-950/50 overflow-hidden">
-            
+
             {/* Nav links */}
             <nav className="p-3 space-y-1">
               {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
@@ -191,9 +244,7 @@ export default function Navbar() {
                       }`}
                   >
                     <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${
-                      active
-                        ? "bg-indigo-100 dark:bg-indigo-500/20"
-                        : "bg-zinc-100 dark:bg-zinc-800"
+                      active ? "bg-indigo-100 dark:bg-indigo-500/20" : "bg-zinc-100 dark:bg-zinc-800"
                     }`}>
                       <Icon className={`h-4 w-4 ${active ? "text-indigo-600 dark:text-indigo-400" : "text-zinc-500 dark:text-zinc-400"}`} />
                     </div>
