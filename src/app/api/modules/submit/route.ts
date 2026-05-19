@@ -12,7 +12,10 @@ const submitSchema = z.object({
   subject: z.string().min(2),
   grade: z.string().min(1).optional().default("Umum"),
   category: z.string().min(2),
-  contentUrl: z.string().url(),
+  contentUrl: z.string().refine(
+    (val) => val.startsWith("data:") || /^https?:\/\/.+/.test(val),
+    { message: "URL tidak valid" }
+  ),
 });
 
 export async function POST(req: Request) {

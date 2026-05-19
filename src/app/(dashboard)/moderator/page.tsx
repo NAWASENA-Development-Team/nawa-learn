@@ -293,14 +293,29 @@ export default function ModeratorDashboard() {
                       </span>
                     </div>
                     <div className="pt-2">
-                      <a 
-                        href={sub.moduleUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center text-xs font-bold text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                      <button
+                        onClick={() => {
+                          const url = sub.moduleUrl;
+                          if (url.startsWith("data:")) {
+                            // Trigger download for real uploaded files stored as base64
+                            const ext = url.startsWith("data:image/png") ? ".png"
+                                      : url.startsWith("data:image/jpeg") ? ".jpg"
+                                      : url.startsWith("data:application/pdf") ? ".pdf"
+                                      : url.includes("wordprocessingml") ? ".docx"
+                                      : url.includes("presentationml") ? ".pptx"
+                                      : ".dat";
+                            const link = document.createElement("a");
+                            link.href = url;
+                            link.download = `modul-${sub.moduleTitle}${ext}`;
+                            link.click();
+                          } else {
+                            window.open(url, "_blank", "noopener,noreferrer");
+                          }
+                        }}
+                        className="inline-flex items-center text-xs font-bold text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
                       >
                         Buka Dokumen Modul ↗
-                      </a>
+                      </button>
                     </div>
                   </div>
 

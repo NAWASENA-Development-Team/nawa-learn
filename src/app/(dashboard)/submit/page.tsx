@@ -41,7 +41,10 @@ const moduleSchema = z.object({
   subject: z.string().min(2, "Mata pelajaran wajib dipilih atau diisi"),
   grade: z.string().min(1, "Kelas wajib dipilih"),
   category: z.string().min(2, "Kategori wajib dipilih"),
-  contentUrl: z.string().url("Wajib menyertakan URL file/dokumen yang valid"),
+  contentUrl: z.string().refine(
+    (val) => val.startsWith("data:") || /^https?:\/\/.+/.test(val),
+    { message: "Wajib menyertakan URL file/dokumen yang valid atau unggah berkas terlebih dahulu" }
+  ),
 });
 
 type FormData = z.infer<typeof moduleSchema>;
@@ -176,42 +179,51 @@ export default function SubmitModulePage() {
 
   const startLocalFileUpload = (file: File) => {
     setFileError(null);
-    const maxSizeBytes = 5 * 1024 * 1024; // 5MB Limit
+    const maxSizeBytes = 1 * 1024 * 1024; // 1MB — data URL disimpan langsung di DB
     if (file.size > maxSizeBytes) {
-      setFileError(`Ukuran file melebihi batas 5MB! (Ukuran berkas Anda: ${(file.size / 1024 / 1024).toFixed(2)}MB)`);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      setFileError(
+        `Ukuran file melebihi batas 1MB! (Berkas Anda: ${(file.size / 1024 / 1024).toFixed(2)}MB). ` +
+        `Untuk file lebih besar, unggah ke Google Drive terlebih dahulu lalu paste link-nya di tab Google Drive.`
+      );
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
     setLocalFile(file);
     setIsUploading(true);
-    setUploadProgress(0);
-    setUploadStateText("Membaca file...");
+    setUploadProgress(10);
+    setUploadStateText("Membaca berkas...");
 
-    // Simulate standard high-fidelity upload progress bar
-    const intervals = [
-      { progress: 20, text: "Memindai keamanan dokumen...", delay: 300 },
-      { progress: 50, text: "Mengompresi file ke cloud...", delay: 600 },
-      { progress: 85, text: "Mengunggah file ke NAWA-LEARN storage...", delay: 1100 },
-      { progress: 100, text: "Sinkronisasi metadata file selesai!", delay: 1500 }
-    ];
+    const reader = new FileReader();
 
-    intervals.forEach(({ progress, text, delay }) => {
-      setTimeout(() => {
-        setUploadProgress(progress);
-        setUploadStateText(text);
-        if (progress === 100) {
-          setIsUploading(false);
-          // Set to a mock direct upload url for validation
-          const fileSafeName = encodeURIComponent(file.name.replace(/\s+/g, "_"));
-          const mockUrl = `https://nawa-learn.storage/uploads/local-${Date.now()}-${fileSafeName}`;
-          setValue("contentUrl", mockUrl);
-          trigger("contentUrl");
-        }
-      }, delay);
-    });
+    reader.onprogress = (e) => {
+      if (e.lengthComputable) {
+        const pct = Math.round((e.loaded / e.total) * 80) + 10;
+        setUploadProgress(Math.min(90, pct));
+      }
+    };
+
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setUploadProgress(100);
+      setUploadStateText("Berkas berhasil dimuat!");
+      setIsUploading(false);
+      setValue("contentUrl", dataUrl);
+      trigger("contentUrl");
+    };
+
+    reader.onerror = () => {
+      setFileError("Gagal membaca berkas. Silakan coba lagi.");
+      setIsUploading(false);
+      setLocalFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+
+    // Animate initial steps while FileReader runs
+    setTimeout(() => { setUploadProgress(40); setUploadStateText("Memproses berkas..."); }, 200);
+    setTimeout(() => { setUploadProgress(70); setUploadStateText("Menyiapkan data..."); }, 500);
+
+    reader.readAsDataURL(file);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -309,8 +321,8 @@ export default function SubmitModulePage() {
 
   const usePhoto = () => {
     if (capturedImage) {
-      // Set to mock picture cloud url for form submission
-      setValue("contentUrl", `https://nawa-learn.storage/photos/cam-${Date.now()}.png`);
+      // Store actual base64 data URL — no fake URL
+      setValue("contentUrl", capturedImage);
       trigger("contentUrl");
     }
   };
