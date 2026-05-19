@@ -13,7 +13,6 @@ import {
   ArrowRight
 } from "lucide-react";
 import { AVATAR_OPTIONS, AvatarOption } from "@/lib/avatars";
-import { getLevel as computeLevel } from "@/lib/levelUtils";
 
 interface LeaderboardUser {
   id: string;
@@ -57,8 +56,10 @@ export default function LeaderboardClient({
 
   // ── Helpers matching ProfileClient ──
 
-  // Calculate Level (linear scaling — mirrors levelRewards.ts)
-  const getLevel = (points: number) => computeLevel(points);
+  // Level formula: linear scaling, L→L+1 costs L*50 XP
+  // threshold(L) = 25*L*(L-1)  →  inverse: floor((1+sqrt(1+4P/25))/2)
+  const getLevel = (points: number) =>
+    Math.floor((1 + Math.sqrt(1 + (4 * points) / 25)) / 2);
 
   // Gelar Belajar (matches ProfileClient.getPlayfulRankTitle by level)
   const getPlayfulTitle = (points: number) => {
