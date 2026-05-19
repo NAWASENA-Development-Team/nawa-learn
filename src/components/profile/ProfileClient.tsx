@@ -50,6 +50,8 @@ interface UserProfile {
   photoUrl: string | null;
   bio: string | null;
   motto: string | null;
+  // Level rewards
+  levelFrame: string | null;   // "wood" | "bronze" | "silver" | "gold" | null
 }
 
 interface UserModule {
@@ -238,6 +240,19 @@ export default function ProfileClient({
     return null;
   };
 
+  // Level frame styling based on user.levelFrame DB field
+  const getLevelFrameStyle = (frame: string | null) => {
+    if (!frame) return null;
+    const map: Record<string, { gradient: string; label: string }> = {
+      wood:   { gradient: "from-amber-800 via-yellow-700 to-amber-600",         label: "Frame Kayu"     },
+      bronze: { gradient: "from-amber-600 via-orange-500 to-amber-700",         label: "Frame Perunggu" },
+      silver: { gradient: "from-slate-400 via-zinc-300 to-slate-500",           label: "Frame Silver"   },
+      gold:   { gradient: "from-yellow-400 via-amber-300 to-yellow-600",        label: "Frame Emas"     },
+    };
+    return map[frame] ?? null;
+  };
+  const levelFrameStyle = getLevelFrameStyle(user.levelFrame);
+
   // Get specialty badge for Top 3 (based on contribution type)
   const getSpecialtyBadge = () => {
     if (user.rank > 3) return null;
@@ -398,6 +413,10 @@ export default function ProfileClient({
           
           {/* Playful Interactive Avatar Component */}
           <div className="relative shrink-0 group">
+            {/* Level frame (from level rewards system) — shown when no rank frame */}
+            {levelFrameStyle && !avatarFrame && (
+              <div className={`absolute -inset-2 rounded-[30px] bg-gradient-to-br ${levelFrameStyle.gradient} opacity-90`} title={levelFrameStyle.label} />
+            )}
             {/* Avatar frame ring for ranked players */}
             {avatarFrame && (
               <div className={`absolute -inset-1.5 rounded-[28px] bg-gradient-to-br ${
@@ -748,8 +767,10 @@ export default function ProfileClient({
 
               {/* Badge Categories */}
               <div className="space-y-8">
-                {(["contribution", "learning", "milestone", "social", "special"] as const).map((category) => {
+                {(["contribution", "learning", "milestone", "social", "special", "hidden"] as const).map((category) => {
+                  const isMod = user.role === "moderator" || user.role === "admin";
                   const categoryBadges = BADGES.filter(b => b.category === category);
+                  // For non-moderators, hidden category badges are always shown as locked mystery slots
                   const categoryUnlocked = unlockedBadges.filter(b => b.category === category);
                   
                   const categoryTitles: Record<typeof category, string> = {
@@ -757,7 +778,8 @@ export default function ProfileClient({
                     learning: "📚 Lencana Pembelajaran",
                     milestone: "🎯 Lencana Pencapaian",
                     social: "🤝 Lencana Sosial",
-                    special: "⭐ Lencana Khusus"
+                    special: "⭐ Lencana Khusus",
+                    hidden: "🔒 Lencana Tersembunyi",
                   };
 
                   return (
@@ -765,51 +787,68 @@ export default function ProfileClient({
                       <div className="mb-4 flex items-center justify-between">
                         <h3 className="text-base font-extrabold text-zinc-900 dark:text-white">
                           {categoryTitles[category]}
+                          {category === "hidden" && !isMod && (
+                            <span className="ml-2 text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-lg">Rahasia</span>
+                          )}
                         </h3>
                         <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
-                          {categoryUnlocked.length} / {categoryBadges.length}
+                          {isMod ? `${categoryUnlocked.length} / ${categoryBadges.length}` : (
+                            category === "hidden" ? `? / ${categoryBadges.length}` : `${categoryUnlocked.length} / ${categoryBadges.length}`
+                          )}
                         </span>
                       </div>
                       
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {categoryBadges.map((badge) => {
                           const isUnlocked = unlockedBadges.some(b => b.id === badge.id);
+                          // For hidden badges: non-moderators see a mystery slot
+                          const isHiddenFromUser = badge.hidden && !isMod;
+                          const showAsUnlocked = isUnlocked && (!badge.hidden || isMod);
+
                           return (
                             <div
                               key={badge.id}
                               className={`p-4 rounded-2xl border transition-all duration-300 relative group flex gap-3 items-start ${
-                                isUnlocked
+                                showAsUnlocked
                                   ? `bg-gradient-to-br ${getRarityColor(badge.rarity)} border-opacity-50 border-white shadow-md hover:shadow-lg`
-                                  : "bg-zinc-50/50 dark:bg-zinc-950/40 border-zinc-150 dark:border-zinc-850 opacity-60"
+                                  : isHiddenFromUser
+                                    ? "bg-zinc-900/80 dark:bg-zinc-950 border-zinc-700 dark:border-zinc-800"
+                                    : "bg-zinc-50/50 dark:bg-zinc-950/40 border-zinc-150 dark:border-zinc-850 opacity-60"
                               }`}
-                              title={badge.description}
+                              title={isHiddenFromUser ? "Lencana misterius — cara membukanya hanya diketahui moderator" : badge.description}
                             >
                               <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 flex-none ${
-                                isUnlocked
+                                showAsUnlocked
                                   ? "bg-white/20 text-white shadow-sm"
-                                  : "bg-zinc-200 dark:bg-zinc-800 text-zinc-400"
+                                  : isHiddenFromUser
+                                    ? "bg-zinc-800 text-zinc-600"
+                                    : "bg-zinc-200 dark:bg-zinc-800 text-zinc-400"
                               }`}>
-                                {isUnlocked ? badge.icon : <Lock className="h-5 w-5 text-zinc-400 dark:text-zinc-500" />}
+                                {showAsUnlocked ? badge.icon : isHiddenFromUser ? "❓" : <Lock className="h-5 w-5 text-zinc-400 dark:text-zinc-500" />}
                               </div>
 
                               <div className="text-left flex-1 min-w-0">
                                 <h4 className={`font-extrabold text-sm flex items-center gap-1.5 ${
-                                  isUnlocked
+                                  showAsUnlocked
                                     ? "text-white"
-                                    : "text-zinc-950 dark:text-zinc-100"
+                                    : isHiddenFromUser
+                                      ? "text-zinc-500 dark:text-zinc-600"
+                                      : "text-zinc-950 dark:text-zinc-100"
                                 }`}>
-                                  {badge.title}
-                                  {isUnlocked && <span className="text-xs">✓</span>}
+                                  {isHiddenFromUser ? "???" : badge.title}
+                                  {showAsUnlocked && <span className="text-xs">✓</span>}
                                 </h4>
                                 <p className={`text-[11px] mt-0.5 leading-snug ${
-                                  isUnlocked
+                                  showAsUnlocked
                                     ? "text-white/80"
-                                    : "text-zinc-500 dark:text-zinc-400"
+                                    : isHiddenFromUser
+                                      ? "text-zinc-600 dark:text-zinc-700"
+                                      : "text-zinc-500 dark:text-zinc-400"
                                 }`}>
-                                  {badge.description}
+                                  {isHiddenFromUser ? "Cara membuka lencana ini hanya diketahui moderator." : badge.description}
                                 </p>
                                 
-                                {!isUnlocked && (
+                                {!showAsUnlocked && !isHiddenFromUser && (
                                   <div className="mt-2 text-[10px] text-zinc-600 dark:text-zinc-400 font-semibold bg-zinc-100/60 dark:bg-zinc-800/60 px-2 py-0.5 rounded-lg inline-block">
                                     {badge.howToUnlock}
                                   </div>

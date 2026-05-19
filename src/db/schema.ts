@@ -19,6 +19,9 @@ export const users = pgTable("users", {
   photoUrl: text("photo_url"),                 // base64 data-URL (Top-10 perk)
   bio: text("bio"),
   motto: varchar("motto", { length: 200 }),
+  // Level reward tracking
+  claimedLevelRewards: jsonb("claimed_level_rewards").$type<number[]>(), // levels already rewarded
+  levelFrame: varchar("level_frame", { length: 20 }),                    // "wood"|"bronze"|"silver"|"gold"
 });
 
 export const modules = pgTable("modules", {
@@ -38,9 +41,11 @@ export const questions = pgTable("questions", {
   id: uuid("id").defaultRandom().primaryKey(),
   moduleId: uuid("module_id").references(() => modules.id), // Nullable for standalone questions
   questionText: text("question_text").notNull(),
-  options: jsonb("options").notNull(), // e.g., { a: "...", b: "...", c: "...", d: "...", e: "..." }
+  options: jsonb("options").notNull(), // e.g., { A: "...", B: "...", C: "...", D: "...", E: "..." }
   answerKey: varchar("answer_key", { length: 10 }).notNull(),
   difficulty: difficultyEnum("difficulty").notNull(),
+  subject: varchar("subject", { length: 100 }),   // e.g. "Matematika"
+  category: varchar("category", { length: 100 }),  // e.g. "UTBK", "Olimpiade"
   tags: text("tags").array(),
   uploaderId: uuid("uploader_id").references(() => users.id).notNull(),
   status: statusEnum("status").default("pending").notNull(),

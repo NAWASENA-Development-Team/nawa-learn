@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { modules, submissions, users, pointsLog } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
+import { checkAndGrantLevelRewards } from "@/lib/levelRewards";
 
 const approveSchema = z.object({
   submissionId: z.string().uuid(),
@@ -34,6 +35,15 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const { submissionId, moduleId, submitterId, feedback } = approveSchema.parse(body);
+
+    // Get submitter's current points for level reward check
+    const submitter = await db.query.users.findFirst({
+      where: eq(users.id, submitterId),
+      columns: { id: true, points: true },
+    });
+    if (!submitter) {
+      return NextResponse.json({ error: "Submitter not found" }, { status: 404 });
+    }
 
     // 2. Execute approval flow with sequential updates
     // Note: neon-http driver does not support transactions, use sequential queries
@@ -65,7 +75,16 @@ export async function POST(req: Request) {
       .set({ points: sql`${users.points} + ${MODULE_APPROVAL_POINTS}` })
       .where(eq(users.id, submitterId));
 
-    return NextResponse.json({ success: true, message: "Module approved and points awarded" }, { status: 200 });
+    const newPoints = submitter.points + MODULE_APPROVAL_POINTS;
+
+    // Check and grant level rewards
+    const levelRewards = await checkAndGrantLevelRewards(submitterId, submitter.points, newPoints);
+
+    return NextResponse.json({
+      success: true,
+      message: "Module approved and points awarded",
+      levelRewards: levelRewards.map(r => r.label),
+    }, { status: 200 });
 
   } catch (error) {
     console.error("Approval error:", error);

@@ -138,6 +138,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
     photoUrl: dbUser.photoUrl ?? null,
     bio: dbUser.bio ?? null,
     motto: dbUser.motto ?? null,
+    levelFrame: dbUser.levelFrame ?? null,
   };
 
   return (

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { users, pointsLog } from "@/db/schema";
 import { eq, sql, and } from "drizzle-orm";
+import { checkAndGrantLevelRewards } from "@/lib/levelRewards";
 
 const completeSchema = z.object({
   quizId: z.string().min(1),
@@ -123,6 +124,9 @@ export async function POST(req: Request) {
 
     const newTotal = Math.max(0, dbUser.points + netChange);
 
+    // Check and grant level rewards
+    const levelRewards = await checkAndGrantLevelRewards(dbUser.id, dbUser.points, newTotal);
+
     return NextResponse.json({
       success: true,
       pointsAwarded,
@@ -131,6 +135,7 @@ export async function POST(req: Request) {
       newTotal,
       difficulty: validated.difficulty,
       alreadyCompleted: false,
+      levelRewards: levelRewards.map(r => r.label),
     }, { status: 200 });
 
   } catch (error) {

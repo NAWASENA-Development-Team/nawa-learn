@@ -28,13 +28,16 @@ type PendingSubmission = {
 };
 
 type PendingQuestion = {
-  id: string;
-  text: string;
+  submissionId: string;
+  questionId: string;
+  questionText: string;
   options: Record<string, string>;
   answerKey: string;
-  subject: string;
-  category: string;
+  difficulty: "mudah" | "sedang" | "sulit";
+  subject: string | null;
+  category: string | null;
   submittedAt: string;
+  submitterId: string;
   submitterName: string;
 };
 
@@ -53,6 +56,7 @@ export default function ModeratorDashboard() {
 
   // Questions State
   const [pendingQuestions, setPendingQuestions] = useState<PendingQuestion[]>([]);
+  const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
   const [processingQuestionId, setProcessingQuestionId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -62,7 +66,7 @@ export default function ModeratorDashboard() {
     
     if (isAuth) {
       fetchPendingSubmissions();
-      loadPendingQuestions();
+      fetchPendingQuestions();
     }
   }, []);
 
@@ -75,7 +79,7 @@ export default function ModeratorDashboard() {
       sessionStorage.setItem("moderator_authenticated", "true");
       setPasswordInput("");
       fetchPendingSubmissions();
-      loadPendingQuestions();
+      fetchPendingQuestions();
     } else {
       setPasswordError("Password salah. Silakan coba lagi.");
       setPasswordInput("");
@@ -96,13 +100,19 @@ export default function ModeratorDashboard() {
     }
   };
 
-  // Load pending questions submitted by students from localStorage
-  const loadPendingQuestions = () => {
-    if (typeof window !== "undefined") {
-      const questionsData = localStorage.getItem("pending_questions");
-      if (questionsData) {
-        setPendingQuestions(JSON.parse(questionsData));
+  // Load pending questions from real DB API
+  const fetchPendingQuestions = async () => {
+    setIsLoadingQuestions(true);
+    try {
+      const res = await fetch("/api/questions/pending");
+      if (res.ok) {
+        const { data } = await res.json();
+        setPendingQuestions(data);
       }
+    } catch (error) {
+      console.error("Gagal mengambil data soal pending:", error);
+    } finally {
+      setIsLoadingQuestions(false);
     }
   };
 
@@ -135,31 +145,64 @@ export default function ModeratorDashboard() {
     }
   };
 
-  // Approve Question
-  const handleApproveQuestion = (q: PendingQuestion) => {
-    setProcessingQuestionId(q.id);
-    setTimeout(() => {
-      // 1. Remove from pending_questions
-      const filteredPending = pendingQuestions.filter((item) => item.id !== q.id);
-      localStorage.setItem("pending_questions", JSON.stringify(filteredPending));
-      setPendingQuestions(filteredPending);
+  // Approve Question via real DB API
+  const handleApproveQuestion = async (q: PendingQuestion) => {
+    setProcessingQuestionId(q.questionId);
+    try {
+      const res = await fetch("/api/questions/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          submissionId: q.submissionId,
+          questionId: q.questionId,
+          submitterId: q.submitterId,
+          feedback: "Soal disetujui. Terima kasih atas kontribusinya untuk SMAN 2 Jonggol!",
+        }),
+      });
 
-      // 2. Add to approved_questions
-      const approvedList = JSON.parse(localStorage.getItem("approved_questions") || "[]");
-      localStorage.setItem("approved_questions", JSON.stringify([...approvedList, q]));
-
-      alert(`Soal latihan "${q.subject}" berhasil disetujui! Soal ini sekarang aktif di Halaman Practice.`);
+      if (res.ok) {
+        const data = await res.json();
+        const rewardMsg = data.levelRewards?.length
+          ? `\n🎁 Level Reward: ${data.levelRewards.join(", ")}`
+          : "";
+        alert(`Soal "${q.subject || "Latihan"}" berhasil disetujui! +${data.pointsAwarded} V-Point diberikan ke kontributor.${rewardMsg}`);
+        setPendingQuestions((prev) => prev.filter((item) => item.questionId !== q.questionId));
+      } else {
+        alert("Gagal menyetujui soal. Coba lagi.");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Terjadi kesalahan jaringan.");
+    } finally {
       setProcessingQuestionId(null);
-    }, 800);
+    }
   };
 
-  // Reject Question
-  const handleRejectQuestion = (questionId: string) => {
-    if (confirm("Apakah Anda yakin ingin menolak soal latihan ini?")) {
-      const filteredPending = pendingQuestions.filter((item) => item.id !== questionId);
-      localStorage.setItem("pending_questions", JSON.stringify(filteredPending));
-      setPendingQuestions(filteredPending);
-      alert("Soal berhasil ditolak dan dihapus dari antrean.");
+  // Reject Question via real DB API
+  const handleRejectQuestion = async (q: PendingQuestion) => {
+    if (!confirm("Apakah Anda yakin ingin menolak soal latihan ini?")) return;
+    setProcessingQuestionId(q.questionId);
+    try {
+      const res = await fetch("/api/questions/reject", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          submissionId: q.submissionId,
+          questionId: q.questionId,
+          feedback: "Soal tidak memenuhi standar kualitas.",
+        }),
+      });
+
+      if (res.ok) {
+        setPendingQuestions((prev) => prev.filter((item) => item.questionId !== q.questionId));
+        alert("Soal berhasil ditolak.");
+      } else {
+        alert("Gagal menolak soal. Coba lagi.");
+      }
+    } catch {
+      alert("Terjadi kesalahan jaringan.");
+    } finally {
+      setProcessingQuestionId(null);
     }
   };
 
@@ -338,7 +381,9 @@ export default function ModeratorDashboard() {
       {/* 2. QUESTIONS SUBMISSION TAB */}
       {activeTab === "questions" && (
         <div className="space-y-4">
-          {pendingQuestions.length === 0 ? (
+          {isLoadingQuestions ? (
+            <div className="text-center py-10 text-zinc-500 text-sm">Memuat soal pending...</div>
+          ) : pendingQuestions.length === 0 ? (
             <div className="bg-white dark:bg-zinc-900 border border-zinc-200/60 dark:border-zinc-800 rounded-3xl p-10 text-center shadow-sm max-w-xl mx-auto">
               <div className="w-12 h-12 bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-purple-100/40">
                 <HelpCircle className="h-6 w-6" />
@@ -348,19 +393,33 @@ export default function ModeratorDashboard() {
             </div>
           ) : (
             <div className="grid gap-6">
-              {pendingQuestions.map((q) => (
+              {pendingQuestions.map((q) => {
+                const difficultyBadge = {
+                  mudah:  { label: "Mudah",  cls: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400", pts: "+15 VP" },
+                  sedang: { label: "Sedang", cls: "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400",   pts: "+25 VP" },
+                  sulit:  { label: "Sulit",  cls: "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400",           pts: "+40 VP" },
+                }[q.difficulty] ?? { label: q.difficulty, cls: "bg-zinc-100 text-zinc-600", pts: "" };
+
+                return (
                 <div 
-                  key={q.id} 
+                  key={q.questionId} 
                   className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm flex flex-col gap-5 text-left border-l-4 border-l-purple-500"
                 >
                   {/* Top Header Card */}
                   <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 dark:border-zinc-800/80 pb-3">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-extrabold px-2.5 py-0.5 rounded">
-                        {q.subject}
-                      </span>
-                      <span className="text-[10px] bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-extrabold px-2.5 py-0.5 rounded">
-                        {q.category}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {q.subject && (
+                        <span className="text-[10px] bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-extrabold px-2.5 py-0.5 rounded">
+                          {q.subject}
+                        </span>
+                      )}
+                      {q.category && (
+                        <span className="text-[10px] bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-extrabold px-2.5 py-0.5 rounded">
+                          {q.category}
+                        </span>
+                      )}
+                      <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded ${difficultyBadge.cls}`}>
+                        {difficultyBadge.label} · {difficultyBadge.pts}
                       </span>
                     </div>
 
@@ -372,12 +431,12 @@ export default function ModeratorDashboard() {
                   {/* Question text */}
                   <div>
                     <h4 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-150 leading-relaxed mb-3">
-                      {q.text}
+                      {q.questionText}
                     </h4>
 
                     {/* Options list */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-                      {Object.entries(q.options).map(([key, val]) => (
+                      {Object.entries(q.options as Record<string, string>).map(([key, val]) => (
                         <div 
                           key={key} 
                           className={`p-2.5 rounded-xl border text-xs flex gap-2 items-center ${
@@ -405,23 +464,25 @@ export default function ModeratorDashboard() {
 
                     <div className="flex gap-2">
                       <button
-                        onClick={() => handleRejectQuestion(q.id)}
-                        className="inline-flex h-9 items-center justify-center rounded-xl border border-red-200 dark:border-red-950 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400 font-bold px-4 text-xs transition-colors cursor-pointer"
+                        onClick={() => handleRejectQuestion(q)}
+                        disabled={processingQuestionId === q.questionId}
+                        className="inline-flex h-9 items-center justify-center rounded-xl border border-red-200 dark:border-red-950 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400 font-bold px-4 text-xs transition-colors cursor-pointer disabled:opacity-50"
                       >
                         <X className="h-4 w-4 mr-1" /> Tolak
                       </button>
 
                       <button
                         onClick={() => handleApproveQuestion(q)}
-                        disabled={processingQuestionId === q.id}
-                        className="inline-flex h-9 items-center justify-center rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-4 text-xs transition-all shadow-md shadow-emerald-600/10 cursor-pointer"
+                        disabled={processingQuestionId === q.questionId}
+                        className="inline-flex h-9 items-center justify-center rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-4 text-xs transition-all shadow-md shadow-emerald-600/10 cursor-pointer disabled:opacity-50"
                       >
-                        <Check className="h-4 w-4 mr-1" /> {processingQuestionId === q.id ? "Menyetujui..." : "Setujui & Publikasikan"}
+                        <Check className="h-4 w-4 mr-1" /> {processingQuestionId === q.questionId ? "Memproses..." : "Setujui & Publikasikan"}
                       </button>
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

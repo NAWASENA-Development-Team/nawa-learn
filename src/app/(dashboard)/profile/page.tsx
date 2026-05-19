@@ -161,6 +161,7 @@ export default async function OwnProfilePage() {
     photoUrl: dbUser.photoUrl ?? null,
     bio: dbUser.bio ?? null,
     motto: dbUser.motto ?? null,
+    levelFrame: dbUser.levelFrame ?? null,
   };
 
   return (

@@ -71,6 +71,7 @@ export default function SubmitModulePage() {
   const [questionText, setQuestionText] = useState("");
   const [questionSubject, setQuestionSubject] = useState("");
   const [questionCategory, setQuestionCategory] = useState("UTBK");
+  const [questionDifficulty, setQuestionDifficulty] = useState<"mudah" | "sedang" | "sulit">("sedang");
   const [optionA, setOptionA] = useState("");
   const [optionB, setOptionB] = useState("");
   const [optionC, setOptionC] = useState("");
@@ -382,37 +383,41 @@ export default function SubmitModulePage() {
     }
   };
 
-  const onSubmitQuestion = (e: React.FormEvent) => {
+  const onSubmitQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!questionText.trim() || !questionSubject.trim() || !optionA.trim() || !optionB.trim()) {
       alert("Mohon lengkapi teks pertanyaan, mata pelajaran, dan minimal opsi A & B!");
       return;
     }
-    
-    setIsQuestionSubmitting(true);
-    setTimeout(() => {
-      const newQuestion = {
-        id: "q-sub-" + Date.now(),
-        text: questionText,
-        options: {
-          A: optionA,
-          B: optionB,
-          C: optionC || "-",
-          D: optionD || "-",
-          E: optionE || "-"
-        },
-        answerKey: questionAnswerKey,
-        subject: questionSubject,
-        category: questionCategory,
-        submittedAt: new Date().toISOString(),
-        submitterName: "Ahmad Kontributor"
-      };
 
-      const existing = JSON.parse(localStorage.getItem("pending_questions") || "[]");
-      localStorage.setItem("pending_questions", JSON.stringify([...existing, newQuestion]));
+    setIsQuestionSubmitting(true);
+    try {
+      const res = await fetch("/api/questions/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          questionText: questionText.trim(),
+          options: {
+            A: optionA.trim(),
+            B: optionB.trim(),
+            C: optionC.trim() || "-",
+            D: optionD.trim() || "-",
+            E: optionE.trim() || "-",
+          },
+          answerKey: questionAnswerKey,
+          difficulty: questionDifficulty,
+          subject: questionSubject,
+          category: questionCategory,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || "Gagal mengirim soal. Coba lagi.");
+        return;
+      }
 
       setShowQuestionSuccess(true);
-      
       // Clear fields
       setQuestionText("");
       setOptionA("");
@@ -420,8 +425,12 @@ export default function SubmitModulePage() {
       setOptionC("");
       setOptionD("");
       setOptionE("");
+      setQuestionDifficulty("sedang");
+    } catch {
+      alert("Terjadi kesalahan jaringan. Pastikan Anda sudah login.");
+    } finally {
       setIsQuestionSubmitting(false);
-    }, 800);
+    }
   };
 
   const filteredDriveFiles = MOCK_DRIVE_FILES.filter(file => 
@@ -1200,6 +1209,38 @@ export default function SubmitModulePage() {
                     <option value="Reguler">Ujian Harian / Reguler</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Difficulty + Point Preview */}
+              <div>
+                <label className="block text-sm font-bold text-zinc-850 dark:text-zinc-200 mb-2">
+                  Tingkat Kesulitan Soal
+                </label>
+                <div className="grid grid-cols-3 gap-3">
+                  {([
+                    { key: "mudah",  label: "Mudah",  emoji: "🟢", pts: 15, color: "border-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400" },
+                    { key: "sedang", label: "Sedang", emoji: "🟡", pts: 25, color: "border-amber-400 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400" },
+                    { key: "sulit",  label: "Sulit",  emoji: "🔴", pts: 40, color: "border-red-400 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400" },
+                  ] as const).map((d) => (
+                    <button
+                      key={d.key}
+                      type="button"
+                      onClick={() => setQuestionDifficulty(d.key)}
+                      className={`flex flex-col items-center gap-1 py-3 px-2 rounded-xl border-2 transition-all duration-150 cursor-pointer ${
+                        questionDifficulty === d.key
+                          ? d.color + " shadow-md scale-[1.03]"
+                          : "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-500 hover:border-zinc-400"
+                      }`}
+                    >
+                      <span className="text-lg">{d.emoji}</span>
+                      <span className="text-xs font-bold">{d.label}</span>
+                      <span className="text-[10px] font-semibold opacity-80">+{d.pts} VP</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2 text-[11px] text-zinc-400 dark:text-zinc-500">
+                  Poin diberikan ke akunmu saat soal disetujui moderator. Soal lebih sulit = lebih banyak V-Point!
+                </p>
               </div>
 
               {/* Options A-E */}

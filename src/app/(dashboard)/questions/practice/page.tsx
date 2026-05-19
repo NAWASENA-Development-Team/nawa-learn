@@ -35,6 +35,8 @@ type Question = {
   answerKey: string;
   subject: string;
   category: string;
+  uploaderId?: string;   // DB UUID of creator (for anti-cheat)
+  isOwnQuestion?: boolean;
 };
 
 type Quiz = {
@@ -168,6 +170,8 @@ export default function PracticeMode() {
   const [penaltyPoints, setPenaltyPoints] = useState<number | null>(null);
   const [pointsLoading, setPointsLoading] = useState(false);
   const [alreadyCompleted, setAlreadyCompleted] = useState(false);
+  const [levelRewardsGranted, setLevelRewardsGranted] = useState<string[]>([]);
+  const [blockedByAntiCheat, setBlockedByAntiCheat] = useState(false);
 
   // ── Exam creation modal ────────────────────────────────────────────────────
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -183,25 +187,35 @@ export default function PracticeMode() {
   const [examDrafts, setExamDrafts] = useState<QuestionDraft[]>([]);
   const [examQIdx, setExamQIdx] = useState(0);
 
-  // ── Load quizzes + custom exams from localStorage ─────────────────────────
+  // ── Load quizzes: fetch approved questions from DB + custom exams from localStorage ─────
   useEffect(() => {
-    const approvedRaw = localStorage.getItem("approved_questions");
-    const approvedList = approvedRaw ? JSON.parse(approvedRaw) : [];
-
-    const parsedContributedQuestions = approvedList.map((q: any, index: number) => ({
-      id: q.id || `cq-${index}`,
-      text: q.text,
-      options: {
-        A: q.options?.A || "",
-        B: q.options?.B || "",
-        C: q.options?.C || "",
-        D: q.options?.D || "",
-        E: q.options?.E || "",
-      },
-      answerKey: q.answerKey,
-      subject: q.subject || "Matematika",
-      category: q.category || "UTBK"
-    }));
+    async function loadQuizzes() {
+      // Fetch approved questions from real DB API (includes isOwnQuestion flag)
+      let parsedContributedQuestions: Question[] = [];
+      try {
+        const res = await fetch("/api/questions/approved");
+        if (res.ok) {
+          const { data } = await res.json();
+          parsedContributedQuestions = (data as any[]).map((q, index) => ({
+            id: q.id || `cq-${index}`,
+            text: q.questionText,
+            options: {
+              A: (q.options as Record<string,string>)?.A || "",
+              B: (q.options as Record<string,string>)?.B || "",
+              C: (q.options as Record<string,string>)?.C || "",
+              D: (q.options as Record<string,string>)?.D || "",
+              E: (q.options as Record<string,string>)?.E || "",
+            },
+            answerKey: q.answerKey,
+            subject: q.subject || "Umum",
+            category: q.category || "UTBK",
+            uploaderId: q.uploaderId,
+            isOwnQuestion: q.isOwnQuestion ?? false,
+          }));
+        }
+      } catch {
+        // Silently fall back to empty if API unavailable
+      }
 
     const allQuizzes: Quiz[] = [
       {
@@ -295,7 +309,10 @@ export default function PracticeMode() {
       });
     });
 
-    setQuizzes(allQuizzes);
+      setQuizzes(allQuizzes);
+    }
+    loadQuizzes();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Timer ─────────────────────────────────────────────────────────────────
@@ -311,8 +328,22 @@ export default function PracticeMode() {
   }, [isStarted, timeLeft, isFinished]);
 
   const handleSelectQuiz = (quiz: Quiz) => {
+    // Anti-cheat: for the contributed quiz, filter out questions created by current user
+    let quizQuestions = quiz.questions;
+    let blocked = false;
+    if (quiz.id === "quiz_contributed") {
+      const available = quiz.questions.filter((q) => !q.isOwnQuestion);
+      if (available.length === 0 && quiz.questions.length > 0) {
+        // All questions were created by this user
+        blocked = true;
+      } else {
+        quizQuestions = available;
+      }
+    }
+
+    setBlockedByAntiCheat(blocked);
     setSelectedQuiz(quiz);
-    setQuestions(quiz.questions);
+    setQuestions(quizQuestions);
     setTimeLeft(quiz.durationMinutes * 60);
     setAnswers({});
     setCurrentIndex(0);
@@ -359,6 +390,7 @@ export default function PracticeMode() {
           setPointsAwarded(data.pointsAwarded);
           setPenaltyPoints(data.penaltyPoints ?? 0);
           setAlreadyCompleted(data.alreadyCompleted ?? false);
+          setLevelRewardsGranted(data.levelRewards ?? []);
         }
       })
       .catch((err) => console.error("Quiz point award error:", err))
@@ -375,6 +407,8 @@ export default function PracticeMode() {
     setPointsAwarded(null);
     setPenaltyPoints(null);
     setAlreadyCompleted(false);
+    setLevelRewardsGranted([]);
+    setBlockedByAntiCheat(false);
   };
 
   // ── Delete custom exam ────────────────────────────────────────────────────
@@ -1084,12 +1118,19 @@ export default function PracticeMode() {
               >
                 <ArrowLeft className="h-4 w-4 shrink-0" /> Menu Kuis
               </button>
-              <button
-                onClick={() => setIsStarted(true)}
-                className="flex-[2] inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-3.5 px-6 text-xs sm:text-sm transition-all shadow-md shadow-indigo-600/10 hover:shadow-lg hover:shadow-indigo-600/20 active:scale-[0.98] cursor-pointer border border-indigo-700"
-              >
-                Mulai Ujian Sekarang 🚀
-              </button>
+              {blockedByAntiCheat ? (
+                <div className="flex-[2] inline-flex items-center justify-center gap-2 rounded-xl bg-amber-100 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 font-bold py-3.5 px-6 text-xs sm:text-sm cursor-not-allowed">
+                  ⚠️ Semua soal ini Anda buat — tidak bisa mengikuti kuis sendiri
+                </div>
+              ) : (
+                <button
+                  onClick={() => setIsStarted(true)}
+                  disabled={questions.length === 0}
+                  className="flex-[2] inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold py-3.5 px-6 text-xs sm:text-sm transition-all shadow-md shadow-indigo-600/10 hover:shadow-lg hover:shadow-indigo-600/20 active:scale-[0.98] cursor-pointer border border-indigo-700"
+                >
+                  Mulai Ujian Sekarang 🚀
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1216,6 +1257,21 @@ export default function PracticeMode() {
               </>
             ) : null}
           </div>
+
+          {/* Level reward banner */}
+          {levelRewardsGranted.length > 0 && (
+            <div className="max-w-2xl mx-auto mb-4 p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/30 border border-amber-200 dark:border-amber-800 text-left flex gap-3 items-start animate-in fade-in duration-300">
+              <span className="text-2xl shrink-0">🎁</span>
+              <div>
+                <p className="font-extrabold text-amber-800 dark:text-amber-300 text-sm">Level Reward Baru!</p>
+                <ul className="mt-1 space-y-0.5">
+                  {levelRewardsGranted.map((r, i) => (
+                    <li key={i} className="text-xs text-amber-700 dark:text-amber-400 font-semibold">• {r}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
 
           {/* Feedback badge */}
           <div className="max-w-2xl mx-auto p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-sm flex gap-3 items-start text-left mb-10">

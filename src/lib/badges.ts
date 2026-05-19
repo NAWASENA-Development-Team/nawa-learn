@@ -6,10 +6,15 @@ export interface Badge {
   title: string;
   description: string;
   icon: string;
-  category: "contribution" | "learning" | "social" | "milestone" | "subject" | "special";
+  category: "contribution" | "learning" | "social" | "milestone" | "subject" | "special" | "hidden";
   rarity: "common" | "uncommon" | "rare" | "epic" | "legendary";
   unlockCondition: (data: BadgeUnlockData) => boolean;
   howToUnlock: string;
+  /**
+   * If true, the badge title/description/icon are hidden from non-moderators in the UI.
+   * Students see a "???" mystery badge; only moderators know the real unlock condition.
+   */
+  hidden?: boolean;
 }
 
 export interface BadgeUnlockData {
@@ -833,6 +838,98 @@ export const BADGES: Badge[] = [
     rarity: "legendary",
     unlockCondition: (data) => data.accountAgeInDays >= 365 && data.points >= 500,
     howToUnlock: "Aktif di platform selama 1 tahun dengan 500+ poin"
+  },
+
+  // ========== HIDDEN GOLD BADGES (8) — only moderators know the real conditions ==========
+  // These 8 badges are purely secretive; students see them as "???" mystery slots.
+  // Conditions below are deliberately vague in the exported interface.
+  {
+    id: "shadow_pioneer",
+    title: "Perintis Bayangan",
+    description: "Telah menemukan sesuatu yang tidak banyak orang ketahui.",
+    icon: "🌑",
+    category: "hidden",
+    rarity: "legendary",
+    hidden: true,
+    unlockCondition: (data) => data.points >= 3000,
+    howToUnlock: "???"
+  },
+  {
+    id: "midnight_scholar",
+    title: "Cendekiawan Tengah Malam",
+    description: "Diperoleh oleh mereka yang belajar tanpa henti.",
+    icon: "🌙",
+    category: "hidden",
+    rarity: "legendary",
+    hidden: true,
+    unlockCondition: (data) => data.approvedModules >= 50,
+    howToUnlock: "???"
+  },
+  {
+    id: "golden_quill",
+    title: "Pena Emas",
+    description: "Kontributor soal yang luar biasa.",
+    icon: "✍️",
+    category: "hidden",
+    rarity: "legendary",
+    hidden: true,
+    unlockCondition: (data) => data.approvedQuestions >= 50,
+    howToUnlock: "???"
+  },
+  {
+    id: "silent_guardian",
+    title: "Penjaga Senyap",
+    description: "Melindungi komunitas dari balik layar.",
+    icon: "🛡️",
+    category: "hidden",
+    rarity: "legendary",
+    hidden: true,
+    unlockCondition: (data) => data.points >= 1500 && data.accountAgeInDays >= 200,
+    howToUnlock: "???"
+  },
+  {
+    id: "obsidian_mind",
+    title: "Pikiran Obsidian",
+    description: "Mencapai kedalaman pengetahuan yang sangat langka.",
+    icon: "🔮",
+    category: "hidden",
+    rarity: "legendary",
+    hidden: true,
+    unlockCondition: (data) => data.points >= 5000,
+    howToUnlock: "???"
+  },
+  {
+    id: "diamond_sage",
+    title: "Bijak Berlian",
+    description: "Hanya dimiliki oleh siswa paling berdedikasi.",
+    icon: "💠",
+    category: "hidden",
+    rarity: "legendary",
+    hidden: true,
+    unlockCondition: (data) => data.totalDownloads >= 2000,
+    howToUnlock: "???"
+  },
+  {
+    id: "oracle_of_nawa",
+    title: "Peramal Nawa",
+    description: "Sosok legendaris yang membentuk masa depan platform.",
+    icon: "🌟",
+    category: "hidden",
+    rarity: "legendary",
+    hidden: true,
+    unlockCondition: (data) => data.approvedModules >= 30 && data.approvedQuestions >= 30 && data.totalDownloads >= 500,
+    howToUnlock: "???"
+  },
+  {
+    id: "eternal_flame",
+    title: "Api Abadi",
+    description: "Semangatnya tidak pernah padam.",
+    icon: "🔥",
+    category: "hidden",
+    rarity: "legendary",
+    hidden: true,
+    unlockCondition: (data) => data.accountAgeInDays >= 365 && data.points >= 2000 && data.approvedModules >= 20,
+    howToUnlock: "???"
   },
 ];
 
