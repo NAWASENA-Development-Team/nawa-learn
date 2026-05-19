@@ -1,23 +1,18 @@
 // components/leaderboard/LeaderboardClient.tsx
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { 
   Trophy, 
   Search, 
   Sparkles, 
   Award, 
-  ArrowUpRight, 
   Crown, 
-  Zap, 
-  Star,
-  Users,
-  Target,
   Smile,
-  BookOpen,
   ArrowRight
 } from "lucide-react";
+import { AVATAR_OPTIONS, AvatarOption } from "@/lib/avatars";
 
 interface LeaderboardUser {
   id: string;
@@ -46,34 +41,88 @@ export default function LeaderboardClient({
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<"all" | "top3" | "top10">("all");
 
-  // Calculate Level helper
-  const getLevel = (points: number) => {
-    return Math.floor(points / 50) + 1;
-  };
+  // ── Avatar state: read from localStorage (same logic as profile page) ──
+  interface PodiumAvatarData { avatar: AvatarOption; photo: string | null; }
+  const [podiumAvatars, setPodiumAvatars] = useState<Record<string, PodiumAvatarData>>({});
 
-  // Gelar Belajar based on points
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const result: Record<string, PodiumAvatarData> = {};
+    topUsers.slice(0, 3).forEach(u => {
+      let avatar: AvatarOption = AVATAR_OPTIONS[u.points % AVATAR_OPTIONS.length];
+      try {
+        const saved = localStorage.getItem(`nawa_avatar_${u.id}`);
+        if (saved) avatar = JSON.parse(saved) as AvatarOption;
+      } catch {}
+      const photo = localStorage.getItem(`nawa_photo_${u.id}`);
+      result[u.id] = { avatar, photo };
+    });
+    setPodiumAvatars(result);
+  }, [topUsers]);
+
+  // Get avatar data for a podium user (with localStorage-aware fallback)
+  const getPodiumAvatar = (user: LeaderboardUser): PodiumAvatarData =>
+    podiumAvatars[user.id] ?? {
+      avatar: AVATAR_OPTIONS[user.points % AVATAR_OPTIONS.length],
+      photo: null,
+    };
+
+  // ── Helpers matching ProfileClient ──
+
+  // Calculate Level
+  const getLevel = (points: number) => Math.floor(points / 50) + 1;
+
+  // Gelar Belajar (matches ProfileClient.getPlayfulRankTitle by level)
   const getPlayfulTitle = (points: number) => {
     const lvl = getLevel(points);
-    if (points >= 300) return "Cendekiawan Agung 🔮";
-    if (points >= 150) return "Ksatria Buku Senior 🧙‍♂️";
-    if (points >= 100) return "Pakar Modul Sekolah 🧠";
-    if (points >= 50) return "Prajurit Belajar Aktif ⚡";
-    if (points > 0) return "Pemula Berbakat 🌱";
-    return "Siswa Penjelajah 🧭";
+    if (lvl >= 10) return "Cendekiawan Agung 🔮";
+    if (lvl >= 7)  return "Ksatria Buku Senior 🧙‍♂️";
+    if (lvl >= 4)  return "Pakar Modul Sekolah 🧠";
+    if (lvl >= 2)  return "Prajurit Belajar Aktif ⚡";
+    return "Pemula Berbakat 🌱";
+  };
+
+  // Specialty badge for Top-3 podium (points-based, matches ProfileClient.getSpecialtyBadge fallback chain)
+  const getPodiumBadge = (points: number) => {
+    if (points >= 300) return {
+      name: "Grand Archivist", desc: "Penjaga Arsip Agung NAWA-LEARN",
+      gradient: "from-indigo-500 via-purple-500 to-pink-500",
+      border: "border-purple-400/50", icon: "📚", glow: "shadow-purple-500/40",
+    };
+    if (points >= 200) return {
+      name: "Scholar Prime", desc: "Kontributor Multi-Disiplin",
+      gradient: "from-emerald-400 via-teal-500 to-cyan-500",
+      border: "border-teal-400/50", icon: "🧠", glow: "shadow-teal-500/40",
+    };
+    if (points >= 100) return {
+      name: "Quiz Dominator", desc: "Maestro Latihan CBT SMAN 2",
+      gradient: "from-cyan-500 via-blue-500 to-indigo-600",
+      border: "border-cyan-400/50", icon: "🎯", glow: "shadow-cyan-500/40",
+    };
+    return {
+      name: "Legend Scholar", desc: "Legenda Platform NAWA-LEARN",
+      gradient: "from-amber-400 via-yellow-400 to-amber-300",
+      border: "border-amber-400/50", icon: "👑", glow: "shadow-amber-400/40",
+    };
+  };
+
+  // Avatar frame gradient (matches ProfileClient.getAvatarFrame gradient)
+  const podiumFrameGradient = (rank: number) => {
+    if (rank === 1) return "from-amber-400 via-yellow-300 to-amber-500";
+    if (rank <= 3)  return "from-amber-300 via-orange-200 to-amber-400";
+    return "from-purple-400 via-fuchsia-400 to-purple-600";
   };
 
   // Podium Data (Top 3)
   const podiumData = useMemo(() => {
-    const first = topUsers[0] || null;
+    const first  = topUsers[0] || null;
     const second = topUsers[1] || null;
-    const third = topUsers[2] || null;
+    const third  = topUsers[2] || null;
     return { first, second, third };
   }, [topUsers]);
 
   // Rest of the list (Rank 4+)
-  const restUsers = useMemo(() => {
-    return topUsers.slice(3);
-  }, [topUsers]);
+  const restUsers = useMemo(() => topUsers.slice(3), [topUsers]);
 
   // Filter & Search Logic
   const filteredUsers = useMemo(() => {
@@ -160,118 +209,185 @@ export default function LeaderboardClient({
         </div>
       </div>
 
-      {/* 🏆 3D-Like Juara Podium Section (Top 3 Showcase) */}
+      {/* 🏆 Juara Podium — Profile-style avatar + frame + specialty badge */}
       {topUsers.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end max-w-4xl mx-auto mb-12 px-4 sm:px-0">
-          
-          {/* 🥈 SECOND PLACE (Left) */}
-          {podiumData.second && (
-            <div className="order-2 md:order-1 flex flex-col items-center">
-              <div className="relative group flex flex-col items-center mb-2">
-                {/* Visual medal crown placeholder */}
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-zinc-200 to-slate-400 border-2 border-white flex items-center justify-center text-2xl shadow-lg relative z-10 transition-transform group-hover:scale-105">
-                  🥈
-                </div>
-                <div className="absolute -top-3 bg-zinc-200 text-zinc-800 font-black text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider shadow">
-                  RANK 2
-                </div>
-              </div>
-              
-              <div className="w-full text-center p-5 bg-gradient-to-b from-zinc-50 to-zinc-150/40 dark:from-zinc-900 dark:to-zinc-950/20 border-2 border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-md flex flex-col items-center min-h-[160px] relative overflow-hidden group hover:border-zinc-350 dark:hover:border-zinc-700 transition-all duration-300">
-                <h3 className="font-extrabold text-zinc-900 dark:text-zinc-100 mt-2 truncate max-w-[160px] hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                  <Link href={`/profile/${podiumData.second.id}`}>
-                    {podiumData.second.name}
-                  </Link>
-                </h3>
-                <span className="text-[10px] text-zinc-500 font-bold bg-zinc-200/50 dark:bg-zinc-850 px-2 py-0.5 rounded-full mt-1.5">
-                  Level {getLevel(podiumData.second.points)}
-                </span>
-                <p className="text-[9px] text-zinc-400 font-medium mt-1 truncate max-w-[160px]">
-                  {getPlayfulTitle(podiumData.second.points)}
-                </p>
-                <div className="mt-4 text-center">
-                  <span className="text-2xl font-black text-zinc-700 dark:text-zinc-300">
-                    {podiumData.second.points}
-                  </span>
-                  <span className="text-[9px] uppercase tracking-wider font-bold text-zinc-400 block mt-0.5">POIN</span>
-                </div>
-              </div>
-            </div>
-          )}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 items-end max-w-4xl mx-auto mb-14 px-2 sm:px-0">
 
-          {/* 🥇 FIRST PLACE (Center - Highest) */}
-          {podiumData.first && (
-            <div className="order-1 md:order-2 flex flex-col items-center group">
-              {/* Crown Floating Animation */}
-              <div className="animate-bounce duration-1000 mb-1">
-                <Crown className="h-8 w-8 text-yellow-500 drop-shadow" />
-              </div>
-              
-              <div className="relative flex flex-col items-center mb-2">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 border-4 border-yellow-300 flex items-center justify-center text-3xl shadow-xl relative z-10 scale-110 transition-transform group-hover:scale-115 shadow-yellow-500/20">
-                  🥇
-                </div>
-                <div className="absolute -top-3 bg-gradient-to-r from-amber-500 to-yellow-500 text-white font-black text-[9px] px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow border border-yellow-400 animate-pulse">
-                  CHAMPION
-                </div>
-              </div>
-              
-              <div className="w-full text-center p-6 bg-gradient-to-b from-amber-500/10 via-yellow-400/5 to-transparent border-3 border-yellow-400/80 dark:border-yellow-500/40 rounded-3xl shadow-xl flex flex-col items-center min-h-[190px] relative overflow-hidden group hover:border-yellow-400 transition-all duration-300">
-                <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-500/[0.05] rounded-full blur-xl pointer-events-none" />
-                <h3 className="font-black text-lg text-zinc-900 dark:text-white mt-2 truncate max-w-[200px] hover:text-amber-600 dark:hover:text-amber-500 transition-colors">
-                  <Link href={`/profile/${podiumData.first.id}`}>
-                    {podiumData.first.name}
-                  </Link>
-                </h3>
-                <span className="text-[10px] text-amber-900 dark:text-amber-400 font-bold bg-amber-100 dark:bg-amber-950/60 px-2.5 py-0.5 rounded-full mt-1.5 border border-amber-200/50 dark:border-amber-900/50">
-                  Level {getLevel(podiumData.first.points)}
-                </span>
-                <p className="text-[9px] text-amber-800 dark:text-amber-500 font-bold mt-1.5">
-                  {getPlayfulTitle(podiumData.first.points)}
-                </p>
-                <div className="mt-4 text-center">
-                  <span className="text-3xl font-black text-amber-600 dark:text-yellow-500">
-                    {podiumData.first.points}
-                  </span>
-                  <span className="text-[9px] uppercase tracking-wider font-extrabold text-amber-500 block mt-0.5">POIN</span>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* ─── Helper: renders a single podium card ─────────────────── */}
+          {/* Rank 2 — Left */}
+          {podiumData.second && (() => {
+            const u = podiumData.second;
+            const { avatar, photo } = getPodiumAvatar(u);
+            const badge = getPodiumBadge(u.points);
+            const lvl = getLevel(u.points);
+            return (
+              <div className="order-2 md:order-1 flex flex-col items-center gap-3 group">
 
-          {/* 🥉 THIRD PLACE (Right) */}
-          {podiumData.third && (
-            <div className="order-3 flex flex-col items-center">
-              <div className="relative group flex flex-col items-center mb-2">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-amber-600 border-2 border-white flex items-center justify-center text-2xl shadow-lg relative z-10 transition-transform group-hover:scale-105">
-                  🥉
+                {/* Floating rank label */}
+                <div className="bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-widest shadow">
+                  🥈 Peringkat 2
                 </div>
-                <div className="absolute -top-3 bg-orange-200 text-orange-950 font-black text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider shadow">
-                  RANK 3
+
+                {/* Avatar with spinning profile frame */}
+                <div className="relative">
+                  <div className={`absolute -inset-2 rounded-[26px] bg-gradient-to-br ${podiumFrameGradient(2)} opacity-80`} />
+                  <div className={`relative w-24 h-24 rounded-[22px] bg-gradient-to-br ${avatar.bg} flex items-center justify-center shadow-xl border-4 border-white/10 overflow-hidden shadow-zinc-400/30 z-10 transition-transform duration-300 group-hover:scale-105`}>
+                    {photo
+                      ? <img src={photo} alt="foto" className="w-full h-full object-cover" />
+                      : (avatar as any).svg
+                        ? <img src={(avatar as any).svg} alt={avatar.label} className="w-full h-full object-cover" />
+                        : <span className="text-5xl">{(avatar as any).emoji}</span>
+                    }
+                  </div>
                 </div>
-              </div>
-              
-              <div className="w-full text-center p-5 bg-gradient-to-b from-orange-50 to-orange-100/20 dark:from-zinc-900 dark:to-zinc-950/20 border-2 border-orange-200/60 dark:border-zinc-800 rounded-3xl shadow-md flex flex-col items-center min-h-[160px] relative overflow-hidden group hover:border-orange-350 dark:hover:border-zinc-700 transition-all duration-300">
-                <h3 className="font-extrabold text-zinc-900 dark:text-zinc-100 mt-2 truncate max-w-[160px] hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                  <Link href={`/profile/${podiumData.third.id}`}>
-                    {podiumData.third.name}
-                  </Link>
-                </h3>
-                <span className="text-[10px] text-zinc-500 font-bold bg-zinc-200/50 dark:bg-zinc-850 px-2 py-0.5 rounded-full mt-1.5">
-                  Level {getLevel(podiumData.third.points)}
-                </span>
-                <p className="text-[9px] text-zinc-400 font-medium mt-1 truncate max-w-[160px]">
-                  {getPlayfulTitle(podiumData.third.points)}
-                </p>
-                <div className="mt-4 text-center">
-                  <span className="text-2xl font-black text-orange-700 dark:text-orange-450">
-                    {podiumData.third.points}
+
+                {/* Specialty badge pill */}
+                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r ${badge.gradient} border ${badge.border} shadow-lg ${badge.glow}`}>
+                  <span className="text-sm">{badge.icon}</span>
+                  <div className="text-left">
+                    <p className="text-[10px] font-black text-white tracking-wider uppercase leading-none">{badge.name}</p>
+                    <p className="text-[8px] text-white/70 font-semibold leading-none mt-0.5">{badge.desc}</p>
+                  </div>
+                </div>
+
+                {/* Info card */}
+                <div className="w-full text-center p-5 bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-900 dark:to-zinc-950 border-2 border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-md flex flex-col items-center relative overflow-hidden hover:border-zinc-350 dark:hover:border-zinc-700 transition-all duration-300">
+                  <div className="absolute top-0 right-0 w-12 h-12 bg-zinc-400/5 rounded-full blur-xl pointer-events-none" />
+                  <h3 className="font-extrabold text-zinc-900 dark:text-zinc-100 truncate max-w-[160px] hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                    <Link href={`/profile/${u.id}`}>{u.name}</Link>
+                  </h3>
+                  <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-bold bg-zinc-100 dark:bg-zinc-800 px-2.5 py-0.5 rounded-full mt-1.5 border border-zinc-200 dark:border-zinc-700">
+                    Level {lvl}
                   </span>
-                  <span className="text-[9px] uppercase tracking-wider font-bold text-orange-400 block mt-0.5">POIN</span>
+                  <p className="text-[9px] text-zinc-400 font-medium mt-1">{getPlayfulTitle(u.points)}</p>
+                  <div className="mt-3">
+                    <span className="text-2xl font-black text-zinc-700 dark:text-zinc-300">{u.points}</span>
+                    <span className="text-[9px] uppercase tracking-wider font-bold text-zinc-400 block mt-0.5">V-POINT</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
+
+          {/* ─── Rank 1 — Center (tallest, golden) ─────────────────────── */}
+          {podiumData.first && (() => {
+            const u = podiumData.first;
+            const { avatar, photo } = getPodiumAvatar(u);
+            const badge = getPodiumBadge(u.points);
+            const lvl = getLevel(u.points);
+            return (
+              <div className="order-1 md:order-2 flex flex-col items-center gap-3 group">
+
+                {/* Floating crown */}
+                <div className="animate-bounce mb-0">
+                  <Crown className="h-8 w-8 text-yellow-500 drop-shadow-lg" />
+                </div>
+
+                {/* Rank label */}
+                <div className="bg-gradient-to-r from-amber-500 to-yellow-500 text-zinc-900 font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-widest shadow border border-yellow-400 animate-pulse">
+                  👑 CHAMPION
+                </div>
+
+                {/* Avatar with spinning amber frame */}
+                <div className="relative">
+                  <div className={`absolute -inset-2.5 rounded-[30px] bg-gradient-to-br ${podiumFrameGradient(1)} animate-[spin_4s_linear_infinite] opacity-80`} />
+                  <div className={`relative w-28 h-28 rounded-[24px] bg-gradient-to-br ${avatar.bg} flex items-center justify-center shadow-2xl border-4 border-white/10 overflow-hidden shadow-yellow-500/30 z-10 transition-transform duration-300 group-hover:scale-105`}>
+                    {photo
+                      ? <img src={photo} alt="foto" className="w-full h-full object-cover" />
+                      : (avatar as any).svg
+                        ? <img src={(avatar as any).svg} alt={avatar.label} className="w-full h-full object-cover" />
+                        : <span className="text-6xl">{(avatar as any).emoji}</span>
+                    }
+                  </div>
+                  {/* #1 badge overlaid */}
+                  <div className="absolute -top-2 -right-2 bg-gradient-to-r from-amber-500 to-yellow-400 text-zinc-900 font-black text-[9px] px-2 py-0.5 rounded-lg border border-yellow-300 shadow-md z-20 uppercase tracking-wide">
+                    #1 🏆
+                  </div>
+                </div>
+
+                {/* Specialty badge */}
+                <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r ${badge.gradient} border ${badge.border} shadow-lg ${badge.glow}`}>
+                  <span className="text-base">{badge.icon}</span>
+                  <div className="text-left">
+                    <p className="text-[10px] font-black text-white tracking-wider uppercase leading-none">{badge.name}</p>
+                    <p className="text-[8px] text-white/70 font-semibold leading-none mt-0.5">{badge.desc}</p>
+                  </div>
+                  <Sparkles className="h-3 w-3 text-white/80 animate-pulse" />
+                </div>
+
+                {/* Info card */}
+                <div className="w-full text-center p-6 bg-gradient-to-b from-amber-500/10 via-yellow-400/5 to-transparent border-2 border-yellow-400/80 dark:border-yellow-500/40 rounded-3xl shadow-xl flex flex-col items-center relative overflow-hidden hover:border-yellow-400 transition-all duration-300">
+                  <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-500/[0.05] rounded-full blur-xl pointer-events-none" />
+                  <h3 className="font-black text-lg text-zinc-900 dark:text-white truncate max-w-[200px] hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
+                    <Link href={`/profile/${u.id}`}>{u.name}</Link>
+                  </h3>
+                  <span className="text-[10px] text-amber-900 dark:text-amber-400 font-bold bg-amber-100 dark:bg-amber-950/60 px-2.5 py-0.5 rounded-full mt-1.5 border border-amber-200/50 dark:border-amber-900/50">
+                    Level {lvl}
+                  </span>
+                  <p className="text-[9px] text-amber-800 dark:text-amber-500 font-bold mt-1">{getPlayfulTitle(u.points)}</p>
+                  <div className="mt-3">
+                    <span className="text-3xl font-black text-amber-600 dark:text-yellow-500">{u.points}</span>
+                    <span className="text-[9px] uppercase tracking-wider font-extrabold text-amber-500 block mt-0.5">V-POINT</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* ─── Rank 3 — Right ─────────────────────────────────────────── */}
+          {podiumData.third && (() => {
+            const u = podiumData.third;
+            const { avatar, photo } = getPodiumAvatar(u);
+            const badge = getPodiumBadge(u.points);
+            const lvl = getLevel(u.points);
+            return (
+              <div className="order-3 flex flex-col items-center gap-3 group">
+
+                {/* Floating rank label */}
+                <div className="bg-orange-100 dark:bg-orange-950/50 text-orange-900 dark:text-orange-300 font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-widest shadow border border-orange-200/60 dark:border-orange-900/40">
+                  🥉 Peringkat 3
+                </div>
+
+                {/* Avatar with amber frame */}
+                <div className="relative">
+                  <div className={`absolute -inset-2 rounded-[26px] bg-gradient-to-br ${podiumFrameGradient(3)} opacity-80`} />
+                  <div className={`relative w-24 h-24 rounded-[22px] bg-gradient-to-br ${avatar.bg} flex items-center justify-center shadow-xl border-4 border-white/10 overflow-hidden shadow-orange-400/20 z-10 transition-transform duration-300 group-hover:scale-105`}>
+                    {photo
+                      ? <img src={photo} alt="foto" className="w-full h-full object-cover" />
+                      : (avatar as any).svg
+                        ? <img src={(avatar as any).svg} alt={avatar.label} className="w-full h-full object-cover" />
+                        : <span className="text-5xl">{(avatar as any).emoji}</span>
+                    }
+                  </div>
+                </div>
+
+                {/* Specialty badge */}
+                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r ${badge.gradient} border ${badge.border} shadow-lg ${badge.glow}`}>
+                  <span className="text-sm">{badge.icon}</span>
+                  <div className="text-left">
+                    <p className="text-[10px] font-black text-white tracking-wider uppercase leading-none">{badge.name}</p>
+                    <p className="text-[8px] text-white/70 font-semibold leading-none mt-0.5">{badge.desc}</p>
+                  </div>
+                </div>
+
+                {/* Info card */}
+                <div className="w-full text-center p-5 bg-gradient-to-b from-orange-50 to-white dark:from-zinc-900 dark:to-zinc-950 border-2 border-orange-200/60 dark:border-zinc-800 rounded-3xl shadow-md flex flex-col items-center relative overflow-hidden hover:border-orange-300 dark:hover:border-zinc-700 transition-all duration-300">
+                  <div className="absolute top-0 right-0 w-12 h-12 bg-orange-400/5 rounded-full blur-xl pointer-events-none" />
+                  <h3 className="font-extrabold text-zinc-900 dark:text-zinc-100 truncate max-w-[160px] hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                    <Link href={`/profile/${u.id}`}>{u.name}</Link>
+                  </h3>
+                  <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-bold bg-zinc-100 dark:bg-zinc-800 px-2.5 py-0.5 rounded-full mt-1.5 border border-zinc-200 dark:border-zinc-700">
+                    Level {lvl}
+                  </span>
+                  <p className="text-[9px] text-zinc-400 font-medium mt-1">{getPlayfulTitle(u.points)}</p>
+                  <div className="mt-3">
+                    <span className="text-2xl font-black text-orange-700 dark:text-orange-400">{u.points}</span>
+                    <span className="text-[9px] uppercase tracking-wider font-bold text-orange-400 block mt-0.5">V-POINT</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
         </div>
       )}
