@@ -496,18 +496,37 @@ export default function SubmitModulePage() {
               <Sparkles className="h-5 w-5 text-amber-500 absolute -top-1 -right-1 animate-pulse" />
             </div>
 
-            <h3 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2">Soal Kuis Terkirim!</h3>
-            <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mb-6 leading-relaxed">
-              Hebat! Soal kuis latihan mandiri mata pelajaran <span className="font-bold text-indigo-600 dark:text-indigo-400">"{questionSubject}"</span> telah diajukan untuk dimoderasi oleh Pengurus OSIS.
+            <h3 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2">Soal Berhasil Dikirim!</h3>
+            <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mb-4 leading-relaxed">
+              Soal mata pelajaran <span className="font-bold text-indigo-600 dark:text-indigo-400">"{questionSubject}"</span> telah masuk ke antrean moderator.
             </p>
 
-            <div className="bg-zinc-50 dark:bg-zinc-950 p-4 border border-zinc-200 dark:border-zinc-800 rounded-xl mb-6 flex items-center justify-between text-left">
+            {/* Pending notice */}
+            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-xl p-3 mb-4 text-left flex gap-2.5 items-start">
+              <span className="text-amber-500 text-base shrink-0">⏳</span>
               <div>
-                <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium">POTENSI HADIAH</p>
-                <p className="text-base font-bold text-indigo-650 dark:text-indigo-400">+20 V-Point</p>
+                <p className="text-[11px] font-extrabold text-amber-800 dark:text-amber-300">Menunggu persetujuan moderator</p>
+                <p className="text-[10px] text-amber-700 dark:text-amber-400 mt-0.5 leading-snug">
+                  V-Point baru diberikan <strong>setelah moderator menyetujui</strong> soal ini. Soal sudah muncul di tab <em>Soal Saya</em> pada profilmu dengan status <em>verifikasi</em>.
+                </p>
               </div>
-              <div className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 text-xs px-2.5 py-1 rounded-md font-semibold border border-indigo-100 dark:border-indigo-950">
-                Peringkat Kuis
+            </div>
+
+            <div className="bg-zinc-50 dark:bg-zinc-950 p-3 border border-zinc-200 dark:border-zinc-800 rounded-xl mb-5 flex items-center justify-between text-left">
+              <div>
+                <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium">POIN SAAT DISETUJUI</p>
+                <p className="text-base font-bold text-indigo-650 dark:text-indigo-400">
+                  {questionDifficulty === "mudah" ? "+15" : questionDifficulty === "sulit" ? "+40" : "+25"} V-Point
+                </p>
+              </div>
+              <div className={`text-xs px-2.5 py-1 rounded-md font-semibold border ${
+                questionDifficulty === "mudah"
+                  ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900"
+                  : questionDifficulty === "sulit"
+                    ? "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 border-red-200 dark:border-red-900"
+                    : "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-900"
+              }`}>
+                {questionDifficulty === "mudah" ? "Mudah" : questionDifficulty === "sulit" ? "Sulit" : "Sedang"}
               </div>
             </div>
 
@@ -520,10 +539,10 @@ export default function SubmitModulePage() {
                 Buat Soal Lain
               </button>
               <a 
-                href="/moderator" 
+                href="/profile"
                 className="w-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 font-semibold py-2.5 rounded-xl transition-all duration-200 inline-flex items-center justify-center gap-1.5 text-xs border border-zinc-200 dark:border-zinc-750"
               >
-                Pantau Antrean Moderator <ArrowRight className="h-4 w-4" />
+                Lihat di Profilku <ArrowRight className="h-4 w-4" />
               </a>
             </div>
           </div>

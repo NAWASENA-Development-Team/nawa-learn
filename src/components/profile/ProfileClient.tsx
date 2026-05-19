@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { BADGES, Badge, getDaysOldAccount, getRarityColor, getRarityTextColor, BadgeUnlockData } from "@/lib/badges";
 import { AVATAR_OPTIONS, AvatarOption } from "@/lib/avatars";
+import { getLevel, getLevelThreshold } from "@/lib/levelRewards";
 
 interface UserProfile {
   id: string;
@@ -118,6 +119,8 @@ export default function ProfileClient({
 
   // Local States
   const [activeTab, setActiveTab] = useState<"summary" | "modules" | "questions" | "logs">("summary");
+  const [expandedBadgeCategories, setExpandedBadgeCategories] = useState<Set<string>>(new Set());
+  const BADGES_PER_CATEGORY_DEFAULT = 5;
   const [selectedAvatar, setSelectedAvatar] = useState<AvatarOption>(() => {
     // Priority: DB (avatarIndex) → localStorage JSON → points-based default
     if (user.avatarIndex !== null && user.avatarIndex !== undefined) {
@@ -162,12 +165,14 @@ export default function ProfileClient({
   // Certificate state
   const [showCertificate, setShowCertificate] = useState(false);
   
-  // Leveling Calculations
-  const POINTS_PER_LEVEL = 50;
-  const level = Math.floor(user.points / POINTS_PER_LEVEL) + 1;
-  const pointsInCurrentLevel = user.points % POINTS_PER_LEVEL;
-  const progressPercent = Math.min(100, Math.floor((pointsInCurrentLevel / POINTS_PER_LEVEL) * 100));
-  const pointsNeededForNext = POINTS_PER_LEVEL - pointsInCurrentLevel;
+  // Leveling Calculations (linear scaling: L→L+1 costs L*50 XP)
+  const level = getLevel(user.points);
+  const currentThreshold = getLevelThreshold(level);
+  const nextThreshold = getLevelThreshold(level + 1);
+  const pointsInCurrentLevel = user.points - currentThreshold;
+  const pointsForThisLevel = nextThreshold - currentThreshold; // = level * 50
+  const progressPercent = Math.min(100, Math.floor((pointsInCurrentLevel / pointsForThisLevel) * 100));
+  const pointsNeededForNext = pointsForThisLevel - pointsInCurrentLevel;
 
   // Animated progress bar: starts at 0, animates to actual value after mount
   const [displayProgress, setDisplayProgress] = useState(0);
@@ -772,6 +777,12 @@ export default function ProfileClient({
                   const categoryBadges = BADGES.filter(b => b.category === category);
                   // For non-moderators, hidden category badges are always shown as locked mystery slots
                   const categoryUnlocked = unlockedBadges.filter(b => b.category === category);
+
+                  const isExpanded = expandedBadgeCategories.has(category);
+                  const visibleBadges = isExpanded
+                    ? categoryBadges
+                    : categoryBadges.slice(0, BADGES_PER_CATEGORY_DEFAULT);
+                  const hiddenCount = Math.max(0, categoryBadges.length - BADGES_PER_CATEGORY_DEFAULT);
                   
                   const categoryTitles: Record<typeof category, string> = {
                     contribution: "🎁 Lencana Kontribusi",
@@ -799,7 +810,7 @@ export default function ProfileClient({
                       </div>
                       
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {categoryBadges.map((badge) => {
+                        {visibleBadges.map((badge) => {
                           const isUnlocked = unlockedBadges.some(b => b.id === badge.id);
                           // For hidden badges: non-moderators see a mystery slot
                           const isHiddenFromUser = badge.hidden && !isMod;
@@ -858,6 +869,27 @@ export default function ProfileClient({
                           );
                         })}
                       </div>
+
+                      {/* Show all / collapse button */}
+                      {hiddenCount > 0 && (
+                        <button
+                          onClick={() => {
+                            setExpandedBadgeCategories(prev => {
+                              const next = new Set(prev);
+                              if (next.has(category)) next.delete(category);
+                              else next.add(category);
+                              return next;
+                            });
+                          }}
+                          className="mt-4 w-full py-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          {isExpanded ? (
+                            <>Sembunyikan ↑</>
+                          ) : (
+                            <>Tampilkan Semua +{hiddenCount} lencana lainnya ↓</>
+                          )}
+                        </button>
+                      )}
                     </div>
                   );
                 })}
