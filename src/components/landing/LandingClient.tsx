@@ -166,7 +166,7 @@ export default function LandingClient({ stats, sampleModules }: LandingClientPro
           </div>
 
           {/* Headline — strong contrast in both modes */}
-          <h1 className="max-w-4xl text-5xl font-black leading-[1.1] tracking-tight text-zinc-900 dark:text-white md:text-7xl">
+          <h1 className="max-w-4xl text-3xl sm:text-5xl font-black leading-[1.1] tracking-tight text-zinc-900 dark:text-white md:text-7xl">
             Belajar Lebih Cerdas,{" "}
             <span className="bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 bg-clip-text text-transparent dark:from-indigo-400 dark:via-violet-400 dark:to-purple-400">
               Bersama-sama.

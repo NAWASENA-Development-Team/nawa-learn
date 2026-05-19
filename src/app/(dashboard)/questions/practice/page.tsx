@@ -675,7 +675,7 @@ export default function PracticeMode() {
         {/* ── Create Exam Modal ── */}
         {showCreateModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-2xl w-full max-w-xl max-h-[92vh] overflow-y-auto">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-2xl w-full max-w-[95vw] sm:max-w-xl max-h-[92vh] overflow-y-auto">
 
               {/* Modal header */}
               <div className="flex items-center justify-between p-6 border-b border-zinc-100 dark:border-zinc-800">
@@ -726,7 +726,7 @@ export default function PracticeMode() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">Kategori</label>
                       <select
@@ -750,7 +750,7 @@ export default function PracticeMode() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">Durasi (menit)</label>
                       <input

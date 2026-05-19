@@ -277,7 +277,7 @@ export default function ModeratorDashboard() {
               {submissions.map((sub) => (
                 <div 
                   key={sub.submissionId} 
-                  className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between shadow-sm transition-all hover:border-indigo-300 gap-6"
+                  className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between shadow-sm transition-all hover:border-indigo-300 gap-3 sm:gap-6"
                 >
                   <div className="space-y-1.5 flex-1 text-left">
                     <h3 className="text-base font-extrabold text-zinc-900 dark:text-white leading-snug">
@@ -319,7 +319,7 @@ export default function ModeratorDashboard() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 shrink-0 border-t md:border-t-0 border-zinc-100 dark:border-zinc-800 pt-4 md:pt-0">
+                  <div className="flex items-center gap-3 shrink-0 border-t sm:border-t-0 border-zinc-100 dark:border-zinc-800 pt-4 sm:pt-0">
                     <button 
                       onClick={() => handleApproveModule(sub)}
                       disabled={processingModuleId === sub.submissionId}

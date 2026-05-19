@@ -747,11 +747,11 @@ export default function SubmitModulePage() {
               </div>
 
               {/* Step 2: Subject, Grade & Category Selector */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {/* Kelas Selector */}
                 <div>
                   <label className="block text-sm font-bold text-zinc-850 dark:text-zinc-200 mb-1.5">Pilih Kelas</label>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {["X", "XI", "XII", "Umum"].map((gradeOption) => (
                       <button
                         key={gradeOption}
@@ -904,8 +904,8 @@ export default function SubmitModulePage() {
                             <div className="h-10 w-10 rounded-lg bg-indigo-100 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                               <FileText className="h-5 w-5" />
                             </div>
-                            <div>
-                              <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 truncate max-w-[200px] sm:max-w-xs">{localFile.name}</p>
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 truncate">{localFile.name}</p>
                               {isUploading ? (
                                 <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-0.5 flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> {uploadProgress}% - {uploadStateText}</p>
                               ) : (
@@ -1169,7 +1169,7 @@ export default function SubmitModulePage() {
               </div>
 
               {/* Subject & Category Selector */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {/* Subject Selector */}
                 <div>
                   <label className="block text-sm font-bold text-zinc-855 dark:text-zinc-200 mb-1.5">Mata Pelajaran</label>

@@ -389,7 +389,7 @@ export default function ModulesLibraryClient({ initialModules }: ModulesLibraryC
                     </div>
                     <div className="text-left">
                       <p className="text-[9px] text-zinc-400 dark:text-zinc-500 font-medium">KONTRIBUTOR</p>
-                      <p className="text-[10px] font-bold text-zinc-700 dark:text-zinc-300 truncate max-w-[90px] sm:max-w-[120px]">
+                      <p className="text-[10px] font-bold text-zinc-700 dark:text-zinc-300 truncate max-w-[120px]">
                         {mod.uploaderName || "Anonim"}
                       </p>
                     </div>
