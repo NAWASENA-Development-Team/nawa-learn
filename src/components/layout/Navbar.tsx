@@ -155,14 +155,17 @@ export default function Navbar() {
                     <Link
                       key={href}
                       href={href}
-                      className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200
+                      className={`relative flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-150 active:scale-[0.96]
                         ${active
-                          ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400"
+                          ? "bg-indigo-50 text-indigo-700 shadow-[0_1px_0_0_theme(colors.indigo.200)] dark:bg-indigo-500/10 dark:text-indigo-400 dark:shadow-[0_1px_0_0_theme(colors.indigo.800)]"
                           : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800/60 dark:hover:text-zinc-200"
                         }`}
                     >
-                      <Icon className={`h-3.5 w-3.5 ${active ? "text-indigo-600 dark:text-indigo-400" : ""}`} />
+                      <Icon className={`h-3.5 w-3.5 shrink-0 ${active ? "text-indigo-600 dark:text-indigo-400" : ""}`} />
                       {label}
+                      {active && (
+                        <span className="absolute -bottom-[11px] inset-x-3 h-px rounded-full bg-indigo-400/60 dark:bg-indigo-500/50" aria-hidden />
+                      )}
                     </Link>
                   );
                 })}
@@ -212,45 +215,51 @@ export default function Navbar() {
 
       {/* ── Mobile drawer (signed-in) ─────────────────────────────────── */}
       <Show when="signed-in">
-        {/* Backdrop */}
-        {mobileOpen && (
-          <div
-            className="fixed inset-0 z-40 bg-zinc-950/40 backdrop-blur-sm md:hidden"
-            onClick={() => setMobileOpen(false)}
-          />
-        )}
-
-        {/* Slide-down panel */}
+        {/* Backdrop — fades independently of the panel */}
         <div
-          className={`fixed top-16 left-0 right-0 z-40 md:hidden transition-all duration-300 ease-in-out ${
-            mobileOpen ? "translate-y-0 opacity-100 pointer-events-auto" : "-translate-y-3 opacity-0 pointer-events-none"
+          onClick={() => setMobileOpen(false)}
+          className={`fixed inset-0 z-40 bg-zinc-950/40 backdrop-blur-sm md:hidden transition-opacity duration-200 ${
+            mobileOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          }`}
+        />
+
+        {/* Scale-from-top panel — feels like it unfolds from the navbar */}
+        <div
+          className={`fixed top-16 left-0 right-0 z-50 md:hidden transition-[transform,opacity] duration-200 ease-out origin-top ${
+            mobileOpen
+              ? "scale-y-100 opacity-100 pointer-events-auto"
+              : "scale-y-95 opacity-0 pointer-events-none"
           }`}
         >
           <div className="mx-3 mt-1 rounded-2xl border border-zinc-200/80 bg-white/95 shadow-xl shadow-zinc-900/10 backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-950/95 dark:shadow-zinc-950/50 overflow-hidden">
 
             {/* Nav links */}
             <nav className="p-3 space-y-1">
-              {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+              {NAV_ITEMS.map(({ href, label, icon: Icon }, idx) => {
                 const active = isActive(href);
                 return (
                   <Link
                     key={href}
                     href={href}
                     onClick={() => setMobileOpen(false)}
-                    className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200
+                    style={{ transitionDelay: mobileOpen ? `${idx * 25}ms` : "0ms" }}
+                    className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-150 active:scale-[0.97]
                       ${active
                         ? "bg-gradient-to-r from-indigo-50 to-violet-50 text-indigo-700 border border-indigo-100 dark:from-indigo-500/10 dark:to-violet-500/10 dark:text-indigo-400 dark:border-indigo-900/50"
                         : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/60 dark:hover:text-zinc-100"
                       }`}
                   >
-                    <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${
+                    <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-colors duration-150 ${
                       active ? "bg-indigo-100 dark:bg-indigo-500/20" : "bg-zinc-100 dark:bg-zinc-800"
                     }`}>
                       <Icon className={`h-4 w-4 ${active ? "text-indigo-600 dark:text-indigo-400" : "text-zinc-500 dark:text-zinc-400"}`} />
                     </div>
                     <span>{label}</span>
                     {active && (
-                      <span className="ml-auto text-[10px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-wider">Aktif</span>
+                      <span className="ml-auto flex items-center gap-1 text-[10px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-wider">
+                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400 animate-pulse" />
+                        Aktif
+                      </span>
                     )}
                   </Link>
                 );

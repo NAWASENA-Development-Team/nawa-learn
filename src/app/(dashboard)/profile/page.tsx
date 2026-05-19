@@ -63,6 +63,25 @@ export default async function OwnProfilePage() {
     }
   }
 
+  // 2b. Re-sync name from Clerk if it's still the generic "Student" placeholder.
+  //     This silently fixes existing accounts created before the webhook was updated.
+  if (dbUser!.name === 'Student') {
+    const clerkUserFresh = await currentUser();
+    if (clerkUserFresh) {
+      const isGoogle = clerkUserFresh.externalAccounts?.some(
+        (acc) => acc.provider === 'google' || acc.provider === 'oauth_google',
+      );
+      const freshName = (isGoogle && (clerkUserFresh.firstName || clerkUserFresh.lastName))
+        ? `${clerkUserFresh.firstName || ''} ${clerkUserFresh.lastName || ''}`.trim()
+        : clerkUserFresh.username
+          || `${clerkUserFresh.firstName || ''} ${clerkUserFresh.lastName || ''}`.trim();
+      if (freshName && freshName !== 'Student') {
+        await db.update(users).set({ name: freshName }).where(eq(users.clerkId, clerkId));
+        dbUser = { ...dbUser!, name: freshName };
+      }
+    }
+  }
+
   // 3. Retrieve rank statistics
   // Calculate user rank by checking how many users have more points
   const [higherPointsResult] = await db
