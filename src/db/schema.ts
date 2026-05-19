@@ -79,6 +79,20 @@ export const bookmarks = pgTable("bookmarks", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const customExams = pgTable("custom_exams", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  subject: varchar("subject", { length: 100 }).notNull(),
+  category: varchar("category", { length: 100 }).notNull(),
+  difficulty: varchar("difficulty", { length: 50 }).notNull(),
+  durationMinutes: integer("duration_minutes").notNull().default(30),
+  // Array of { id, text, options: {A,B,C,D,E}, answerKey }
+  questions: jsonb("questions").notNull(),
+  authorId: uuid("author_id").references(() => users.id),
+  authorName: varchar("author_name", { length: 255 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const pointsLog = pgTable("points_log", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id").references(() => users.id).notNull(),

@@ -290,24 +290,38 @@ export default function PracticeMode() {
       });
     }
 
-    // Load student-created custom exams
-    const customRaw = localStorage.getItem("custom_exams");
-    const customList: any[] = customRaw ? JSON.parse(customRaw) : [];
-    customList.forEach((exam) => {
-      allQuizzes.push({
-        id: exam.id,
-        title: exam.title,
-        subject: exam.subject,
-        category: exam.category,
-        questionsCount: exam.questions.length,
-        durationMinutes: exam.durationMinutes,
-        difficulty: exam.difficulty,
-        icon: "✏️",
-        questions: exam.questions,
-        author: exam.author || "Siswa SMAN 2",
-        isCustom: true,
-      });
-    });
+    // Load student-created custom exams from DB (visible to all users)
+    try {
+      const examRes = await fetch("/api/exams/list");
+      if (examRes.ok) {
+        const { data: dbExams } = await examRes.json();
+        (dbExams as any[]).forEach((exam) => {
+          const qs: Question[] = (exam.questions as any[]).map((q: any) => ({
+            id: q.id,
+            text: q.text,
+            options: q.options,
+            answerKey: q.answerKey,
+            subject: exam.subject,
+            category: exam.category,
+          }));
+          allQuizzes.push({
+            id: exam.id,
+            title: exam.title,
+            subject: exam.subject,
+            category: exam.category,
+            questionsCount: qs.length,
+            durationMinutes: exam.durationMinutes,
+            difficulty: exam.difficulty,
+            icon: "✏️",
+            questions: qs,
+            author: exam.authorName || "Siswa SMAN 2",
+            isCustom: true,
+          });
+        });
+      }
+    } catch {
+      // Silently ignore if API unavailable
+    }
 
       setQuizzes(allQuizzes);
     }
@@ -411,14 +425,10 @@ export default function PracticeMode() {
     setBlockedByAntiCheat(false);
   };
 
-  // ── Delete custom exam ────────────────────────────────────────────────────
+  // ── Delete custom exam (removes from UI only; DB deletion not exposed)  ───
   const handleDeleteCustomExam = (examId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm("Hapus ujian buatan ini?")) return;
-    const customRaw = localStorage.getItem("custom_exams");
-    const list: any[] = customRaw ? JSON.parse(customRaw) : [];
-    const updated = list.filter((ex) => ex.id !== examId);
-    localStorage.setItem("custom_exams", JSON.stringify(updated));
+    if (!confirm("Sembunyikan ujian ini dari daftar lokal? (Ujian tetap tersimpan di server dan masih terlihat pengguna lain)")) return;
     setQuizzes((prev) => prev.filter((q) => q.id !== examId));
   };
 
@@ -460,7 +470,9 @@ export default function PracticeMode() {
     });
   };
 
-  const handleSaveExam = () => {
+  const [isSavingExam, setIsSavingExam] = useState(false);
+
+  const handleSaveExam = async () => {
     // Validate all questions have text + all options + answer key
     const incomplete = examDrafts.findIndex(
       (d) => !d.text.trim() || !d.optA.trim() || !d.optB.trim() || !d.optC.trim() || !d.optD.trim() || !d.optE.trim()
@@ -471,9 +483,9 @@ export default function PracticeMode() {
       return;
     }
 
-    const newId = `custom_${Date.now()}`;
-    const questions: Question[] = examDrafts.map((d, i) => ({
-      id: `${newId}_q${i}`,
+    const tempId = `custom_${Date.now()}`;
+    const builtQuestions: Question[] = examDrafts.map((d, i) => ({
+      id: `${tempId}_q${i}`,
       text: d.text,
       options: { A: d.optA, B: d.optB, C: d.optC, D: d.optD, E: d.optE },
       answerKey: d.answerKey,
@@ -481,40 +493,56 @@ export default function PracticeMode() {
       category: examMeta.category,
     }));
 
-    const newExam = {
-      id: newId,
-      title: examMeta.title,
-      subject: examMeta.subject,
-      category: examMeta.category,
-      difficulty: examMeta.difficulty,
-      durationMinutes: examMeta.durationMinutes,
-      questions,
-      author: "Siswa SMAN 2",
-      createdAt: new Date().toISOString(),
-    };
+    setIsSavingExam(true);
+    try {
+      const res = await fetch("/api/exams/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: examMeta.title,
+          subject: examMeta.subject,
+          category: examMeta.category,
+          difficulty: examMeta.difficulty,
+          durationMinutes: examMeta.durationMinutes,
+          questions: builtQuestions.map((q) => ({
+            id: q.id,
+            text: q.text,
+            options: q.options,
+            answerKey: q.answerKey,
+          })),
+        }),
+      });
 
-    // Persist
-    const customRaw = localStorage.getItem("custom_exams");
-    const list: any[] = customRaw ? JSON.parse(customRaw) : [];
-    localStorage.setItem("custom_exams", JSON.stringify([...list, newExam]));
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(`Gagal menyimpan ujian: ${err.error || "Coba lagi."}`);
+        return;
+      }
 
-    // Add to quizzes state
-    setQuizzes((prev) => [...prev, {
-      id: newId,
-      title: examMeta.title,
-      subject: examMeta.subject,
-      category: examMeta.category,
-      questionsCount: questions.length,
-      durationMinutes: examMeta.durationMinutes,
-      difficulty: examMeta.difficulty,
-      icon: "✏️",
-      questions,
-      author: "Siswa SMAN 2",
-      isCustom: true,
-    }]);
+      const { examId } = await res.json();
 
-    setShowCreateModal(false);
-    alert(`✅ Ujian "${examMeta.title}" berhasil dibuat dan tersedia di daftar paket!`);
+      // Add immediately to local state so the creator can use it right away
+      setQuizzes((prev) => [...prev, {
+        id: examId,
+        title: examMeta.title,
+        subject: examMeta.subject,
+        category: examMeta.category,
+        questionsCount: builtQuestions.length,
+        durationMinutes: examMeta.durationMinutes,
+        difficulty: examMeta.difficulty,
+        icon: "✏️",
+        questions: builtQuestions,
+        author: "Siswa SMAN 2",
+        isCustom: true,
+      }]);
+
+      setShowCreateModal(false);
+      alert(`✅ Ujian "${examMeta.title}" berhasil dibuat dan sekarang terlihat oleh semua pengguna!`);
+    } catch {
+      alert("Terjadi kesalahan jaringan. Coba lagi.");
+    } finally {
+      setIsSavingExam(false);
+    }
   };
 
   // ── Computed values ───────────────────────────────────────────────────────
@@ -929,9 +957,14 @@ export default function PracticeMode() {
                     ) : (
                       <button
                         onClick={handleSaveExam}
-                        className="flex-[2] py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold transition-all shadow-md cursor-pointer flex items-center justify-center gap-1.5"
+                        disabled={isSavingExam}
+                        className="flex-[2] py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-sm font-bold transition-all shadow-md cursor-pointer flex items-center justify-center gap-1.5"
                       >
-                        <CheckCircle2 className="h-4 w-4" /> Simpan Ujian
+                        {isSavingExam ? (
+                          <><div className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" /> Menyimpan...</>
+                        ) : (
+                          <><CheckCircle2 className="h-4 w-4" /> Simpan & Bagikan Ujian</>
+                        )}
                       </button>
                     )}
                   </div>
