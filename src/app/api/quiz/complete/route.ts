@@ -4,7 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { users, pointsLog } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 
 const completeSchema = z.object({
   quizId: z.string().min(1),
@@ -64,17 +64,43 @@ export async function POST(req: Request) {
       }, { status: 404 });
     }
 
+    // ── First-completion check ─────────────────────────────────────────────
+    // Use quizId-scoped action so each quiz can only reward once per user.
+    const completionAction = `quiz_completed_${validated.quizId}`;
+
+    const existingEntry = await db.query.pointsLog.findFirst({
+      where: and(
+        eq(pointsLog.userId, dbUser.id),
+        eq(pointsLog.action, completionAction)
+      ),
+      columns: { id: true },
+    });
+
+    if (existingEntry) {
+      // Already completed before — no reward, no penalty
+      return NextResponse.json({
+        success: true,
+        pointsAwarded: 0,
+        penaltyPoints: 0,
+        netPoints: 0,
+        newTotal: dbUser.points,
+        difficulty: validated.difficulty,
+        alreadyCompleted: true,
+      }, { status: 200 });
+    }
+
+    // ── First time: award + apply penalty ────────────────────────────────
     const pointsAwarded = getPointsForDifficulty(validated.difficulty);
     const wrongAnswers = validated.wrongAnswers ?? 0;
 
-    // Penalty: 2% of current total per wrong answer
-    const penaltyPoints = Math.floor(wrongAnswers * 0.02 * dbUser.points);
+    // Penalty: 10% of current total per wrong answer
+    const penaltyPoints = Math.floor(wrongAnswers * 0.10 * dbUser.points);
     const netChange = pointsAwarded - penaltyPoints;
 
-    // Award points for quiz completion
+    // Log reward (action = completionAction, used as uniqueness key too)
     await db.insert(pointsLog).values({
       userId: dbUser.id,
-      action: `quiz_completed_${validated.difficulty.toLowerCase()}`,
+      action: completionAction,
       delta: pointsAwarded,
       refId: null,
     });
@@ -103,6 +129,7 @@ export async function POST(req: Request) {
       netPoints: netChange,
       newTotal,
       difficulty: validated.difficulty,
+      alreadyCompleted: false,
     }, { status: 200 });
 
   } catch (error) {

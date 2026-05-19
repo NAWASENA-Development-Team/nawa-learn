@@ -167,6 +167,7 @@ export default function PracticeMode() {
   const [pointsAwarded, setPointsAwarded] = useState<number | null>(null);
   const [penaltyPoints, setPenaltyPoints] = useState<number | null>(null);
   const [pointsLoading, setPointsLoading] = useState(false);
+  const [alreadyCompleted, setAlreadyCompleted] = useState(false);
 
   // ── Exam creation modal ────────────────────────────────────────────────────
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -357,6 +358,7 @@ export default function PracticeMode() {
         if (data.success) {
           setPointsAwarded(data.pointsAwarded);
           setPenaltyPoints(data.penaltyPoints ?? 0);
+          setAlreadyCompleted(data.alreadyCompleted ?? false);
         }
       })
       .catch((err) => console.error("Quiz point award error:", err))
@@ -372,6 +374,7 @@ export default function PracticeMode() {
     setIsFinished(false);
     setPointsAwarded(null);
     setPenaltyPoints(null);
+    setAlreadyCompleted(false);
   };
 
   // ── Delete custom exam ────────────────────────────────────────────────────
@@ -399,8 +402,8 @@ export default function PracticeMode() {
       alert("Judul ujian dan mata pelajaran wajib diisi.");
       return;
     }
-    if (examMeta.questionCount < 1 || examMeta.questionCount > 50) {
-      alert("Jumlah soal harus antara 1–50.");
+    if (examMeta.questionCount < 1 || examMeta.questionCount > 5) {
+      alert("Jumlah soal harus antara 1–5.");
       return;
     }
     // Initialise blank drafts
@@ -532,7 +535,7 @@ export default function PracticeMode() {
             <div className="h-10 w-10 rounded-xl bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">⚡</div>
             <div>
               <p className="text-[10px] text-zinc-455 dark:text-zinc-500 font-bold uppercase">Sistem Penalti</p>
-              <p className="text-sm font-extrabold text-zinc-850 dark:text-zinc-200">-2% / Jawaban Salah</p>
+              <p className="text-sm font-extrabold text-zinc-850 dark:text-zinc-200">-10% / Jawaban Salah</p>
             </div>
           </div>
         </div>
@@ -764,12 +767,12 @@ export default function PracticeMode() {
                       <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">Jumlah Soal</label>
                       <input
                         type="number"
-                        min={1} max={50}
+                        min={1} max={5}
                         value={examMeta.questionCount}
-                        onChange={(e) => setExamMeta((p) => ({ ...p, questionCount: Math.min(50, Math.max(1, Number(e.target.value))) }))}
+                        onChange={(e) => setExamMeta((p) => ({ ...p, questionCount: Math.min(5, Math.max(1, Number(e.target.value))) }))}
                         className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
                       />
-                      <p className="text-[10px] text-zinc-400 mt-1">1–50 soal</p>
+                      <p className="text-[10px] text-zinc-400 mt-1">Maks. 5 soal per ujian</p>
                     </div>
                   </div>
 
@@ -781,8 +784,8 @@ export default function PracticeMode() {
                     <div>
                       <p className="font-bold">Reward ujian ini:</p>
                       <p>
-                        {examMeta.difficulty === "Mudah" ? "+15" : examMeta.difficulty === "Sedang" ? "+25" : examMeta.difficulty === "Sulit" ? "+45" : "+100"} V-Point saat selesai
-                        &nbsp;· penalti <span className="font-bold">-2%</span> total V-Point per jawaban salah
+                        {examMeta.difficulty === "Mudah" ? "+15" : examMeta.difficulty === "Sedang" ? "+25" : examMeta.difficulty === "Sulit" ? "+45" : "+100"} V-Point saat selesai (pertama kali)
+                        &nbsp;· penalti <span className="font-bold">-10%</span> total V-Point per jawaban salah
                       </p>
                     </div>
                   </div>
@@ -1036,7 +1039,7 @@ export default function PracticeMode() {
               <AlertTriangle className="h-4.5 w-4.5 text-red-500 shrink-0 mt-0.5" />
               <div className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
                 <span className="font-extrabold text-red-600 dark:text-red-400">Sistem Penalti Aktif: </span>
-                Setiap jawaban salah akan <span className="font-bold">mengurangi 2% total V-Point</span> kamu saat ini.
+                Setiap jawaban salah akan <span className="font-bold">mengurangi 10% total V-Point</span> kamu saat ini.
                 Jawab dengan cermat!
               </div>
             </div>
@@ -1152,6 +1155,16 @@ export default function PracticeMode() {
               <div className="p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/30 flex items-center gap-3">
                 <div className="h-5 w-5 rounded-full border-2 border-indigo-300 border-t-indigo-600 animate-spin shrink-0" />
                 <p className="text-sm font-bold text-indigo-700 dark:text-indigo-300">Menghitung V-Point kamu...</p>
+              </div>
+            ) : alreadyCompleted ? (
+              <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-lg shrink-0">🔒</div>
+                <div className="text-left">
+                  <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">V-Point Tidak Diberikan</p>
+                  <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mt-0.5">
+                    Kamu sudah pernah menyelesaikan ujian ini sebelumnya. V-Point hanya diberikan untuk penyelesaian <span className="font-bold">pertama kali</span>.
+                  </p>
+                </div>
               </div>
             ) : pointsAwarded !== null ? (
               <>
@@ -1301,7 +1314,7 @@ export default function PracticeMode() {
               </div>
             </div>
 
-            <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-150 leading-relaxed mb-8">
+            <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white leading-relaxed mb-8">
               {currentQ.text}
             </h3>
 
@@ -1315,7 +1328,7 @@ export default function PracticeMode() {
                     className={`w-full text-left p-4 rounded-xl border transition-all duration-200 flex items-center justify-between cursor-pointer group hover:scale-[1.01] ${
                       isSelected
                         ? "border-indigo-600 bg-indigo-50/70 dark:bg-indigo-950/40 text-indigo-800 dark:text-indigo-300 shadow-sm"
-                        : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 hover:border-indigo-300 dark:hover:border-indigo-900 text-zinc-700 dark:text-zinc-355"
+                        : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 hover:border-indigo-300 dark:hover:border-indigo-900 text-zinc-700 dark:text-zinc-200"
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -1430,7 +1443,7 @@ export default function PracticeMode() {
             <div className="border-t border-zinc-100 dark:border-zinc-800/80 mt-4 pt-3 space-y-1.5 text-[10px] text-zinc-500">
               <p>⏱️ <b>Durasi:</b> {selectedQuiz?.durationMinutes} Menit Maksimal</p>
               <p>🔀 <b>Acak Soal:</b> Aktif (CBT Mode)</p>
-              <p>⚠️ <b>Penalti:</b> -2% / Jawaban Salah</p>
+              <p>⚠️ <b>Penalti:</b> -10% / Jawaban Salah</p>
             </div>
           </div>
         </div>
