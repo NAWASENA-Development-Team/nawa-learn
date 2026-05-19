@@ -34,7 +34,7 @@ import {
 } from "lucide-react";
 import { BADGES, Badge, getDaysOldAccount, getRarityColor, getRarityTextColor, BadgeUnlockData } from "@/lib/badges";
 import { AVATAR_OPTIONS, AvatarOption } from "@/lib/avatars";
-import { getLevel, getLevelThreshold } from "@/lib/levelRewards";
+import { getLevel, getLevelThreshold } from "@/lib/levelUtils";
 
 interface UserProfile {
   id: string;

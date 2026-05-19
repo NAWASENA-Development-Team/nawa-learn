@@ -13,7 +13,7 @@ import {
   ArrowRight
 } from "lucide-react";
 import { AVATAR_OPTIONS, AvatarOption } from "@/lib/avatars";
-import { getLevel as computeLevel } from "@/lib/levelRewards";
+import { getLevel as computeLevel } from "@/lib/levelUtils";
 
 interface LeaderboardUser {
   id: string;
