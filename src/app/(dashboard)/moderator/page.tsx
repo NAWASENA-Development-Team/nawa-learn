@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { BADGES, getDaysOldAccount, getRarityColor } from "@/lib/badges";
 import type { BadgeUnlockData } from "@/lib/badges";
+import { useToast } from "@/components/ui/Toast";
 
 type PendingSubmission = {
   submissionId: string;
@@ -62,6 +63,7 @@ type UserStats = {
 const HIDDEN_BADGES = BADGES.filter((b) => b.hidden);
 
 export default function ModeratorDashboard() {
+  const { success, error: toastError, info } = useToast();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [passwordError, setPasswordError] = useState("");
@@ -173,14 +175,14 @@ export default function ModeratorDashboard() {
       });
 
       if (res.ok) {
-        alert("Modul berhasil disetujui! Poin telah ditambahkan ke profil kontributor.");
+        success("Modul disetujui!", "Poin telah ditambahkan ke profil kontributor.");
         setSubmissions((prev) => prev.filter((s) => s.submissionId !== sub.submissionId));
       } else {
-        alert("Terjadi kegagalan saat menyetujui modul.");
+        toastError("Gagal menyetujui modul", "Terjadi kesalahan saat menyetujui modul.");
       }
     } catch (error) {
       console.error(error);
-      alert("Terjadi kesalahan jaringan.");
+      toastError("Kesalahan jaringan", "Periksa koneksi internet Anda dan coba lagi.");
     } finally {
       setProcessingModuleId(null);
     }
@@ -204,16 +206,19 @@ export default function ModeratorDashboard() {
       if (res.ok) {
         const data = await res.json();
         const rewardMsg = data.levelRewards?.length
-          ? `\n🎁 Level Reward: ${data.levelRewards.join(", ")}`
+          ? ` • Level Reward: ${data.levelRewards.join(", ")}`
           : "";
-        alert(`Soal "${q.subject || "Latihan"}" berhasil disetujui! +${data.pointsAwarded} V-Point diberikan ke kontributor.${rewardMsg}`);
+        success(
+          `Soal disetujui!`,
+          `+${data.pointsAwarded} V-Point diberikan ke kontributor.${rewardMsg}`
+        );
         setPendingQuestions((prev) => prev.filter((item) => item.questionId !== q.questionId));
       } else {
-        alert("Gagal menyetujui soal. Coba lagi.");
+        toastError("Gagal menyetujui soal", "Terjadi kesalahan. Coba lagi.");
       }
     } catch (error) {
       console.error(error);
-      alert("Terjadi kesalahan jaringan.");
+      toastError("Kesalahan jaringan", "Periksa koneksi internet Anda dan coba lagi.");
     } finally {
       setProcessingQuestionId(null);
     }
@@ -236,12 +241,12 @@ export default function ModeratorDashboard() {
 
       if (res.ok) {
         setPendingQuestions((prev) => prev.filter((item) => item.questionId !== q.questionId));
-        alert("Soal berhasil ditolak.");
+        info("Soal ditolak", "Soal telah dihapus dari antrian moderasi.");
       } else {
-        alert("Gagal menolak soal. Coba lagi.");
+        toastError("Gagal menolak soal", "Terjadi kesalahan. Coba lagi.");
       }
     } catch {
-      alert("Terjadi kesalahan jaringan.");
+      toastError("Kesalahan jaringan", "Periksa koneksi internet Anda dan coba lagi.");
     } finally {
       setProcessingQuestionId(null);
     }
