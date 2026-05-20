@@ -159,6 +159,7 @@ const BASE_QUESTIONS: Question[] = [
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function PracticeMode() {
+  const { error: toastError, success: toastSuccess, warning: toastWarning } = useToast();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -444,11 +445,11 @@ export default function PracticeMode() {
 
   const handleMetaNext = () => {
     if (!examMeta.title.trim() || !examMeta.subject.trim()) {
-      alert("Judul ujian dan mata pelajaran wajib diisi.");
+      toastWarning("Data Belum Lengkap", "Judul ujian dan mata pelajaran wajib diisi.");
       return;
     }
     if (examMeta.questionCount < 1 || examMeta.questionCount > 5) {
-      alert("Jumlah soal harus antara 1–5.");
+      toastWarning("Jumlah Soal Tidak Valid", "Jumlah soal harus antara 1–5.");
       return;
     }
     // Initialise blank drafts
@@ -479,7 +480,7 @@ export default function PracticeMode() {
       (d) => !d.text.trim() || !d.optA.trim() || !d.optB.trim() || !d.optC.trim() || !d.optD.trim() || !d.optE.trim()
     );
     if (incomplete !== -1) {
-      alert(`Soal nomor ${incomplete + 1} belum lengkap. Isi semua teks soal dan opsi A–E.`);
+      toastWarning("Soal Belum Lengkap", `Soal nomor ${incomplete + 1} belum lengkap. Isi semua teks soal dan opsi A–E.`);
       setExamQIdx(incomplete);
       return;
     }
@@ -516,7 +517,7 @@ export default function PracticeMode() {
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        alert(`Gagal menyimpan ujian: ${err.error || "Coba lagi."}`);
+        toastError("Gagal Menyimpan Ujian", err.error || "Coba lagi.");
         return;
       }
 
@@ -538,9 +539,9 @@ export default function PracticeMode() {
       }]);
 
       setShowCreateModal(false);
-      alert(`✅ Ujian "${examMeta.title}" berhasil dibuat dan sekarang terlihat oleh semua pengguna!`);
+      toastSuccess(`Ujian Berhasil Dibuat!`, `"${examMeta.title}" sekarang terlihat oleh semua pengguna.`);
     } catch {
-      alert("Terjadi kesalahan jaringan. Coba lagi.");
+      toastError("Kesalahan Jaringan", "Terjadi kesalahan jaringan. Coba lagi.");
     } finally {
       setIsSavingExam(false);
     }

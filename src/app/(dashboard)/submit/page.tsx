@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useToast } from "@/components/ui/Toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -65,6 +66,7 @@ const MOCK_DRIVE_FILES: MockDriveFile[] = [
 ];
 
 export default function SubmitModulePage() {
+  const { error: toastError, success: toastSuccess, warning: toastWarning } = useToast();
   const [submitType, setSubmitType] = useState<"module" | "question">("module");
   
   // Custom Question Form State
@@ -351,33 +353,38 @@ export default function SubmitModulePage() {
         clearPhoto();
         setDirectDriveUrl("");
       } else {
-        let errorMessage = "Kesalahan Tidak Diketahui";
+        let errorTitle = "Gagal Mengirim Modul";
+        let errorMessage = "Terjadi kesalahan tidak diketahui.";
         
         try {
           const errData = await res.json();
-          errorMessage = errData.error || errorMessage;
-          
-          // Provide specific guidance for common errors
           if (res.status === 401) {
-            errorMessage = "Anda belum login. Silakan refresh halaman dan login kembali.";
+            errorTitle = "Belum Login";
+            errorMessage = "Silakan refresh halaman dan login kembali.";
           } else if (res.status === 404) {
-            errorMessage = "Profil Anda belum tersinkronisasi. Silakan logout dan login kembali.";
+            errorTitle = "Profil Tidak Ditemukan";
+            errorMessage = "Silakan logout dan login kembali untuk menyinkronkan profil Anda.";
           } else if (res.status === 400) {
-            errorMessage = `Data tidak valid: ${errorMessage}`;
+            errorTitle = "Data Tidak Valid";
+            errorMessage = errData.error || "Periksa kembali isian formulir Anda.";
           } else if (res.status === 503) {
-            errorMessage = "Database sedang tidak tersedia. Silakan coba lagi dalam beberapa saat.";
+            errorTitle = "Database Tidak Tersedia";
+            errorMessage = "Coba lagi dalam beberapa saat.";
           } else if (res.status === 500) {
-            errorMessage = "Terjadi kesalahan server. Silakan coba lagi nanti.";
+            errorTitle = "Kesalahan Server";
+            errorMessage = "Silakan coba lagi nanti.";
+          } else {
+            errorMessage = errData.error || errorMessage;
           }
         } catch (parseError) {
           console.error("Error parsing response:", parseError);
         }
         
-        alert(`Gagal mengirim: ${errorMessage}`);
+        toastError(errorTitle, errorMessage);
       }
     } catch (error) {
       console.error("Network error:", error);
-      alert("Terjadi kesalahan jaringan. Pastikan Anda terhubung ke internet dan coba lagi.");
+      toastError("Kesalahan Jaringan", "Pastikan Anda terhubung ke internet dan coba lagi.");
     } finally {
       setIsSubmitting(false);
     }
@@ -385,8 +392,22 @@ export default function SubmitModulePage() {
 
   const onSubmitQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!questionText.trim() || !questionSubject.trim() || !optionA.trim() || !optionB.trim()) {
-      alert("Mohon lengkapi teks pertanyaan, mata pelajaran, dan minimal opsi A & B!");
+
+    // Client-side validation (mirrors server schema)
+    if (!questionText.trim()) {
+      toastWarning("Soal Belum Lengkap", "Teks pertanyaan wajib diisi.");
+      return;
+    }
+    if (questionText.trim().length < 10) {
+      toastWarning("Teks Terlalu Pendek", "Pertanyaan minimal harus 10 karakter.");
+      return;
+    }
+    if (!questionSubject.trim() || questionSubject.trim().length < 2) {
+      toastWarning("Mata Pelajaran Kosong", "Pilih atau isi mata pelajaran terlebih dahulu.");
+      return;
+    }
+    if (!optionA.trim() || !optionB.trim()) {
+      toastWarning("Opsi Belum Lengkap", "Minimal isi opsi A dan B.");
       return;
     }
 
@@ -406,14 +427,33 @@ export default function SubmitModulePage() {
           },
           answerKey: questionAnswerKey,
           difficulty: questionDifficulty,
-          subject: questionSubject,
+          subject: questionSubject.trim(),
           category: questionCategory,
         }),
       });
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        alert(err.error || "Gagal mengirim soal. Coba lagi.");
+        if (res.status === 401) {
+          toastError("Belum Login", "Silakan refresh halaman dan login kembali.");
+        } else if (res.status === 404) {
+          toastError("Profil Tidak Ditemukan", "Logout dan login kembali untuk menyinkronkan profil.");
+        } else if (res.status === 400 && err.details) {
+          // Extract the first meaningful Zod validation issue
+          const firstIssue = err.details[0];
+          const fieldName = firstIssue?.path?.[0] ?? "field";
+          const fieldMap: Record<string, string> = {
+            questionText: "teks pertanyaan",
+            subject: "mata pelajaran",
+            category: "kategori",
+            answerKey: "kunci jawaban",
+            difficulty: "tingkat kesulitan",
+          };
+          const label = fieldMap[String(fieldName)] ?? String(fieldName);
+          toastError("Data Tidak Valid", `Periksa kolom "${label}": ${firstIssue?.message ?? "nilai tidak sesuai"}.`);
+        } else {
+          toastError("Gagal Mengirim Soal", err.error || "Terjadi kesalahan, coba lagi.");
+        }
         return;
       }
 
@@ -427,7 +467,7 @@ export default function SubmitModulePage() {
       setOptionE("");
       setQuestionDifficulty("sedang");
     } catch {
-      alert("Terjadi kesalahan jaringan. Pastikan Anda sudah login.");
+      toastError("Kesalahan Jaringan", "Pastikan Anda sudah login dan terhubung ke internet.");
     } finally {
       setIsQuestionSubmitting(false);
     }

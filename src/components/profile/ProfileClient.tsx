@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { BADGES, Badge, getDaysOldAccount, getRarityColor, getRarityTextColor, BadgeUnlockData } from "@/lib/badges";
 import { AVATAR_OPTIONS, AvatarOption } from "@/lib/avatars";
+import { useToast } from "@/components/ui/Toast";
 
 // Inline level helpers — linear scaling, safe for client bundle (no server deps)
 const calcLevel = (pts: number) => Math.floor((1 + Math.sqrt(1 + (4 * pts) / 25)) / 2);
@@ -111,6 +112,8 @@ export default function ProfileClient({
   isOwnProfile 
 }: ProfileClientProps) {
   
+  const { error: toastError, success: toastSuccess } = useToast();
+
   // Fire-and-forget helper: persist profile changes to DB so other users can see them
   const saveToDb = (data: Partial<{ avatarIndex: number; photoUrl: string | null; bio: string; motto: string }>) => {
     fetch('/api/profile/update', {
@@ -196,7 +199,7 @@ export default function ProfileClient({
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) {
-      alert("Ukuran foto maksimal 2MB!");
+      toastError("Foto Terlalu Besar", "Ukuran foto maksimal 2MB.");
       return;
     }
     const reader = new FileReader();
@@ -577,7 +580,7 @@ export default function ProfileClient({
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(typeof window !== "undefined" ? window.location.href : "");
-                  alert("Link profil berhasil disalin ke clipboard! 📋");
+                  toastSuccess("Link Disalin!", "Link profil berhasil disalin ke clipboard.");
                 }}
                 className="inline-flex items-center gap-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-800 border border-zinc-700/80 text-zinc-350 px-4 py-2.5 text-xs font-bold transition-all cursor-pointer"
               >
