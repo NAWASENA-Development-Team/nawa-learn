@@ -1,36 +1,76 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<div align="center">
+  <h1>🚀 Nawa Learn</h1>
+  <p><strong>Empowering Education Through Gamification and Collaborative Learning.</strong></p>
+</div>
 
-## Getting Started
+<br />
 
-First, run the development server:
+## 📖 About Nawa Learn
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Nawa Learn is an innovative, next-generation learning platform designed by the **Nawasena Development Team**. We aim to revolutionize the educational experience by combining a modern technology stack with gamified elements such as interactive avatars, comprehensive badge systems, and a competitive leaderboard. Nawa Learn creates an engaging and dynamic environment for students to share knowledge, access learning modules, and excel in their academic journey.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## ✨ Key Features
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Gamified Learning Experience**: Engage with an extensive badge system featuring over 80 achievements across multiple categories.
+- **Customizable Avatars**: Express yourself with 22+ custom SVG avatars spanning fantasy and sci-fi themes.
+- **Resource Sharing**: Upload and download comprehensive learning modules and questions.
+- **Competitive Leaderboards**: Track points and compete with peers to reach the top ranks.
+- **Secure Moderator Panel**: Dedicated interface for content curation and platform administration.
+- **Responsive & Modern UI**: Built with Next.js and Tailwind CSS, featuring rich aesthetics, dark mode, and micro-animations.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🛠 Tech Stack
 
-## Learn More
+- **Framework**: [Next.js](https://nextjs.org/)
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **Icons & Assets**: Custom SVG Components
 
-To learn more about Next.js, take a look at the following resources:
+## 🚀 Getting Started
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Follow these steps to set up the project locally.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Prerequisites
 
-## Deploy on Vercel
+- Node.js 18.x or later
+- npm, pnpm, or yarn
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Installation
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/NAWASENA-Development-Team/nawa-learn.git
+   cd nawa-learn
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   # or yarn install / pnpm install
+   ```
+
+3. Run the development server:
+   ```bash
+   npm run dev
+   # or yarn dev / pnpm dev
+   ```
+
+4. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
+
+## 🤝 Contributing
+
+We welcome contributions from the community! Whether it's reporting a bug, suggesting a feature, or writing code, your help is appreciated. 
+
+Please read our [Contributing Guidelines](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) before getting started.
+
+## 🔒 Security
+
+If you discover any security-related issues, please refer to our [Security Policy](SECURITY.md) for reporting guidelines.
+
+## 📄 License
+
+This project is proprietary and developed by the Nawasena Development Team. All rights reserved.
+
+---
+<div align="center">
+  Made with ❤️ by the Nawasena Development Team
+</div>
