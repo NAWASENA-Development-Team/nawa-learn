@@ -54,13 +54,13 @@ export async function GET() {
       type: "report",
       title: `Laporan: ${r.issueType === 'bug' ? 'Bug Sistem' : r.issueType === 'content' ? 'Kesalahan Konten' : 'Lainnya'}`,
       status: r.status,
-      createdAt: r.createdAt,
+      submittedAt: r.createdAt,
       feedback: r.description.slice(0, 100) + (r.description.length > 100 ? '...' : ''),
     }));
 
     const combined = [...enriched, ...enrichedReports].sort((a, b) => {
-      const dateA = new Date(a.submittedAt || a.createdAt).getTime();
-      const dateB = new Date(b.submittedAt || b.createdAt).getTime();
+      const dateA = new Date(a.submittedAt).getTime();
+      const dateB = new Date(b.submittedAt).getTime();
       return dateB - dateA;
     });
 

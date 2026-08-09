@@ -340,7 +340,7 @@ export default function ProfileClient({
   };
 
   const submitReport = async () => {
-    if (!reportDesc.trim()) return toastWarning("Peringatan", "Deskripsi laporan tidak boleh kosong.");
+    if (!reportDesc.trim()) return toastError("Peringatan", "Deskripsi laporan tidak boleh kosong.");
     setIsSubmittingReport(true);
     try {
       const res = await fetch("/api/profile/report", {
@@ -1424,7 +1424,7 @@ export default function ProfileClient({
                       </div>
                     )}
                     <span className="text-[10px] text-zinc-500 mt-1 block">
-                      {new Date(item.submittedAt || item.createdAt).toLocaleDateString("id-ID", {
+                      {new Date(item.submittedAt).toLocaleDateString("id-ID", {
                         day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit"
                       })}
                     </span>
