@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/components/ui/Toast";
+import { LatexRenderer } from "@/components/ui/LatexRenderer";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -34,6 +35,7 @@ type Question = {
   text: string;
   options: Record<string, string>;
   answerKey: string;
+  explanation?: string | null;
   subject: string;
   category: string;
   uploaderId?: string;   // DB UUID of creator (for anti-cheat)
@@ -58,6 +60,7 @@ type QuestionDraft = {
   text: string;
   optA: string; optB: string; optC: string; optD: string; optE: string;
   answerKey: string;
+  explanation: string;
 };
 
 // ─── Constants & helpers ──────────────────────────────────────────────────────
@@ -65,7 +68,7 @@ type QuestionDraft = {
 const DIFFICULTY_OPTIONS = ["Mudah", "Sedang", "Sulit", "Sangat Sulit"];
 const CATEGORY_OPTIONS = ["UTBK-SNBT", "Olimpiade (OSN)", "Ujian Harian", "Reguler", "Campuran"];
 const EMPTY_DRAFT: QuestionDraft = {
-  text: "", optA: "", optB: "", optC: "", optD: "", optE: "", answerKey: "A",
+  text: "", optA: "", optB: "", optC: "", optD: "", optE: "", answerKey: "A", explanation: "",
 };
 
 function getDifficultyStyle(difficulty: string): string {
@@ -340,7 +343,7 @@ export default function PracticeMode() {
 
   // ── Auto-finish on timer end ──────────────────────────────────────────────
   useEffect(() => {
-    if (isStarted && timeLeft === 0 && !isFinished) setIsFinished(true);
+    if (isStarted && timeLeft === 0 && !isFinished) setTimeout(() => setIsFinished(true), 0);
   }, [isStarted, timeLeft, isFinished]);
 
   const handleSelectQuiz = (quiz: Quiz) => {
@@ -389,7 +392,7 @@ export default function PracticeMode() {
     const wrong = questions.length - correct;
     const score = questions.length ? Math.round((correct / questions.length) * 100) : 0;
 
-    setPointsLoading(true);
+    setTimeout(() => setPointsLoading(true), 0);
     fetch("/api/quiz/complete", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -491,6 +494,7 @@ export default function PracticeMode() {
       text: d.text,
       options: { A: d.optA, B: d.optB, C: d.optC, D: d.optD, E: d.optE },
       answerKey: d.answerKey,
+      explanation: d.explanation || null,
       subject: examMeta.subject,
       category: examMeta.category,
     }));
@@ -511,6 +515,7 @@ export default function PracticeMode() {
             text: q.text,
             options: q.options,
             answerKey: q.answerKey,
+            explanation: q.explanation || null,
           })),
         }),
       });
@@ -939,6 +944,18 @@ export default function PracticeMode() {
                     Kunci jawaban: <span className="font-black text-indigo-600">{examDrafts[examQIdx]?.answerKey}</span>
                   </p>
 
+                  {/* Explanation text */}
+                  <div className="pt-2">
+                    <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">Pembahasan (Opsional)</label>
+                    <textarea
+                      rows={2}
+                      value={examDrafts[examQIdx]?.explanation ?? ""}
+                      onChange={(e) => updateDraft("explanation", e.target.value)}
+                      placeholder="Pembahasan untuk soal ini... (Bisa pakai LaTeX)"
+                      className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none"
+                    />
+                  </div>
+
                   {/* Navigation between questions */}
                   <div className="flex gap-3 pt-2">
                     <button
@@ -1323,6 +1340,53 @@ export default function PracticeMode() {
             </div>
           </div>
 
+          {/* Review & Pembahasan */}
+          <div className="max-w-4xl mx-auto mb-10 text-left space-y-6">
+            <h3 className="text-xl font-black text-zinc-900 dark:text-white border-b border-zinc-200 dark:border-zinc-800 pb-3 mb-6">Kunci Jawaban & Pembahasan</h3>
+            {questions.map((q, idx) => {
+              const userAnswer = answers[q.id];
+              const isCorrect = userAnswer === q.answerKey;
+              return (
+                <div key={q.id} className={`p-5 rounded-2xl border ${isCorrect ? "bg-emerald-50/50 dark:bg-emerald-950/10 border-emerald-200 dark:border-emerald-900/30" : "bg-red-50/50 dark:bg-red-950/10 border-red-200 dark:border-red-900/30"}`}>
+                  <div className="flex gap-3 items-start mb-4">
+                    <span className={`shrink-0 h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold text-white mt-0.5 ${isCorrect ? "bg-emerald-500" : "bg-red-500"}`}>
+                      {idx + 1}
+                    </span>
+                    <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                      <LatexRenderer text={q.text} />
+                    </h4>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 ml-9">
+                    <div className="p-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1">Jawabanmu</p>
+                      <p className={`text-sm font-semibold ${isCorrect ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                        {userAnswer ? `${userAnswer}. ${q.options[userAnswer]}` : "- Kosong -"}
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1">Kunci Jawaban</p>
+                      <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                        {q.answerKey}. {q.options[q.answerKey]}
+                      </p>
+                    </div>
+                  </div>
+
+                  {q.explanation && (
+                    <div className="ml-9 p-4 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50">
+                      <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                        <Sparkles className="h-3 w-3" /> Pembahasan
+                      </p>
+                      <div className="text-sm text-zinc-700 dark:text-zinc-300">
+                        <LatexRenderer text={q.explanation} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
           <div className="flex flex-col sm:flex-row justify-center gap-4 border-t border-zinc-150 dark:border-zinc-800/80 pt-8">
             <button
               onClick={handleRestart}
@@ -1406,7 +1470,7 @@ export default function PracticeMode() {
             </div>
 
             <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white leading-relaxed mb-8">
-              {currentQ.text}
+              <LatexRenderer text={currentQ.text} />
             </h3>
 
             <div className="space-y-3">
@@ -1430,7 +1494,9 @@ export default function PracticeMode() {
                       }`}>
                         {key}
                       </span>
-                      <span className="text-xs sm:text-sm font-semibold">{value}</span>
+                      <span className="text-xs sm:text-sm font-semibold">
+                        <LatexRenderer text={value} />
+                      </span>
                     </div>
                     {isSelected && (
                       <div className="h-5 w-5 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-md">

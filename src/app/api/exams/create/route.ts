@@ -17,6 +17,7 @@ const questionSchema = z.object({
     E: z.string(),
   }),
   answerKey: z.enum(["A", "B", "C", "D", "E"]),
+  explanation: z.string().optional(),
 });
 
 const createSchema = z.object({

@@ -461,6 +461,7 @@ export default function ModulesLibraryClient({ initialModules }: ModulesLibraryC
               {selectedReaderModule.contentUrl.startsWith("data:image/") ? (
                 /* REAL PHOTO UPLOAD: Show actual captured/uploaded image */
                 <div className="max-w-2xl mx-auto flex flex-col items-center gap-4">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={selectedReaderModule.contentUrl}
                     alt={selectedReaderModule.title}

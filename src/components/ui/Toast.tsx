@@ -104,6 +104,11 @@ function ToastCard({
     return () => clearTimeout(t);
   }, []);
 
+  const dismiss = useCallback(() => {
+    setVisible(false);
+    setTimeout(() => onDismiss(item.id), 300);
+  }, [item.id, onDismiss]);
+
   // Progress bar + auto-dismiss
   useEffect(() => {
     if (duration === 0) return;
@@ -121,12 +126,7 @@ function ToastCard({
     rafRef.current = requestAnimationFrame(tick);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [duration]);
-
-  const dismiss = useCallback(() => {
-    setVisible(false);
-    setTimeout(() => onDismiss(item.id), 300);
-  }, [item.id, onDismiss]);
+  }, [duration, dismiss]);
 
   return (
     <div

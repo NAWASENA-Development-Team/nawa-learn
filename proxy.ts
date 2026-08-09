@@ -9,9 +9,9 @@ const isProtectedRoute = createRouteMatcher([
   '/api/questions(.*)'
 ]);
 
-export default clerkMiddleware((auth, req) => {
+export default clerkMiddleware(async (auth, req) => {
   if (isProtectedRoute(req)) {
-    auth.protect(); // Redirects to sign-in if unauthenticated
+    await auth.protect(); // Redirects to sign-in if unauthenticated
   }
 });
 

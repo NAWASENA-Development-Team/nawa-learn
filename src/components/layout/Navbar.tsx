@@ -35,7 +35,7 @@ function ThemeToggle({ compact = false }: { compact?: boolean }) {
   const [mounted, setMounted] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => { setTimeout(() => setMounted(true), 0); }, []);
   if (!mounted) return <div className={compact ? "h-8 w-8" : "h-9 w-9"} />;
 
   const isDark = resolvedTheme === "dark";
@@ -117,7 +117,7 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Close mobile menu on route change
-  useEffect(() => { setMobileOpen(false); }, [pathname]);
+  useEffect(() => { setTimeout(() => setMobileOpen(false), 0); }, [pathname]);
 
   // Prevent body scroll when drawer is open
   useEffect(() => {

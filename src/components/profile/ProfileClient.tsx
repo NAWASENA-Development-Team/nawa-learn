@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { 
   Trophy, 
   BookOpen, 
@@ -28,7 +29,10 @@ import {
   AlertCircle,
   Zap,
   Camera,
+  MessageSquare,
   Star,
+  Flag,
+  Bell,
   Crown,
   Flame
 } from "lucide-react";
@@ -165,8 +169,16 @@ export default function ProfileClient({
   const [editName, setEditName] = useState(user.name);
   const [editBio, setEditBio] = useState(bio);
   const [editMotto, setEditMotto] = useState(motto);
-  
-  // Certificate state
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Status & Report Modals
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [statusData, setStatusData] = useState<any[]>([]);
+  const [isLoadingStatus, setIsLoadingStatus] = useState(false);
+  const [reportType, setReportType] = useState("bug");
+  const [reportDesc, setReportDesc] = useState("");
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
   const [showCertificate, setShowCertificate] = useState(false);
   
   // Leveling Calculations (linear scaling: L→L+1 costs L*50 XP)
@@ -314,6 +326,43 @@ export default function ProfileClient({
     };
   };
 
+  const fetchStatus = async () => {
+    setIsLoadingStatus(true);
+    try {
+      const res = await fetch("/api/profile/status");
+      const data = await res.json();
+      if (data.success || data.data) setStatusData(data.data || []);
+    } catch {
+      toastError("Gagal", "Gagal mengambil data status.");
+    } finally {
+      setIsLoadingStatus(false);
+    }
+  };
+
+  const submitReport = async () => {
+    if (!reportDesc.trim()) return toastWarning("Peringatan", "Deskripsi laporan tidak boleh kosong.");
+    setIsSubmittingReport(true);
+    try {
+      const res = await fetch("/api/profile/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ issueType: reportType, description: reportDesc })
+      });
+      if (res.ok) {
+        toastSuccess("Berhasil", "Laporan berhasil dikirim.");
+        setShowReportModal(false);
+        setReportDesc("");
+      } else {
+        throw new Error("Gagal");
+      }
+    } catch {
+      toastError("Gagal", "Laporan gagal dikirim.");
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
+
+  // ─── Render functions ───────────────────────────────────────────────────────
   // Get secret achievement for Top 100
   const getSecretAchievement = () => {
     if (user.rank > 100) return null;
@@ -437,9 +486,9 @@ export default function ProfileClient({
             <div className={`w-32 h-32 rounded-3xl bg-gradient-to-br ${selectedAvatar.bg} flex items-center justify-center shadow-lg border-4 border-white/10 relative transition-transform duration-300 group-hover:scale-105 group-hover:rotate-3 overflow-hidden ${avatarFrame ? avatarFrame.glow : "shadow-indigo-500/20"}`}>
               {/* Custom photo takes priority over SVG avatar */}
               {customPhoto ? (
-                <img src={customPhoto} alt="Custom photo" className="w-full h-full object-cover" />
+                <Image src={customPhoto} alt="Custom photo" fill className="object-cover" />
               ) : (selectedAvatar as any).svg ? (
-                <img src={(selectedAvatar as any).svg} alt={selectedAvatar.label} className="w-full h-full object-cover" />
+                <Image src={(selectedAvatar as any).svg} alt={selectedAvatar.label} fill className="object-cover" />
               ) : (
                 <span className="text-6xl">{(selectedAvatar as any).emoji}</span>
               )}
@@ -586,6 +635,26 @@ export default function ProfileClient({
               >
                 <Share2 className="h-4 w-4" /> Bagikan Profil
               </button>
+
+              {isOwnProfile && (
+                <>
+                  <button
+                    onClick={() => {
+                      fetchStatus();
+                      setShowStatusModal(true);
+                    }}
+                    className="inline-flex items-center gap-2 rounded-xl bg-zinc-800/80 hover:bg-indigo-900/50 border border-zinc-700/80 hover:border-indigo-500/50 text-indigo-300 px-4 py-2.5 text-xs font-bold transition-all hover:scale-[1.02] active:scale-95 cursor-pointer"
+                  >
+                    <Bell className="h-4 w-4" /> Notifikasi & Status
+                  </button>
+                  <button
+                    onClick={() => setShowReportModal(true)}
+                    className="inline-flex items-center gap-2 rounded-xl bg-zinc-800/80 hover:bg-red-900/50 border border-zinc-700/80 hover:border-red-500/50 text-red-300 px-4 py-2.5 text-xs font-bold transition-all hover:scale-[1.02] active:scale-95 cursor-pointer"
+                  >
+                    <Flag className="h-4 w-4" /> Lapor Isu
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
@@ -1279,7 +1348,7 @@ export default function ProfileClient({
                   title={av.label}
                 >
                   {av.svg ? (
-                    <img src={av.svg} alt={av.label} className="w-full h-full object-cover" />
+                    <Image src={av.svg} alt={av.label} fill className="object-cover" />
                   ) : (
                     <>
                       <span className="transition-transform group-hover:rotate-6 text-4xl">{(av as any).emoji}</span>
@@ -1298,6 +1367,131 @@ export default function ProfileClient({
             >
               Tutup
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 🛎️ Cek Status / Notifikasi Modal */}
+      {showStatusModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl overflow-hidden relative">
+            <div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30">
+                  <Bell className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-white">Status & Notifikasi</h3>
+                  <p className="text-xs text-zinc-400 font-medium">Lacak status kontribusi modul dan soal Anda</p>
+                </div>
+              </div>
+              <button onClick={() => setShowStatusModal(false)} className="text-zinc-500 hover:text-white transition-colors">
+                <XCircle className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1 space-y-4">
+              {isLoadingStatus ? (
+                <div className="flex justify-center items-center py-10">
+                  <div className="h-6 w-6 rounded-full border-2 border-indigo-500/30 border-t-indigo-500 animate-spin" />
+                </div>
+              ) : statusData.length === 0 ? (
+                <div className="text-center py-10">
+                  <AlertCircle className="h-10 w-10 text-zinc-600 mx-auto mb-3" />
+                  <p className="text-zinc-400 text-sm font-medium">Belum ada riwayat kontribusi atau laporan.</p>
+                </div>
+              ) : (
+                statusData.map((item, idx) => (
+                  <div key={idx} className="p-4 rounded-xl border border-zinc-800 bg-zinc-800/30 flex flex-col gap-2 relative overflow-hidden group">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider bg-zinc-800 px-2 py-0.5 rounded-md mb-1.5 inline-block">
+                          {item.type === "module" ? "Modul" : item.type === "question" ? "Soal CBT" : "Laporan"}
+                        </span>
+                        <h4 className="text-sm font-bold text-zinc-200 leading-snug">{item.title}</h4>
+                      </div>
+                      <span className={`shrink-0 text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider border ${
+                        item.status === "approved" || item.status === "resolved" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                        item.status === "rejected" ? "bg-red-500/10 text-red-400 border-red-500/20" :
+                        "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                      }`}>
+                        {item.status}
+                      </span>
+                    </div>
+                    {item.feedback && (
+                      <div className="mt-2 text-xs text-zinc-400 bg-zinc-900/50 p-3 rounded-lg border border-zinc-800 border-l-2 border-l-indigo-500">
+                        <strong className="text-indigo-400">Catatan Moderator:</strong> {item.feedback}
+                      </div>
+                    )}
+                    <span className="text-[10px] text-zinc-500 mt-1 block">
+                      {new Date(item.submittedAt || item.createdAt).toLocaleDateString("id-ID", {
+                        day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit"
+                      })}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🚩 Lapor Isu Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-lg shadow-2xl relative overflow-hidden">
+            <div className="p-6 border-b border-zinc-800 bg-zinc-900/50">
+              <div className="flex justify-between items-start mb-2">
+                <div className="h-10 w-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center border border-red-500/30">
+                  <Flag className="h-5 w-5" />
+                </div>
+                <button onClick={() => setShowReportModal(false)} className="text-zinc-500 hover:text-white transition-colors">
+                  <XCircle className="h-6 w-6" />
+                </button>
+              </div>
+              <h3 className="text-xl font-black text-white mt-3">Lapor Isu & Kendala</h3>
+              <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                Temukan kesalahan kunci jawaban, typo di modul, atau bug sistem? Laporkan ke tim Nawasena di sini.
+              </p>
+            </div>
+            
+            <div className="p-6 space-y-5">
+              <div>
+                <label className="text-xs font-bold text-zinc-400 block mb-2 uppercase tracking-wider">Kategori Isu</label>
+                <select 
+                  value={reportType} 
+                  onChange={(e) => setReportType(e.target.value)}
+                  className="w-full bg-zinc-800 border border-zinc-700 text-sm text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500/50"
+                >
+                  <option value="bug">🐛 Bug Sistem / Error</option>
+                  <option value="content">📝 Kesalahan Konten (Modul/Soal)</option>
+                  <option value="other">💡 Lainnya / Saran</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-zinc-400 block mb-2 uppercase tracking-wider">Deskripsi Lengkap</label>
+                <textarea
+                  value={reportDesc}
+                  onChange={(e) => setReportDesc(e.target.value)}
+                  rows={4}
+                  placeholder="Sebutkan detail masalah (misal: Soal Matematika Bab Limit, Opsi D salah, seharusnya -2...)"
+                  className="w-full bg-zinc-800 border border-zinc-700 text-sm text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500/50 resize-none"
+                />
+              </div>
+
+              <button
+                onClick={submitReport}
+                disabled={isSubmittingReport}
+                className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 px-4 rounded-xl transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2 shadow-lg shadow-red-600/20"
+              >
+                {isSubmittingReport ? (
+                  <><div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Mengirim...</>
+                ) : (
+                  <><Flag className="h-4 w-4" /> Kirim Laporan</>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -43,6 +43,7 @@ export const questions = pgTable("questions", {
   questionText: text("question_text").notNull(),
   options: jsonb("options").notNull(), // e.g., { A: "...", B: "...", C: "...", D: "...", E: "..." }
   answerKey: varchar("answer_key", { length: 10 }).notNull(),
+  explanation: text("explanation"),
   difficulty: difficultyEnum("difficulty").notNull(),
   subject: varchar("subject", { length: 100 }),   // e.g. "Matematika"
   category: varchar("category", { length: 100 }),  // e.g. "UTBK", "Olimpiade"
@@ -99,5 +100,14 @@ export const pointsLog = pgTable("points_log", {
   action: varchar("action", { length: 100 }).notNull(),
   delta: integer("delta").notNull(), // Positive or negative
   refId: uuid("ref_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const reports = pgTable("reports", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  issueType: varchar("issue_type", { length: 100 }).notNull(), // 'bug', 'content', 'other'
+  description: text("description").notNull(),
+  status: statusEnum("status").default("pending").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

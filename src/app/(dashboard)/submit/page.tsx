@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { useToast } from "@/components/ui/Toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -74,6 +75,7 @@ export default function SubmitModulePage() {
   const [questionSubject, setQuestionSubject] = useState("");
   const [questionCategory, setQuestionCategory] = useState("UTBK");
   const [questionDifficulty, setQuestionDifficulty] = useState<"mudah" | "sedang" | "sulit">("sedang");
+  const [questionExplanation, setQuestionExplanation] = useState("");
   const [optionA, setOptionA] = useState("");
   const [optionB, setOptionB] = useState("");
   const [optionC, setOptionC] = useState("");
@@ -426,6 +428,7 @@ export default function SubmitModulePage() {
             E: optionE.trim() || "-",
           },
           answerKey: questionAnswerKey,
+          explanation: questionExplanation.trim(),
           difficulty: questionDifficulty,
           subject: questionSubject.trim(),
           category: questionCategory,
@@ -465,6 +468,8 @@ export default function SubmitModulePage() {
       setOptionC("");
       setOptionD("");
       setOptionE("");
+      setQuestionAnswerKey("A");
+      setQuestionExplanation("");
       setQuestionDifficulty("sedang");
     } catch {
       toastError("Kesalahan Jaringan", "Pastikan Anda sudah login dan terhubung ke internet.");
@@ -578,12 +583,12 @@ export default function SubmitModulePage() {
               >
                 Buat Soal Lain
               </button>
-              <a 
+              <Link 
                 href="/profile"
                 className="w-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 font-semibold py-2.5 rounded-xl transition-all duration-200 inline-flex items-center justify-center gap-1.5 text-xs border border-zinc-200 dark:border-zinc-750"
               >
                 Lihat di Profilku <ArrowRight className="h-4 w-4" />
-              </a>
+              </Link>
             </div>
           </div>
         </div>
@@ -1144,6 +1149,7 @@ export default function SubmitModulePage() {
                       ) : (
                         <div className="w-full max-w-md border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden bg-zinc-50 dark:bg-zinc-950 flex flex-col p-3 shadow-md">
                           <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-black border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img 
                               src={capturedImage!}
                               alt="Captured snapshot"
@@ -1231,8 +1237,19 @@ export default function SubmitModulePage() {
                   value={questionText}
                   onChange={(e) => setQuestionText(e.target.value)}
                   className="w-full rounded-xl border border-zinc-250 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-500 dark:text-white transition-all placeholder-zinc-400 min-h-[120px] shadow-inner"
-                  placeholder="Ketikkan deskripsi lengkap soal latihan di sini... e.g. Tentukan nilai limit x mendekati 0 untuk fungsi berikut..."
+                  placeholder="Ketikkan deskripsi lengkap soal latihan di sini... (Gunakan $$...$$ atau $...$ untuk rumus LaTeX, contoh: $x^2 + y^2 = r^2$)"
                   required
+                />
+              </div>
+
+              {/* Explanation text input */}
+              <div>
+                <label className="block text-sm font-bold text-zinc-850 dark:text-zinc-250 mb-1.5">Pembahasan Singkat (Opsional)</label>
+                <textarea 
+                  value={questionExplanation}
+                  onChange={(e) => setQuestionExplanation(e.target.value)}
+                  className="w-full rounded-xl border border-zinc-250 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-500 dark:text-white transition-all placeholder-zinc-400 min-h-[100px] shadow-inner"
+                  placeholder="Beri penjelasan singkat mengapa jawaban tersebut benar... (Mendukung LaTeX)"
                 />
               </div>
 

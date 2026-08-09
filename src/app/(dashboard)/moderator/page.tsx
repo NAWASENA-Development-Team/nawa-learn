@@ -87,17 +87,19 @@ export default function ModeratorDashboard() {
   useEffect(() => {
     // Check if already authenticated from sessionStorage
     const isAuth = sessionStorage.getItem("moderator_authenticated") === "true";
-    setIsAuthenticated(isAuth);
-    
-    if (isAuth) {
-      fetchPendingSubmissions();
-      fetchPendingQuestions();
-      fetchHiddenBadges();
-    }
+    setTimeout(() => {
+      setIsAuthenticated(isAuth);
+      
+      if (isAuth) {
+        fetchPendingSubmissions();
+        fetchPendingQuestions();
+        fetchHiddenBadges();
+      }
+    }, 0);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const fetchHiddenBadges = async () => {
+  async function fetchHiddenBadges() {
     setIsLoadingBadges(true);
     try {
       const res = await fetch("/api/moderator/hidden-badges");
@@ -110,7 +112,7 @@ export default function ModeratorDashboard() {
     } finally {
       setIsLoadingBadges(false);
     }
-  };
+  }
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,7 +131,7 @@ export default function ModeratorDashboard() {
     }
   };
 
-  const fetchPendingSubmissions = async () => {
+  async function fetchPendingSubmissions() {
     try {
       const res = await fetch("/api/submissions/pending");
       if (res.ok) {
@@ -141,10 +143,10 @@ export default function ModeratorDashboard() {
     } finally {
       setIsLoadingModules(false);
     }
-  };
+  }
 
   // Load pending questions from real DB API
-  const fetchPendingQuestions = async () => {
+  async function fetchPendingQuestions() {
     setIsLoadingQuestions(true);
     try {
       const res = await fetch("/api/questions/pending");
@@ -157,7 +159,7 @@ export default function ModeratorDashboard() {
     } finally {
       setIsLoadingQuestions(false);
     }
-  };
+  }
 
   // Approve Module
   const handleApproveModule = async (sub: PendingSubmission) => {

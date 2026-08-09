@@ -107,6 +107,10 @@ export default function SignUpPage() {
             <div className="w-full max-w-[440px] relative">
               <div className="absolute -inset-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-3xl blur-lg opacity-20" />
               <SignUp
+                routing="path"
+                path="/sign-up"
+                signInUrl="/sign-in"
+                fallbackRedirectUrl="/modules"
                 appearance={{
                   elements: {
                     rootBox: "w-full",

@@ -3,6 +3,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { 
   Trophy, 
   Search, 
@@ -222,9 +223,9 @@ export default function LeaderboardClient({
                   <div className={`absolute -inset-2 rounded-[26px] bg-gradient-to-br ${podiumFrameGradient(2)} opacity-80`} />
                   <div className={`relative w-24 h-24 rounded-[22px] bg-gradient-to-br ${avatar.bg} flex items-center justify-center shadow-xl border-4 border-white/10 overflow-hidden shadow-zinc-400/30 z-10 transition-transform duration-300 group-hover:scale-105`}>
                     {photo
-                      ? <img src={photo} alt="foto" className="w-full h-full object-cover" />
+                      ? <Image src={photo} alt="foto" fill className="object-cover" />
                       : (avatar as any).svg
-                        ? <img src={(avatar as any).svg} alt={avatar.label} className="w-full h-full object-cover" />
+                        ? <Image src={(avatar as any).svg} alt={avatar.label} fill className="object-cover" />
                         : <span className="text-5xl">{(avatar as any).emoji}</span>
                     }
                   </div>
@@ -282,9 +283,9 @@ export default function LeaderboardClient({
                   <div className={`absolute -inset-2.5 rounded-[30px] bg-gradient-to-br ${podiumFrameGradient(1)} animate-[spin_4s_linear_infinite] opacity-80`} />
                   <div className={`relative w-28 h-28 rounded-[24px] bg-gradient-to-br ${avatar.bg} flex items-center justify-center shadow-2xl border-4 border-white/10 overflow-hidden shadow-yellow-500/30 z-10 transition-transform duration-300 group-hover:scale-105`}>
                     {photo
-                      ? <img src={photo} alt="foto" className="w-full h-full object-cover" />
+                      ? <Image src={photo} alt="foto" fill className="object-cover" />
                       : (avatar as any).svg
-                        ? <img src={(avatar as any).svg} alt={avatar.label} className="w-full h-full object-cover" />
+                        ? <Image src={(avatar as any).svg} alt={avatar.label} fill className="object-cover" />
                         : <span className="text-6xl">{(avatar as any).emoji}</span>
                     }
                   </div>
@@ -342,9 +343,9 @@ export default function LeaderboardClient({
                   <div className={`absolute -inset-2 rounded-[26px] bg-gradient-to-br ${podiumFrameGradient(3)} opacity-80`} />
                   <div className={`relative w-24 h-24 rounded-[22px] bg-gradient-to-br ${avatar.bg} flex items-center justify-center shadow-xl border-4 border-white/10 overflow-hidden shadow-orange-400/20 z-10 transition-transform duration-300 group-hover:scale-105`}>
                     {photo
-                      ? <img src={photo} alt="foto" className="w-full h-full object-cover" />
+                      ? <Image src={photo} alt="foto" fill className="object-cover" />
                       : (avatar as any).svg
-                        ? <img src={(avatar as any).svg} alt={avatar.label} className="w-full h-full object-cover" />
+                        ? <Image src={(avatar as any).svg} alt={avatar.label} fill className="object-cover" />
                         : <span className="text-5xl">{(avatar as any).emoji}</span>
                     }
                   </div>

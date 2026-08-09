@@ -27,6 +27,7 @@ export async function GET() {
         questionText: questions.questionText,
         options: questions.options,
         answerKey: questions.answerKey,
+        explanation: questions.explanation,
         difficulty: questions.difficulty,
         subject: questions.subject,
         category: questions.category,
