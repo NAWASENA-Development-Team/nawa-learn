@@ -1,7 +1,7 @@
 // components/modules/ModulesLibraryClient.tsx
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { 
   Search, 
   BookOpen, 
@@ -47,6 +47,30 @@ export default function ModulesLibraryClient({ initialModules }: ModulesLibraryC
   // Reader Modal State
   const [selectedReaderModule, setSelectedReaderModule] = useState<Module | null>(null);
   const [printSuccess, setPrintSuccess] = useState(false);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (selectedReaderModule && selectedReaderModule.contentUrl.startsWith("data:application/pdf")) {
+      const parts = selectedReaderModule.contentUrl.split(",");
+      if (parts.length === 2) {
+        try {
+          const byteString = atob(parts[1]);
+          const ab = new ArrayBuffer(byteString.length);
+          const ia = new Uint8Array(ab);
+          for (let i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
+          }
+          const blob = new Blob([ab], { type: "application/pdf" });
+          const url = URL.createObjectURL(blob);
+          setPdfBlobUrl(url);
+          return () => URL.revokeObjectURL(url);
+        } catch (e) {
+          console.error("Failed to parse PDF data URI", e);
+        }
+      }
+    }
+    setPdfBlobUrl(null);
+  }, [selectedReaderModule]);
 
   // Unique lists for filtering
   const categories = ["Semua", "UTBK", "Olimpiade", "Reguler"];
@@ -67,10 +91,30 @@ export default function ModulesLibraryClient({ initialModules }: ModulesLibraryC
       const ext = contentUrl.includes("wordprocessingml") ? ".docx"
                 : contentUrl.includes("presentationml") ? ".pptx"
                 : ".dat";
-      const link = document.createElement("a");
-      link.href = contentUrl;
-      link.download = `modul-nawa-learn${ext}`;
-      link.click();
+      
+      try {
+        const parts = contentUrl.split(",");
+        const byteString = atob(parts[1]);
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) {
+          ia[i] = byteString.charCodeAt(i);
+        }
+        const mime = parts[0].split(":")[1].split(";")[0];
+        const blob = new Blob([ab], { type: mime });
+        const blobUrl = URL.createObjectURL(blob);
+        
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.download = `modul-nawa-learn${ext}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+      } catch (err) {
+        console.error("Failed to download data URI", err);
+      }
     } else if (
       contentUrl.startsWith("https://nawa-learn.storage/") ||
       contentUrl.includes("integral-trik") ||
@@ -475,11 +519,17 @@ export default function ModulesLibraryClient({ initialModules }: ModulesLibraryC
               ) : selectedReaderModule.contentUrl.startsWith("data:application/pdf") ? (
                 /* REAL PDF UPLOAD: Embed actual PDF viewer */
                 <div className="flex flex-col h-full min-h-[500px] gap-2">
-                  <embed
-                    src={selectedReaderModule.contentUrl}
-                    type="application/pdf"
-                    className="w-full flex-1 min-h-[500px] rounded-xl border border-zinc-200 dark:border-zinc-700"
-                  />
+                  {pdfBlobUrl ? (
+                    <embed
+                      src={pdfBlobUrl}
+                      type="application/pdf"
+                      className="w-full flex-1 min-h-[500px] rounded-xl border border-zinc-200 dark:border-zinc-700"
+                    />
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center bg-zinc-100 dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                      <p className="text-sm text-zinc-500 flex items-center gap-2">Memuat Dokumen...</p>
+                    </div>
+                  )}
                   <p className="text-xs text-zinc-500 text-center">
                     Diunggah oleh <span className="font-bold">{selectedReaderModule.uploaderName || "Anonim"}</span>
                   </p>
@@ -702,13 +752,36 @@ export default function ModulesLibraryClient({ initialModules }: ModulesLibraryC
                               : url.includes("wordprocessingml") ? ".docx"
                               : url.includes("presentationml") ? ".pptx"
                               : ".dat";
-                    const link = document.createElement("a");
-                    link.href = url;
-                    link.download = `${selectedReaderModule.title}${ext}`;
-                    link.click();
+                              
+                    try {
+                      const parts = url.split(",");
+                      const byteString = atob(parts[1]);
+                      const ab = new ArrayBuffer(byteString.length);
+                      const ia = new Uint8Array(ab);
+                      for (let i = 0; i < byteString.length; i++) {
+                        ia[i] = byteString.charCodeAt(i);
+                      }
+                      const mime = parts[0].split(":")[1].split(";")[0];
+                      const blob = new Blob([ab], { type: mime });
+                      const blobUrl = URL.createObjectURL(blob);
+                      
+                      const link = document.createElement("a");
+                      link.href = blobUrl;
+                      link.download = `${selectedReaderModule.title}${ext}`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      
+                      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+                    } catch (err) {
+                      console.error("Failed to download data URI in reader", err);
+                    }
+                    
                     setPrintSuccess(true);
                     setTimeout(() => setPrintSuccess(false), 2000);
                   } else {
+                    // For external or mock URLs, open in a new tab
+                    window.open(url, "_blank", "noopener,noreferrer");
                     setPrintSuccess(true);
                     setTimeout(() => setPrintSuccess(false), 2000);
                   }

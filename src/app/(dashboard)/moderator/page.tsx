@@ -406,10 +406,29 @@ export default function ModeratorDashboard() {
                                       : url.includes("wordprocessingml") ? ".docx"
                                       : url.includes("presentationml") ? ".pptx"
                                       : ".dat";
-                            const link = document.createElement("a");
-                            link.href = url;
-                            link.download = `modul-${sub.moduleTitle}${ext}`;
-                            link.click();
+                            try {
+                              const parts = url.split(",");
+                              const byteString = atob(parts[1]);
+                              const ab = new ArrayBuffer(byteString.length);
+                              const ia = new Uint8Array(ab);
+                              for (let i = 0; i < byteString.length; i++) {
+                                ia[i] = byteString.charCodeAt(i);
+                              }
+                              const mime = parts[0].split(":")[1].split(";")[0];
+                              const blob = new Blob([ab], { type: mime });
+                              const blobUrl = URL.createObjectURL(blob);
+                              
+                              const link = document.createElement("a");
+                              link.href = blobUrl;
+                              link.download = `modul-${sub.moduleTitle}${ext}`;
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                              
+                              setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+                            } catch (err) {
+                              console.error("Failed to download data URI in moderator", err);
+                            }
                           } else {
                             window.open(url, "_blank", "noopener,noreferrer");
                           }

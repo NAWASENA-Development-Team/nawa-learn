@@ -1173,12 +1173,12 @@ export default function SubmitModulePage() {
                               type="button"
                               onClick={usePhoto}
                               className={`flex-1 text-white py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all shadow-md ${
-                                currentContentUrl.startsWith("https://nawa-learn.storage/photos/cam-")
+                                (currentContentUrl.startsWith("https://nawa-learn.storage/photos/cam-") || (capturedImage && currentContentUrl === capturedImage))
                                   ? "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/10 border border-emerald-600"
                                   : "bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/10 border border-indigo-600"
                               }`}
                             >
-                              {currentContentUrl.startsWith("https://nawa-learn.storage/photos/cam-") ? (
+                              {(currentContentUrl.startsWith("https://nawa-learn.storage/photos/cam-") || (capturedImage && currentContentUrl === capturedImage)) ? (
                                 <>
                                   <CheckCircle2 className="h-3.5 w-3.5" /> Terpasang
                                 </>
