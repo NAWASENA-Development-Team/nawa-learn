@@ -30,6 +30,30 @@ export interface BadgeUnlockData {
   createdAt: string;
 }
 
+export interface SpecialtyStats {
+  hardQuizzes: number;
+  approvedMods: number;
+  diverseSubjects: number;
+  quizTotal: number;
+  approvedQuestions: number;
+  totalDownloads: number;
+}
+
+export const getSpecialtyBadge = (stats: SpecialtyStats, rank?: number) => {
+  if (rank && rank > 3) return null; // Default behavior for podium: only top 3 gets it if rank is passed
+  
+  if (stats.totalDownloads >= 100) return { name: "Viral Educator", desc: "Materi Diunduh 100+ Kali", icon: "🔥", gradient: "from-red-600 via-rose-500 to-pink-500", border: "border-rose-400/50", glow: "shadow-rose-500/40" };
+  if (stats.approvedQuestions >= 5) return { name: "Question Master", desc: "Pembuat Soal Mahir", icon: "📝", gradient: "from-blue-600 via-sky-500 to-cyan-400", border: "border-sky-400/50", glow: "shadow-sky-500/40" };
+  if (stats.hardQuizzes >= 2) return { name: "Rule Breaker", desc: "Penakluk Ujian Sulit", icon: "⚡", gradient: "from-red-500 via-orange-500 to-yellow-400", border: "border-orange-400/50", glow: "shadow-orange-500/40" };
+  if (stats.approvedMods >= 5) return { name: "Library Builder", desc: "Kontributor 5+ Modul", icon: "🏛️", gradient: "from-amber-600 via-orange-500 to-amber-400", border: "border-orange-400/50", glow: "shadow-orange-500/40" };
+  if (stats.approvedMods >= 3) return { name: "Grand Archivist", desc: "Penjaga Arsip Agung NAWA-LEARN", icon: "📚", gradient: "from-indigo-500 via-purple-500 to-pink-500", border: "border-purple-400/50", glow: "shadow-purple-500/40" };
+  if (stats.diverseSubjects >= 4) return { name: "Polymath", desc: "Ahli 4+ Mata Pelajaran", icon: "🧬", gradient: "from-fuchsia-600 via-purple-500 to-pink-400", border: "border-fuchsia-400/50", glow: "shadow-fuchsia-500/40" };
+  if (stats.diverseSubjects >= 3) return { name: "Scholar Prime", desc: "Kontributor Multi-Disiplin", icon: "🧠", gradient: "from-emerald-400 via-teal-500 to-cyan-500", border: "border-teal-400/50", glow: "shadow-teal-500/40" };
+  if (stats.quizTotal >= 10) return { name: "Eternal Student", desc: "Penakluk 10+ Kuis", icon: "⏳", gradient: "from-slate-600 via-zinc-500 to-stone-400", border: "border-slate-400/50", glow: "shadow-slate-400/40" };
+  if (stats.quizTotal >= 5) return { name: "Quiz Dominator", desc: "Maestro Latihan CBT SMAN 2", icon: "🎯", gradient: "from-cyan-500 via-blue-500 to-indigo-600", border: "border-cyan-400/50", glow: "shadow-cyan-400/40" };
+  return { name: "Legend Scholar", desc: "Legenda Platform NAWA-LEARN", icon: "👑", gradient: "from-amber-400 via-yellow-400 to-amber-300", border: "border-amber-400/50", glow: "shadow-amber-400/40" };
+};
+
 // Helper function to calculate days since account creation
 export const getDaysOldAccount = (createdAt: string): number => {
   const created = new Date(createdAt);

@@ -1,7 +1,7 @@
 // app/(dashboard)/leaderboard/page.tsx
 import { db } from "@/db";
-import { users } from "@/db/schema";
-import { desc, count, eq, sql } from "drizzle-orm";
+import { users, modules, questions, pointsLog } from "@/db/schema";
+import { desc, count, eq, sql, inArray } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
 import LeaderboardClient from "@/components/leaderboard/LeaderboardClient";
 
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export default async function LeaderboardPage() {
   // 1. Mengambil 50 kontributor teratas untuk pencarian interaktif di client
-  const topUsers = await db.query.users.findMany({
+  const topUsersData = await db.query.users.findMany({
     orderBy: [desc(users.points)],
     limit: 50,
     columns: {
@@ -20,6 +20,42 @@ export default async function LeaderboardPage() {
       avatarIndex: true,
       photoUrl: true,
     }
+  });
+
+  const topUserIds = topUsersData.map(u => u.id);
+
+  // Get data to compute exact specialty badges
+  const allModules = topUserIds.length ? await db.query.modules.findMany({
+    where: inArray(modules.uploaderId, topUserIds),
+  }) : [];
+  
+  const allQuestions = topUserIds.length ? await db.query.questions.findMany({
+    where: inArray(questions.uploaderId, topUserIds),
+  }) : [];
+  
+  const allLogs = topUserIds.length ? await db.query.pointsLog.findMany({
+    where: inArray(pointsLog.userId, topUserIds),
+  }) : [];
+
+  const topUsers = topUsersData.map((u, i) => {
+    const rank = i + 1;
+    const userMods = allModules.filter(m => m.uploaderId === u.id);
+    const userQs = allQuestions.filter(q => q.uploaderId === u.id);
+    const userLogs = allLogs.filter(l => l.userId === u.id);
+
+    const stats = {
+      hardQuizzes: userLogs.filter(l => l.action === "quiz_completed_sulit" || l.action === "quiz_completed_sangat sulit").length,
+      approvedMods: userMods.filter(m => m.status === "approved").length,
+      quizTotal: userLogs.filter(l => l.action.startsWith("quiz_completed")).length,
+      diverseSubjects: new Set(userMods.filter(m => m.status === "approved").map(m => m.subject)).size,
+      approvedQuestions: userQs.filter(q => q.status === "approved").length,
+      totalDownloads: userMods.reduce((a, m) => a + m.downloads, 0),
+    };
+
+    return {
+      ...u,
+      stats // We pass stats down so client can use getSpecialtyBadge
+    };
   });
 
   // 2. Mengambil total seluruh siswa kontributor

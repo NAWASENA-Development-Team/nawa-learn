@@ -14,6 +14,7 @@ import {
   ArrowRight
 } from "lucide-react";
 import { AVATAR_OPTIONS, AvatarOption } from "@/lib/avatars";
+import { getSpecialtyBadge, SpecialtyStats } from "@/lib/badges";
 
 interface LeaderboardUser {
   id: string;
@@ -21,6 +22,7 @@ interface LeaderboardUser {
   points: number;
   avatarIndex: number | null;
   photoUrl: string | null;
+  stats?: SpecialtyStats;
 }
 
 interface LoggedInUserStats {
@@ -70,30 +72,6 @@ export default function LeaderboardClient({
     if (lvl >= 4)  return "Pakar Modul Sekolah 🧠";
     if (lvl >= 2)  return "Prajurit Belajar Aktif ⚡";
     return "Pemula Berbakat 🌱";
-  };
-
-  // Specialty badge for Top-3 podium (points-based, matches ProfileClient.getSpecialtyBadge fallback chain)
-  const getPodiumBadge = (points: number) => {
-    if (points >= 300) return {
-      name: "Grand Archivist", desc: "Penjaga Arsip Agung NAWA-LEARN",
-      gradient: "from-indigo-500 via-purple-500 to-pink-500",
-      border: "border-purple-400/50", icon: "📚", glow: "shadow-purple-500/40",
-    };
-    if (points >= 200) return {
-      name: "Scholar Prime", desc: "Kontributor Multi-Disiplin",
-      gradient: "from-emerald-400 via-teal-500 to-cyan-500",
-      border: "border-teal-400/50", icon: "🧠", glow: "shadow-teal-500/40",
-    };
-    if (points >= 100) return {
-      name: "Quiz Dominator", desc: "Maestro Latihan CBT SMAN 2",
-      gradient: "from-cyan-500 via-blue-500 to-indigo-600",
-      border: "border-cyan-400/50", icon: "🎯", glow: "shadow-cyan-500/40",
-    };
-    return {
-      name: "Legend Scholar", desc: "Legenda Platform NAWA-LEARN",
-      gradient: "from-amber-400 via-yellow-400 to-amber-300",
-      border: "border-amber-400/50", icon: "👑", glow: "shadow-amber-400/40",
-    };
   };
 
   // Avatar frame gradient (matches ProfileClient.getAvatarFrame gradient)
@@ -208,7 +186,7 @@ export default function LeaderboardClient({
           {podiumData.second && (() => {
             const u = podiumData.second;
             const { avatar, photo } = getPodiumAvatar(u);
-            const badge = getPodiumBadge(u.points);
+            const badge = u.stats ? getSpecialtyBadge(u.stats, 1) : null;
             const lvl = getLevel(u.points);
             return (
               <div className="order-2 md:order-1 flex flex-col items-center gap-3 group">
@@ -232,13 +210,15 @@ export default function LeaderboardClient({
                 </div>
 
                 {/* Specialty badge pill */}
-                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r ${badge.gradient} border ${badge.border} shadow-lg ${badge.glow}`}>
-                  <span className="text-sm">{badge.icon}</span>
-                  <div className="text-left">
-                    <p className="text-[10px] font-black text-white tracking-wider uppercase leading-none">{badge.name}</p>
-                    <p className="text-[8px] text-white/70 font-semibold leading-none mt-0.5">{badge.desc}</p>
+                {badge && (
+                  <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r ${badge.gradient} border ${badge.border} shadow-lg ${badge.glow}`}>
+                    <span className="text-sm">{badge.icon}</span>
+                    <div className="text-left">
+                      <p className="text-[10px] font-black text-white tracking-wider uppercase leading-none">{badge.name}</p>
+                      <p className="text-[8px] text-white/70 font-semibold leading-none mt-0.5">{badge.desc}</p>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Info card */}
                 <div className="w-full text-center p-5 bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-900 dark:to-zinc-950 border-2 border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-md flex flex-col items-center relative overflow-hidden hover:border-zinc-350 dark:hover:border-zinc-700 transition-all duration-300">
@@ -263,7 +243,7 @@ export default function LeaderboardClient({
           {podiumData.first && (() => {
             const u = podiumData.first;
             const { avatar, photo } = getPodiumAvatar(u);
-            const badge = getPodiumBadge(u.points);
+            const badge = u.stats ? getSpecialtyBadge(u.stats, 2) : null;
             const lvl = getLevel(u.points);
             return (
               <div className="order-1 md:order-2 flex flex-col items-center gap-3 group">
@@ -296,14 +276,16 @@ export default function LeaderboardClient({
                 </div>
 
                 {/* Specialty badge */}
-                <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r ${badge.gradient} border ${badge.border} shadow-lg ${badge.glow}`}>
-                  <span className="text-base">{badge.icon}</span>
-                  <div className="text-left">
-                    <p className="text-[10px] font-black text-white tracking-wider uppercase leading-none">{badge.name}</p>
-                    <p className="text-[8px] text-white/70 font-semibold leading-none mt-0.5">{badge.desc}</p>
+                {badge && (
+                  <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r ${badge.gradient} border ${badge.border} shadow-lg ${badge.glow}`}>
+                    <span className="text-base">{badge.icon}</span>
+                    <div className="text-left">
+                      <p className="text-[10px] font-black text-white tracking-wider uppercase leading-none">{badge.name}</p>
+                      <p className="text-[8px] text-white/70 font-semibold leading-none mt-0.5">{badge.desc}</p>
+                    </div>
+                    <Sparkles className="h-3 w-3 text-white/80 animate-pulse" />
                   </div>
-                  <Sparkles className="h-3 w-3 text-white/80 animate-pulse" />
-                </div>
+                )}
 
                 {/* Info card */}
                 <div className="w-full text-center p-6 bg-gradient-to-b from-amber-500/10 via-yellow-400/5 to-transparent border-2 border-yellow-400/80 dark:border-yellow-500/40 rounded-3xl shadow-xl flex flex-col items-center relative overflow-hidden hover:border-yellow-400 transition-all duration-300">
@@ -328,7 +310,7 @@ export default function LeaderboardClient({
           {podiumData.third && (() => {
             const u = podiumData.third;
             const { avatar, photo } = getPodiumAvatar(u);
-            const badge = getPodiumBadge(u.points);
+            const badge = u.stats ? getSpecialtyBadge(u.stats, 3) : null;
             const lvl = getLevel(u.points);
             return (
               <div className="order-3 flex flex-col items-center gap-3 group">
@@ -351,14 +333,16 @@ export default function LeaderboardClient({
                   </div>
                 </div>
 
-                {/* Specialty badge */}
-                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r ${badge.gradient} border ${badge.border} shadow-lg ${badge.glow}`}>
-                  <span className="text-sm">{badge.icon}</span>
-                  <div className="text-left">
-                    <p className="text-[10px] font-black text-white tracking-wider uppercase leading-none">{badge.name}</p>
-                    <p className="text-[8px] text-white/70 font-semibold leading-none mt-0.5">{badge.desc}</p>
+                {/* Specialty badge pill */}
+                {badge && (
+                  <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r ${badge.gradient} border ${badge.border} shadow-lg ${badge.glow}`}>
+                    <span className="text-base">{badge.icon}</span>
+                    <div className="text-left">
+                      <p className="text-xs font-black text-white tracking-widest uppercase leading-none">{badge.name}</p>
+                      <p className="text-[9px] text-white/80 font-bold leading-none mt-1">{badge.desc}</p>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Info card */}
                 <div className="w-full text-center p-5 bg-gradient-to-b from-orange-50 to-white dark:from-zinc-900 dark:to-zinc-950 border-2 border-orange-200/60 dark:border-zinc-800 rounded-3xl shadow-md flex flex-col items-center relative overflow-hidden hover:border-orange-300 dark:hover:border-zinc-700 transition-all duration-300">

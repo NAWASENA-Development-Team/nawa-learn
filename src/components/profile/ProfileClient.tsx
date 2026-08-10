@@ -34,11 +34,13 @@ import {
   Flag,
   Bell,
   Crown,
-  Flame
+  Flame,
+  Target
 } from "lucide-react";
-import { BADGES, Badge, getDaysOldAccount, getRarityColor, getRarityTextColor, BadgeUnlockData } from "@/lib/badges";
+import { BADGES, Badge, getDaysOldAccount, getRarityColor, getRarityTextColor, BadgeUnlockData, getSpecialtyBadge } from "@/lib/badges";
 import { AVATAR_OPTIONS, AvatarOption } from "@/lib/avatars";
 import { useToast } from "@/components/ui/Toast";
+import { useRouter } from "next/navigation";
 
 // Inline level helpers — linear scaling, safe for client bundle (no server deps)
 const calcLevel = (pts: number) => Math.floor((1 + Math.sqrt(1 + (4 * pts) / 25)) / 2);
@@ -117,15 +119,7 @@ export default function ProfileClient({
 }: ProfileClientProps) {
   
   const { error: toastError, success: toastSuccess } = useToast();
-
-  // Fire-and-forget helper: persist profile changes to DB so other users can see them
-  const saveToDb = (data: Partial<{ avatarIndex: number; photoUrl: string | null; bio: string; motto: string }>) => {
-    fetch('/api/profile/update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    }).catch(err => console.error('Profile save to DB failed:', err));
-  };
+  const router = useRouter();
 
   // Local States
   const [activeTab, setActiveTab] = useState<"summary" | "modules" | "questions" | "logs">("summary");
@@ -164,6 +158,13 @@ export default function ProfileClient({
     }
     return "Belajar hari ini, memimpin esok hari!";
   });
+
+  // Sync state if user prop changes from router.refresh()
+  useEffect(() => {
+    if (user.bio && user.bio !== bio) setBio(user.bio);
+    if (user.motto && user.motto !== motto) setMotto(user.motto);
+    if (user.name && user.name !== editName) setEditName(user.name);
+  }, [user.bio, user.motto, user.name]);
   
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(user.name);
@@ -215,22 +216,40 @@ export default function ProfileClient({
       return;
     }
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       const dataUrl = reader.result as string;
       setCustomPhoto(dataUrl);
       if (typeof window !== "undefined") {
         localStorage.setItem(`nawa_photo_${user.id}`, dataUrl);
       }
-      saveToDb({ photoUrl: dataUrl });
+      try {
+        await fetch('/api/profile/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ photoUrl: dataUrl }),
+        });
+        router.refresh();
+      } catch (err) {
+        console.error('Photo save to DB failed:', err);
+      }
     };
     reader.readAsDataURL(file);
   };
-  const handleRemovePhoto = () => {
+  const handleRemovePhoto = async () => {
     setCustomPhoto(null);
     if (typeof window !== "undefined") {
       localStorage.removeItem(`nawa_photo_${user.id}`);
     }
-    saveToDb({ photoUrl: null });
+    try {
+      await fetch('/api/profile/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photoUrl: null }),
+      });
+      router.refresh();
+    } catch (err) {
+      console.error('Photo remove failed:', err);
+    }
   };
 
   // === REWARD SYSTEM HELPERS ===
@@ -275,56 +294,14 @@ export default function ProfileClient({
   const levelFrameStyle = getLevelFrameStyle(user.levelFrame);
 
   // Get specialty badge for Top 3 (based on contribution type)
-  const getSpecialtyBadge = () => {
-    if (user.rank > 3) return null;
-    const hardQuizzes = pointLogs.filter(l =>
-      l.action === "quiz_completed_sulit" || l.action === "quiz_completed_sangat sulit"
-    ).length;
-    const approvedMods = userModules.filter(m => m.status === "approved").length;
-    const quizTotal = pointLogs.filter(l => l.action.startsWith("quiz_completed")).length;
-    const diverseSubjects = new Set(userModules.filter(m => m.status === "approved").map(m => m.subject)).size;
-
-    if (hardQuizzes >= 2) return {
-      name: "Rule Breaker",
-      desc: "Penakluk Ujian Sulit",
-      gradient: "from-red-500 via-orange-500 to-yellow-400",
-      border: "border-orange-400/50",
-      icon: "⚡",
-      glow: "shadow-orange-500/40",
-    };
-    if (approvedMods >= 3) return {
-      name: "Grand Archivist",
-      desc: "Penjaga Arsip Agung NAWA-LEARN",
-      gradient: "from-indigo-500 via-purple-500 to-pink-500",
-      border: "border-purple-400/50",
-      icon: "📚",
-      glow: "shadow-purple-500/40",
-    };
-    if (diverseSubjects >= 3) return {
-      name: "Scholar Prime",
-      desc: "Kontributor Multi-Disiplin",
-      gradient: "from-emerald-400 via-teal-500 to-cyan-500",
-      border: "border-teal-400/50",
-      icon: "🧠",
-      glow: "shadow-teal-500/40",
-    };
-    if (quizTotal >= 5) return {
-      name: "Quiz Dominator",
-      desc: "Maestro Latihan CBT SMAN 2",
-      gradient: "from-cyan-500 via-blue-500 to-indigo-600",
-      border: "border-cyan-400/50",
-      icon: "🎯",
-      glow: "shadow-cyan-500/40",
-    };
-    return {
-      name: "Legend Scholar",
-      desc: "Legenda Platform NAWA-LEARN",
-      gradient: "from-amber-400 via-yellow-400 to-amber-300",
-      border: "border-amber-400/50",
-      icon: "👑",
-      glow: "shadow-amber-400/40",
-    };
-  };
+  const userSpecialtyBadge = getSpecialtyBadge({
+    hardQuizzes: pointLogs.filter(l => l.action === "quiz_completed_sulit" || l.action === "quiz_completed_sangat sulit").length,
+    approvedMods: userModules.filter(m => m.status === "approved").length,
+    quizTotal: pointLogs.filter(l => l.action.startsWith("quiz_completed")).length,
+    diverseSubjects: new Set(userModules.filter(m => m.status === "approved").map(m => m.subject)).size,
+    approvedQuestions: userQuestions ? userQuestions.filter(q => q.status === "approved").length : 0,
+    totalDownloads: userModules.reduce((a, m) => a + m.downloads, 0),
+  }, user.rank);
 
   const fetchStatus = async () => {
     setIsLoadingStatus(true);
@@ -385,18 +362,30 @@ export default function ProfileClient({
   };
 
   const avatarFrame = getAvatarFrame(user.rank);
-  const specialtyBadge = getSpecialtyBadge();
+  const specialtyBadge = userSpecialtyBadge;
   const secretAchievement = getSecretAchievement();
 
   // Save selected avatar
-  const handleSelectAvatar = (avatar: AvatarOption) => {
+  const handleSelectAvatar = async (avatar: AvatarOption) => {
     setSelectedAvatar(avatar);
     setShowAvatarPicker(false);
     if (typeof window !== "undefined") {
       localStorage.setItem(`nawa_avatar_${user.id}`, JSON.stringify(avatar));
     }
     const idx = AVATAR_OPTIONS.findIndex(a => a.svg === avatar.svg);
-    if (idx !== -1) saveToDb({ avatarIndex: idx });
+    if (idx !== -1) {
+      try {
+        await fetch('/api/profile/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ avatarIndex: idx }),
+        });
+        toastSuccess("Berhasil", "Avatar berhasil diperbarui.");
+        router.refresh();
+      } catch (err) {
+        toastError("Gagal", "Gagal menyimpan avatar.");
+      }
+    }
   };
 
   // Generate random bio
@@ -406,15 +395,44 @@ export default function ProfileClient({
   };
 
   // Save profile edits
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
+    const isNameChanged = editName !== user.name;
+    const isBioChanged = editBio !== bio;
+    const isMottoChanged = editMotto !== motto;
+
+    if (!isNameChanged && !isBioChanged && !isMottoChanged) {
+      setIsEditing(false);
+      return;
+    }
+
     setBio(editBio);
     setMotto(editMotto);
     setIsEditing(false);
+    
     if (typeof window !== "undefined") {
       localStorage.setItem(`nawa_bio_${user.id}`, editBio);
       localStorage.setItem(`nawa_motto_${user.id}`, editMotto);
     }
-    saveToDb({ bio: editBio, motto: editMotto });
+    
+    try {
+      // Update bio and motto in our DB
+      const res = await fetch('/api/profile/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bio: editBio, motto: editMotto }),
+      });
+      
+      if (!res.ok) {
+        toastError("Gagal", "Gagal menyimpan perubahan profil ke server.");
+        return;
+      }
+      
+      toastSuccess("Tersimpan!", "Profil berhasil diperbarui.");
+      router.refresh();
+    } catch (err) {
+      console.error('Profile save to DB failed:', err);
+      toastError("Gagal", "Terjadi kesalahan jaringan.");
+    }
   };
 
   // Title rank based on levels
@@ -879,9 +897,9 @@ export default function ProfileClient({
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {categoryBadges.map((badge) => {
                           const isUnlocked = unlockedBadges.some(b => b.id === badge.id);
-                          // For hidden badges: non-moderators see a mystery slot
-                          const isHiddenFromUser = badge.hidden && !isMod;
-                          const showAsUnlocked = isUnlocked && (!badge.hidden || isMod);
+                          // For hidden badges: non-moderators see a mystery slot ONLY if they haven't unlocked it yet!
+                          const isHiddenFromUser = badge.hidden && !isMod && !isUnlocked;
+                          const showAsUnlocked = isUnlocked;
 
                           return (
                             <div
@@ -1209,49 +1227,116 @@ export default function ProfileClient({
 
       {/* 4. Riwayat Poin Panel */}
       {activeTab === "logs" && (
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-sm">
-          <div className="mb-6 pb-4 border-b border-zinc-150 dark:border-zinc-850">
-            <h3 className="text-lg font-extrabold text-zinc-900 dark:text-white">
-              ⏱️ Catatan Riwayat Perolehan Poin
-            </h3>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-              Riwayat lengkap kapan dan bagaimana kamu mendapatkan V-Point di platform.
-            </p>
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-sm relative overflow-hidden">
+          {/* Subtle background glow */}
+          <div className="absolute -top-32 -right-32 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="mb-8 pb-4 border-b border-zinc-150 dark:border-zinc-850 flex items-center justify-between relative z-10">
+            <div>
+              <h3 className="text-xl font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
+                <span className="p-1.5 bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl">
+                  <Clock className="w-5 h-5" />
+                </span>
+                Jejak Petualanganmu
+              </h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
+                Riwayat lengkap bagaimana kamu mengumpulkan V-Point di NAWA-LEARN.
+              </p>
+            </div>
           </div>
 
           {pointLogs.length === 0 ? (
-            <div className="text-center py-16 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl">
-              <span className="text-4xl">⏱️</span>
-              <h4 className="text-base font-extrabold text-zinc-900 dark:text-white mt-3">Belum ada riwayat perolehan poin</h4>
-              <p className="text-xs text-zinc-500 mt-1 max-w-xs mx-auto">
+            <div className="text-center py-16 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl bg-zinc-50/50 dark:bg-zinc-950/50">
+              <span className="text-5xl block animate-bounce">⏱️</span>
+              <h4 className="text-base font-extrabold text-zinc-900 dark:text-white mt-4">Belum ada riwayat perolehan poin</h4>
+              <p className="text-xs text-zinc-500 mt-2 max-w-xs mx-auto">
                 Unggah modul belajar perdana untuk mengklaim poin pertamamu senilai 50 poin!
               </p>
             </div>
           ) : (
-            <div className="relative border-l border-zinc-200 dark:border-zinc-800 pl-6 space-y-6 max-w-3xl text-left ml-4">
-              {pointLogs.map((log) => (
-                <div key={log.id} className="relative">
-                  {/* Timeline bullet */}
-                  <span className={`absolute -left-[31px] top-1 flex h-4 w-4 items-center justify-center rounded-full ring-4 ring-white dark:ring-zinc-900 
-                    ${log.delta > 0 ? "bg-amber-500" : "bg-rose-500"}`} 
-                  />
+            <div className="relative border-l-2 border-amber-500/20 dark:border-amber-500/20 pl-6 sm:pl-8 space-y-6 sm:space-y-8 max-w-3xl text-left ml-4 sm:ml-6">
+              {pointLogs.map((log) => {
+                // Determine format
+                let actionText = log.action.replace(/_/g, " ");
+                let ActionIcon = Target;
+                let iconColor = "text-zinc-500 dark:text-zinc-400";
+                let iconBg = "bg-zinc-100 dark:bg-zinc-800";
+                
+                if (log.action.includes("quiz_completed")) {
+                  const diff = log.action.split("_").pop() || "";
+                  actionText = `Menyelesaikan Kuis CBT ${diff ? `(${diff.charAt(0).toUpperCase() + diff.slice(1)})` : ""}`;
+                  ActionIcon = Target;
+                  iconColor = "text-blue-500 dark:text-blue-400";
+                  iconBg = "bg-blue-100 dark:bg-blue-900/30 border-blue-500/20";
+                } else if (log.action === "module_approved") {
+                  actionText = "Modul Berhasil Disetujui";
+                  ActionIcon = BookOpen;
+                  iconColor = "text-emerald-500 dark:text-emerald-400";
+                  iconBg = "bg-emerald-100 dark:bg-emerald-900/30 border-emerald-500/20";
+                } else if (log.action === "question_approved") {
+                  actionText = "Soal CBT Berhasil Disetujui";
+                  ActionIcon = Edit3;
+                  iconColor = "text-purple-500 dark:text-purple-400";
+                  iconBg = "bg-purple-100 dark:bg-purple-900/30 border-purple-500/20";
+                } else if (log.action.includes("rejected")) {
+                  actionText = log.action.includes("module") ? "Modul Ditolak" : "Soal Ditolak";
+                  ActionIcon = XCircle;
+                  iconColor = "text-rose-500 dark:text-rose-400";
+                  iconBg = "bg-rose-100 dark:bg-rose-900/30 border-rose-500/20";
+                } else if (log.action === "module_downloaded") {
+                  actionText = "Seseorang Mengunduh Modulmu";
+                  ActionIcon = Share2;
+                  iconColor = "text-sky-500 dark:text-sky-400";
+                  iconBg = "bg-sky-100 dark:bg-sky-900/30 border-sky-500/20";
+                } else if (log.action === "daily_login") {
+                  actionText = "Login Harian";
+                  ActionIcon = Calendar;
+                  iconColor = "text-amber-500 dark:text-amber-400";
+                  iconBg = "bg-amber-100 dark:bg-amber-900/30 border-amber-500/20";
+                }
 
-                  <div className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-150 dark:border-zinc-850 p-4 rounded-2xl flex items-center justify-between gap-4">
-                    <div>
-                      <h4 className="font-extrabold text-xs sm:text-sm text-zinc-850 dark:text-zinc-100">
-                        {log.action}
-                      </h4>
-                      <p className="text-[10px] text-zinc-400 font-semibold mt-1">
-                        {new Date(log.createdAt).toLocaleString("id-ID", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })} WIB
-                      </p>
+                const isPositive = log.delta > 0;
+                const pointColor = isPositive ? "text-amber-500 dark:text-amber-400" : "text-rose-500 dark:text-rose-400";
+                const pointBg = isPositive ? "bg-amber-100/50 dark:bg-amber-950/50 border-amber-200 dark:border-amber-900/50" : "bg-rose-100/50 dark:bg-rose-950/50 border-rose-200 dark:border-rose-900/50";
+
+                return (
+                  <div key={log.id} className="relative group">
+                    {/* Timeline bullet */}
+                    <span className={`absolute -left-[33px] sm:-left-[41px] top-4 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full ring-4 ring-white dark:ring-zinc-900 
+                      ${isPositive ? "bg-gradient-to-br from-amber-400 to-amber-600 shadow-sm shadow-amber-500/50" : "bg-gradient-to-br from-rose-400 to-rose-600 shadow-sm shadow-rose-500/50"} 
+                      transition-transform duration-300 group-hover:scale-125`} 
+                    />
+
+                    <div className="bg-zinc-50/80 hover:bg-white dark:bg-zinc-950/50 dark:hover:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800/80 hover:border-amber-300/50 dark:hover:border-amber-700/50 p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-300 shadow-sm hover:shadow-md">
+                      
+                      <div className="flex items-center gap-4">
+                        <div className={`shrink-0 w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-[14px] border ${iconBg} ${iconColor} shadow-inner`}>
+                          <ActionIcon className="w-5 h-5 sm:w-6 sm:h-6" />
+                        </div>
+                        <div>
+                          <h4 className="font-extrabold text-xs sm:text-sm text-zinc-900 dark:text-white capitalize">
+                            {actionText}
+                          </h4>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <Clock className="w-3 h-3 text-zinc-400" />
+                            <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-semibold tracking-wide uppercase">
+                              {new Date(log.createdAt).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className={`shrink-0 self-start sm:self-auto px-4 py-2 rounded-xl border ${pointBg} flex items-center gap-1.5`}>
+                        <Star className={`w-3.5 h-3.5 ${pointColor} ${isPositive ? "fill-amber-500/50" : "fill-rose-500/50"}`} />
+                        <span className={`font-black text-sm sm:text-base ${pointColor}`}>
+                          {isPositive ? `+${log.delta}` : log.delta} Poin
+                        </span>
+                      </div>
+                      
                     </div>
-
-                    <span className={`font-black text-lg ${log.delta > 0 ? "text-amber-500 dark:text-amber-400" : "text-rose-500"}`}>
-                      {log.delta > 0 ? `+${log.delta}` : log.delta} Poin
-                    </span>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
