@@ -795,10 +795,10 @@ export default function ProfileClient({
       </div>
 
       {/* 🔍 Navigation Tabs */}
-      <div className="border-b border-zinc-200 dark:border-zinc-800 flex flex-wrap gap-1 sm:gap-2 mb-8 bg-zinc-50 dark:bg-zinc-950 p-1.5 rounded-2xl max-w-2xl">
+      <div className="border border-zinc-200 dark:border-zinc-800 flex flex-nowrap overflow-x-auto gap-1 sm:gap-2 mb-8 bg-zinc-50 dark:bg-zinc-950 p-1.5 rounded-2xl max-w-full lg:max-w-3xl snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <button
           onClick={() => setActiveTab("summary")}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+          className={`shrink-0 whitespace-nowrap flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer snap-start ${
             activeTab === "summary"
               ? "bg-white dark:bg-zinc-900 text-indigo-600 dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-800"
               : "text-zinc-550 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
@@ -808,7 +808,7 @@ export default function ProfileClient({
         </button>
         <button
           onClick={() => setActiveTab("modules")}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+          className={`shrink-0 whitespace-nowrap flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer snap-start ${
             activeTab === "modules"
               ? "bg-white dark:bg-zinc-900 text-indigo-600 dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-800"
               : "text-zinc-550 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
@@ -818,7 +818,7 @@ export default function ProfileClient({
         </button>
         <button
           onClick={() => setActiveTab("questions")}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+          className={`shrink-0 whitespace-nowrap flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer snap-start ${
             activeTab === "questions"
               ? "bg-white dark:bg-zinc-900 text-indigo-600 dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-800"
               : "text-zinc-550 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
@@ -828,7 +828,7 @@ export default function ProfileClient({
         </button>
         <button
           onClick={() => setActiveTab("logs")}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+          className={`shrink-0 whitespace-nowrap flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer snap-start ${
             activeTab === "logs"
               ? "bg-white dark:bg-zinc-900 text-indigo-600 dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-800"
               : "text-zinc-550 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
@@ -987,43 +987,49 @@ export default function ProfileClient({
                 📊 Statistik Singkat
               </h3>
 
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-150 dark:border-zinc-850 rounded-2xl">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-lg">📁</span>
+              <div className="space-y-3">
+                <div className="group flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl hover:border-indigo-400 dark:hover:border-indigo-500 transition-all duration-300 shadow-sm hover:shadow-md cursor-default">
+                  <div className="flex items-center gap-3.5">
+                    <div className="h-10 w-10 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl flex items-center justify-center text-xl shadow-sm group-hover:scale-110 transition-transform">
+                      📁
+                    </div>
                     <div>
-                      <h4 className="font-extrabold text-xs text-zinc-850 dark:text-zinc-200">Total Modul Pending</h4>
-                      <p className="text-[10px] text-zinc-400">Dalam tinjauan OSIS</p>
+                      <h4 className="font-extrabold text-xs text-zinc-850 dark:text-zinc-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Total Modul Pending</h4>
+                      <p className="text-[10px] text-zinc-500">Dalam tinjauan OSIS</p>
                     </div>
                   </div>
-                  <span className="font-bold text-sm text-zinc-700 dark:text-zinc-300">
-                    {userModules.filter(m => m.status === "pending").length} berkas
+                  <span className="font-black text-sm text-zinc-900 dark:text-white bg-white dark:bg-zinc-900 px-3 py-1 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                    {userModules.filter(m => m.status === "pending").length} <span className="text-[10px] text-zinc-400 font-semibold uppercase">Berkas</span>
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between p-3.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-150 dark:border-zinc-850 rounded-2xl">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-lg">📥</span>
+                <div className="group flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl hover:border-emerald-400 dark:hover:border-emerald-500 transition-all duration-300 shadow-sm hover:shadow-md cursor-default">
+                  <div className="flex items-center gap-3.5">
+                    <div className="h-10 w-10 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl flex items-center justify-center text-xl shadow-sm group-hover:scale-110 transition-transform">
+                      📥
+                    </div>
                     <div>
-                      <h4 className="font-extrabold text-xs text-zinc-850 dark:text-zinc-200">Total Unduhan Karya</h4>
-                      <p className="text-[10px] text-zinc-400">Diunduh siswa lain</p>
+                      <h4 className="font-extrabold text-xs text-zinc-850 dark:text-zinc-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">Total Unduhan Karya</h4>
+                      <p className="text-[10px] text-zinc-500">Diunduh siswa lain</p>
                     </div>
                   </div>
-                  <span className="font-bold text-sm text-zinc-700 dark:text-zinc-300">
-                    {userModules.reduce((acc, m) => acc + m.downloads, 0)} kali
+                  <span className="font-black text-sm text-zinc-900 dark:text-white bg-white dark:bg-zinc-900 px-3 py-1 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                    {userModules.reduce((acc, m) => acc + m.downloads, 0)} <span className="text-[10px] text-zinc-400 font-semibold uppercase">Kali</span>
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between p-3.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-150 dark:border-zinc-850 rounded-2xl">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-lg">📋</span>
+                <div className="group flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl hover:border-amber-400 dark:hover:border-amber-500 transition-all duration-300 shadow-sm hover:shadow-md cursor-default">
+                  <div className="flex items-center gap-3.5">
+                    <div className="h-10 w-10 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl flex items-center justify-center text-xl shadow-sm group-hover:scale-110 transition-transform">
+                      📋
+                    </div>
                     <div>
-                      <h4 className="font-extrabold text-xs text-zinc-850 dark:text-zinc-200">Soal Latihan Pending</h4>
-                      <p className="text-[10px] text-zinc-400">Verifikasi kesulitan</p>
+                      <h4 className="font-extrabold text-xs text-zinc-850 dark:text-zinc-200 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">Soal Latihan Pending</h4>
+                      <p className="text-[10px] text-zinc-500">Verifikasi kesulitan</p>
                     </div>
                   </div>
-                  <span className="font-bold text-sm text-zinc-700 dark:text-zinc-300">
-                    {userQuestions.filter(q => q.status === "pending").length} soal
+                  <span className="font-black text-sm text-zinc-900 dark:text-white bg-white dark:bg-zinc-900 px-3 py-1 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                    {userQuestions.filter(q => q.status === "pending").length} <span className="text-[10px] text-zinc-400 font-semibold uppercase">Soal</span>
                   </span>
                 </div>
               </div>
@@ -1080,64 +1086,55 @@ export default function ProfileClient({
               </Link>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-zinc-200 dark:border-zinc-800 text-zinc-400 text-xs font-bold uppercase">
-                    <th className="pb-3 pt-1">Judul Modul</th>
-                    <th className="pb-3 pt-1">Pelajaran</th>
-                    <th className="pb-3 pt-1">Kelas / Kategori</th>
-                    <th className="pb-3 pt-1 text-center">Unduhan</th>
-                    <th className="pb-3 pt-1">Status</th>
-                    <th className="pb-3 pt-1 text-right">Tanggal</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-850">
-                  {userModules.map((mod) => (
-                    <tr key={mod.id} className="group hover:bg-zinc-50/50 dark:hover:bg-zinc-950/20 transition-colors">
-                      <td className="py-4 font-bold text-zinc-900 dark:text-zinc-100 max-w-[220px] truncate">
-                        {mod.title}
-                      </td>
-                      <td className="py-4 font-semibold text-indigo-600 dark:text-indigo-400">
-                        {mod.subject}
-                      </td>
-                      <td className="py-4">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 px-2 py-0.5 rounded-lg text-zinc-600 dark:text-zinc-450 font-bold">
-                            {mod.grade}
-                          </span>
-                          <span className="text-[10px] bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-100 dark:border-indigo-900 px-2 py-0.5 rounded-lg text-indigo-700 dark:text-indigo-400 font-bold">
-                            {mod.category}
-                          </span>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+              {userModules.map((mod) => (
+                <div key={mod.id} className="group relative bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 hover:border-indigo-400 dark:hover:border-indigo-500 transition-all duration-300 shadow-sm hover:shadow-md flex flex-col h-full overflow-hidden">
+                  <div className="absolute -right-8 -top-8 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none group-hover:bg-indigo-500/15 transition-all" />
+                  
+                  <div className="flex justify-between items-start mb-4 relative z-10">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center shadow-sm">
+                        <BookOpen className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">{mod.subject}</span>
+                        <div className="flex gap-1.5 mt-0.5">
+                          <span className="text-[9px] bg-zinc-200 dark:bg-zinc-800 px-1.5 py-0.5 rounded font-bold text-zinc-600 dark:text-zinc-400">{mod.grade}</span>
+                          <span className="text-[9px] bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 px-1.5 py-0.5 rounded font-bold">{mod.category}</span>
                         </div>
-                      </td>
-                      <td className="py-4 text-center font-bold text-zinc-700 dark:text-zinc-300">
-                        {mod.downloads}
-                      </td>
-                      <td className="py-4">
-                        {mod.status === "approved" && (
-                          <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/40 px-2.5 py-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-400">
-                            <CheckCircle2 className="h-3 w-3" /> Disetujui
-                          </span>
-                        )}
-                        {mod.status === "pending" && (
-                          <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/40 px-2.5 py-1 text-[10px] font-bold text-amber-700 dark:text-amber-400">
-                            <Clock className="h-3 w-3" /> Tinjauan
-                          </span>
-                        )}
-                        {mod.status === "rejected" && (
-                          <span className="inline-flex items-center gap-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/40 px-2.5 py-1 text-[10px] font-bold text-rose-700 dark:text-rose-400">
-                            <XCircle className="h-3 w-3" /> Ditolak
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-4 text-right text-zinc-400 text-xs font-semibold">
-                        {new Date(mod.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                    </div>
+                    <div>
+                      {mod.status === "approved" && (
+                        <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/40 px-2.5 py-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-400">
+                          <CheckCircle2 className="h-3 w-3" /> Disetujui
+                        </span>
+                      )}
+                      {mod.status === "pending" && (
+                        <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/40 px-2.5 py-1 text-[10px] font-bold text-amber-700 dark:text-amber-400">
+                          <Clock className="h-3 w-3" /> Tinjauan
+                        </span>
+                      )}
+                      {mod.status === "rejected" && (
+                        <span className="inline-flex items-center gap-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/40 px-2.5 py-1 text-[10px] font-bold text-rose-700 dark:text-rose-400">
+                          <XCircle className="h-3 w-3" /> Ditolak
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <h4 className="font-extrabold text-sm text-zinc-900 dark:text-zinc-100 mb-2 line-clamp-2 leading-snug relative z-10 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    {mod.title}
+                  </h4>
+                  
+                  <div className="mt-auto pt-4 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-xs text-zinc-500 relative z-10">
+                    <span className="font-semibold">{new Date(mod.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</span>
+                    <div className="flex items-center gap-1.5 font-bold text-zinc-700 dark:text-zinc-300 bg-white dark:bg-zinc-900 px-2.5 py-1 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                      <Download className="h-3.5 w-3.5 text-indigo-500" /> {mod.downloads} Unduhan
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -1178,46 +1175,52 @@ export default function ProfileClient({
               </Link>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {userQuestions.map((q) => (
                 <div 
                   key={q.id} 
-                  className="p-5 border border-zinc-200 dark:border-zinc-800 rounded-2xl hover:border-indigo-400 transition-all bg-zinc-50/30 dark:bg-zinc-950/20 text-left"
+                  className="group relative bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 hover:border-emerald-400 dark:hover:border-emerald-500 transition-all duration-300 shadow-sm hover:shadow-md flex flex-col h-full overflow-hidden text-left"
                 >
-                  <div className="flex justify-between items-start gap-4 mb-3">
-                    <span className={`inline-flex items-center rounded-lg px-2.5 py-0.5 text-[10px] font-bold border uppercase
-                      ${q.difficulty === "mudah" ? "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-450 dark:border-emerald-900/40" : 
-                        q.difficulty === "sedang" ? "bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-950/40 dark:text-amber-450 dark:border-amber-900/40" : 
-                        "bg-rose-50 text-rose-700 border-rose-100 dark:bg-rose-950/40 dark:text-rose-450 dark:border-rose-900/40"}`}
+                  <div className="absolute -right-8 -top-8 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none group-hover:bg-emerald-500/15 transition-all" />
+                  
+                  <div className="flex justify-between items-start gap-4 mb-4 relative z-10">
+                    <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[10px] font-black tracking-wider uppercase border shadow-sm
+                      ${q.difficulty === "mudah" ? "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-400 dark:border-emerald-900/60" : 
+                        q.difficulty === "sedang" ? "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-400 dark:border-amber-900/60" : 
+                        "bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-400 dark:border-rose-900/60"}`}
                     >
                       Kesulitan: {q.difficulty}
                     </span>
 
-                    <div className="flex items-center gap-2">
+                    <div>
                       {q.status === "approved" && (
-                        <span className="inline-flex items-center gap-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/40 px-2 py-0.5 text-[9px] font-bold text-emerald-700 dark:text-emerald-400">
-                          Disetujui
+                        <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/40 px-2.5 py-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-400">
+                          <CheckCircle2 className="h-3 w-3" /> Disetujui
                         </span>
                       )}
                       {q.status === "pending" && (
-                        <span className="inline-flex items-center gap-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/40 px-2 py-0.5 text-[9px] font-bold text-amber-700 dark:text-amber-400">
-                          Tinjauan
+                        <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/40 px-2.5 py-1 text-[10px] font-bold text-amber-700 dark:text-amber-400">
+                          <Clock className="h-3 w-3" /> Tinjauan
                         </span>
                       )}
                       {q.status === "rejected" && (
-                        <span className="inline-flex items-center gap-0.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/40 px-2 py-0.5 text-[9px] font-bold text-rose-700 dark:text-rose-400">
-                          Ditolak
+                        <span className="inline-flex items-center gap-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/40 px-2.5 py-1 text-[10px] font-bold text-rose-700 dark:text-rose-400">
+                          <XCircle className="h-3 w-3" /> Ditolak
                         </span>
                       )}
-                      <span className="text-[10px] text-zinc-400 font-semibold">
-                        {new Date(q.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
-                      </span>
                     </div>
                   </div>
 
-                  <p className="font-semibold text-zinc-900 dark:text-zinc-150 line-clamp-2">
-                    {q.questionText}
+                  <p className="font-semibold text-sm text-zinc-800 dark:text-zinc-200 line-clamp-3 leading-relaxed relative z-10 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors mb-4">
+                    "{q.questionText}"
                   </p>
+                  
+                  <div className="mt-auto pt-4 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-[10px] text-zinc-500 font-semibold relative z-10">
+                    <span className="flex items-center gap-1.5 text-zinc-700 dark:text-zinc-400 bg-white dark:bg-zinc-900 px-2.5 py-1 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                      <HelpCircle className="h-3.5 w-3.5 text-emerald-500" /> Kuis CBT
+                    </span>
+                    <span>{new Date(q.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</span>
+                  </div>
                 </div>
               ))}
             </div>
