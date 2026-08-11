@@ -2,15 +2,21 @@
 import { SignUp } from "@clerk/nextjs";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Daftar Akun | NAWA-LEARN SMAN 2 Jonggol",
+  description: "Buat akun NAWA-LEARN gratis dan akses ratusan modul, bank soal, serta raih peringkat pertama di SMAN 2 Jonggol.",
+};
 
 export default function SignUpPage() {
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-zinc-950 dark:via-indigo-950/20 dark:to-purple-950/20 py-8 px-4 sm:px-6 lg:px-8">
 
-      {/* Ambient blobs */}
+      {/* Ambient blobs - Optimized (pulse removed) for mobile performance */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-[10%] left-[5%] w-72 h-72 rounded-full bg-indigo-300/30 dark:bg-indigo-500/10 blur-2xl animate-[pulse_6s_infinite]" />
-        <div className="absolute bottom-[10%] right-[5%] w-80 h-80 rounded-full bg-pink-300/30 dark:bg-pink-500/10 blur-2xl animate-[pulse_8s_infinite]" />
+        <div className="absolute top-[10%] left-[5%] w-72 h-72 rounded-full bg-indigo-300/30 dark:bg-indigo-500/10 blur-xl md:blur-2xl" />
+        <div className="absolute bottom-[10%] right-[5%] w-80 h-80 rounded-full bg-pink-300/30 dark:bg-pink-500/10 blur-xl md:blur-2xl" />
         {/* Floating badges — desktop only */}
         <div className="absolute top-[20%] right-[10%] hidden xl:flex items-center gap-2 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-800/50 rounded-2xl px-4 py-2.5 rotate-6 shadow-md animate-[bounce_4s_infinite]">
           <span className="text-xl">🏆</span>
@@ -107,8 +113,6 @@ export default function SignUpPage() {
             <div className="w-full max-w-[440px] relative">
               <div className="absolute -inset-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-3xl blur-lg opacity-20" />
               <SignUp
-                routing="path"
-                path="/sign-up"
                 signInUrl="/sign-in"
                 fallbackRedirectUrl="/modules"
                 appearance={{
