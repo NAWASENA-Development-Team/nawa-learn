@@ -114,6 +114,8 @@ export default function SignInPage() {
             <div className="w-full max-w-[440px] relative">
               <div className="absolute -inset-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-3xl blur-lg opacity-20" />
               <SignIn
+                routing="path"
+                path="/sign-in"
                 signUpUrl="/sign-up"
                 fallbackRedirectUrl="/modules"
                 appearance={{

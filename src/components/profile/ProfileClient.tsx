@@ -167,6 +167,7 @@ export default function ProfileClient({
   }, [user.bio, user.motto, user.name]);
   
   const [isEditing, setIsEditing] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [editName, setEditName] = useState(user.name);
   const [editBio, setEditBio] = useState(bio);
   const [editMotto, setEditMotto] = useState(motto);
@@ -435,6 +436,44 @@ export default function ProfileClient({
     }
   };
 
+  const handleDownloadCertificate = async () => {
+    try {
+      setIsDownloading(true);
+      const element = document.getElementById("certificate-container");
+      if (!element) {
+        setIsDownloading(false);
+        return;
+      }
+      
+      const html2canvas = (await import("html2canvas")).default;
+      const { jsPDF } = await import("jspdf");
+
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      
+      const pdf = new jsPDF({
+        orientation: "landscape",
+        unit: "px",
+        format: [canvas.width, canvas.height]
+      });
+
+      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
+      pdf.save(`Sertifikat-NawaLearn-${user.name}.pdf`);
+      
+      toastSuccess("Berhasil", "Sertifikat berhasil diunduh.");
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toastError("Gagal", "Terjadi kesalahan saat mengunduh sertifikat.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   // Title rank based on levels
   const getPlayfulRankTitle = (lvl: number, role: string) => {
     if (role === "admin") return "Grandmaster Administrator 👑";
@@ -646,7 +685,7 @@ export default function ProfileClient({
 
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText(typeof window !== "undefined" ? window.location.href : "");
+                  navigator.clipboard.writeText(typeof window !== "undefined" ? `${window.location.origin}/profile/${user.id}` : "");
                   toastSuccess("Link Disalin!", "Link profil berhasil disalin ke clipboard.");
                 }}
                 className="inline-flex items-center gap-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-800 border border-zinc-700/80 text-zinc-350 px-4 py-2.5 text-xs font-bold transition-all cursor-pointer"
@@ -1587,7 +1626,7 @@ export default function ProfileClient({
       {/* 🏆 3. HIGH-FIDELITY APPRECIATION CERTIFICATE MODAL */}
       {showCertificate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/90 backdrop-blur-md p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-300">
-          <div className="max-w-3xl w-full bg-white text-zinc-900 border-8 border-amber-500/80 p-6 sm:p-10 rounded-2xl shadow-2xl relative flex flex-col items-center justify-between text-center select-none overflow-hidden my-8 animate-in zoom-in-95 duration-300">
+          <div id="certificate-container" className="max-w-3xl w-full bg-white text-zinc-900 border-8 border-amber-500/80 p-6 sm:p-10 rounded-2xl shadow-2xl relative flex flex-col items-center justify-between text-center select-none overflow-hidden my-8 animate-in zoom-in-95 duration-300">
             {/* Elegant Background watermarks / borders */}
             <div className="absolute top-0 right-0 w-32 h-32 border-r-4 border-t-4 border-amber-200 rounded-tr-lg" />
             <div className="absolute bottom-0 left-0 w-32 h-32 border-l-4 border-b-4 border-amber-200 rounded-bl-lg" />
@@ -1658,7 +1697,7 @@ export default function ProfileClient({
             </div>
 
             {/* Certificate Modal Action Buttons */}
-            <div className="relative z-10 mt-10 pt-4 border-t border-zinc-150 w-full flex items-center justify-between max-w-xl text-xs gap-3">
+            <div data-html2canvas-ignore="true" className="relative z-10 mt-10 pt-4 border-t border-zinc-150 w-full flex items-center justify-between max-w-xl text-xs gap-3">
               <button
                 onClick={() => setShowCertificate(false)}
                 className="bg-zinc-200 hover:bg-zinc-250 text-zinc-700 font-bold py-2.5 px-4 rounded-xl transition-all cursor-pointer"
@@ -1667,12 +1706,12 @@ export default function ProfileClient({
               </button>
 
               <button
-                onClick={() => {
-                  window.print();
-                }}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-5 rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer border border-indigo-700"
+                onClick={handleDownloadCertificate}
+                disabled={isDownloading}
+                className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 px-5 rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer border border-indigo-700"
               >
-                <Download className="h-4 w-4" /> Cetak / Unduh Sertifikat
+                <Download className={`h-4 w-4 ${isDownloading ? "animate-bounce" : ""}`} /> 
+                {isDownloading ? "Menyiapkan PDF..." : "Unduh Sertifikat"}
               </button>
             </div>
 

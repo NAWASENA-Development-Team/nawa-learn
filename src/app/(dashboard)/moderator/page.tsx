@@ -46,7 +46,7 @@ type PendingQuestion = {
   submitterName: string;
 };
 
-const MODERATOR_PASSWORD = "nawa2025"; // Change this to your desired password
+const MODERATOR_PASSWORD = "nawa2026"; // Change this to your desired password
 
 // User stats returned from /api/moderator/hidden-badges
 type UserStats = {
