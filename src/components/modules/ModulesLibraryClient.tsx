@@ -18,7 +18,10 @@ import {
   GraduationCap,
   X,
   Calendar,
-  Check
+  Check,
+  Bookmark,
+  BookmarkCheck,
+  ChevronDown
 } from "lucide-react";
 
 interface Module {
@@ -49,6 +52,26 @@ export default function ModulesLibraryClient({ initialModules }: ModulesLibraryC
   const [printSuccess, setPrintSuccess] = useState(false);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
 
+  // ─── Bookmark State ─────────────────────────────────────────────────────────────
+  const [bookmarks, setBookmarks] = useState<string[]>([]);
+  const [showBookmarksOnly, setShowBookmarksOnly] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("nawa_bookmarks");
+    if (saved) {
+      try { setBookmarks(JSON.parse(saved)); } catch {}
+    }
+  }, []);
+
+  const toggleBookmark = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setBookmarks(prev => {
+      const newBookmarks = prev.includes(id) ? prev.filter(b => b !== id) : [...prev, id];
+      localStorage.setItem("nawa_bookmarks", JSON.stringify(newBookmarks));
+      return newBookmarks;
+    });
+  };
+
   useEffect(() => {
     if (selectedReaderModule && selectedReaderModule.contentUrl.startsWith("data:application/pdf")) {
       const parts = selectedReaderModule.contentUrl.split(",");
@@ -77,55 +100,10 @@ export default function ModulesLibraryClient({ initialModules }: ModulesLibraryC
   const grades = ["Semua", "X", "XI", "XII", "Umum"];
 
   // Handle module click & increment download count in database and state
-  const handleOpenModule = async (moduleId: string, contentUrl: string) => {
-    if (contentUrl.startsWith("data:image/")) {
-      // Real image upload (camera/local): open in NAWA-READER to display actual photo
-      const mod = modulesList.find(m => m.id === moduleId);
-      if (mod) setSelectedReaderModule(mod);
-    } else if (contentUrl.startsWith("data:application/pdf")) {
-      // Real PDF upload: open in NAWA-READER with embedded viewer
-      const mod = modulesList.find(m => m.id === moduleId);
-      if (mod) setSelectedReaderModule(mod);
-    } else if (contentUrl.startsWith("data:")) {
-      // Other local uploads (DOCX, PPTX, etc.): trigger actual download
-      const ext = contentUrl.includes("wordprocessingml") ? ".docx"
-                : contentUrl.includes("presentationml") ? ".pptx"
-                : ".dat";
-      
-      try {
-        const parts = contentUrl.split(",");
-        const byteString = atob(parts[1]);
-        const ab = new ArrayBuffer(byteString.length);
-        const ia = new Uint8Array(ab);
-        for (let i = 0; i < byteString.length; i++) {
-          ia[i] = byteString.charCodeAt(i);
-        }
-        const mime = parts[0].split(":")[1].split(";")[0];
-        const blob = new Blob([ab], { type: mime });
-        const blobUrl = URL.createObjectURL(blob);
-        
-        const link = document.createElement("a");
-        link.href = blobUrl;
-        link.download = `modul-nawa-learn${ext}`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-      } catch (err) {
-        console.error("Failed to download data URI", err);
-      }
-    } else if (
-      contentUrl.startsWith("https://nawa-learn.storage/") ||
-      contentUrl.includes("integral-trik") ||
-      contentUrl.includes("fisika-rotasi")
-    ) {
-      // Legacy seeded mock content: open NAWA-READER with mock viewer
-      const mod = modulesList.find(m => m.id === moduleId);
-      if (mod) setSelectedReaderModule(mod);
-    } else {
-      // Real external URL (Google Drive, etc.): open in new tab
-      window.open(contentUrl, "_blank", "noopener,noreferrer");
+  const handleOpenModule = async (moduleId: string) => {
+    const mod = modulesList.find(m => m.id === moduleId);
+    if (mod) {
+      setSelectedReaderModule(mod);
     }
 
     // Optimistically update local UI state download count
@@ -133,7 +111,7 @@ export default function ModulesLibraryClient({ initialModules }: ModulesLibraryC
       prev.map(m => m.id === moduleId ? { ...m, downloads: m.downloads + 1 } : m)
     );
 
-    // Trigger API POST call silently in background to update Postgres downloads count
+    // Trigger API POST call silently in background
     try {
       await fetch("/api/modules/download", {
         method: "POST",
@@ -156,98 +134,28 @@ export default function ModulesLibraryClient({ initialModules }: ModulesLibraryC
         
         const matchesCategory = selectedCategory === "Semua" || mod.category === selectedCategory;
         const matchesGrade = selectedGrade === "Semua" || mod.grade === selectedGrade;
+        const matchesBookmark = showBookmarksOnly ? bookmarks.includes(mod.id) : true;
 
-        return matchesSearch && matchesCategory && matchesGrade;
+        return matchesSearch && matchesCategory && matchesGrade && matchesBookmark;
       })
       .sort((a, b) => {
         if (sortBy === "downloads") {
           return b.downloads - a.downloads;
         } else {
-          // Sort by newest Date
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         }
       });
-  }, [modulesList, searchQuery, selectedCategory, selectedGrade, sortBy]);
+  }, [modulesList, searchQuery, selectedCategory, selectedGrade, sortBy, bookmarks, showBookmarksOnly]);
 
-  // Detect file type and return style details
   const getFileTypeDetails = (url: string) => {
     const lowerUrl = url.toLowerCase();
-
-    // Real uploaded files stored as base64 data URLs
-    if (lowerUrl.startsWith("data:image/")) {
-      return {
-        label: "Foto",
-        color: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/40",
-        icon: ImageIcon
-      };
-    }
-    if (lowerUrl.startsWith("data:application/pdf")) {
-      return {
-        label: "PDF",
-        color: "bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border-red-100 dark:border-red-900/40",
-        icon: FileText
-      };
-    }
-    if (lowerUrl.startsWith("data:application/vnd.openxmlformats") || lowerUrl.startsWith("data:application/msword")) {
-      return {
-        label: "DOCX",
-        color: "bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-900/40",
-        icon: FileText
-      };
-    }
-    if (lowerUrl.startsWith("data:")) {
-      return {
-        label: "Dokumen",
-        color: "bg-zinc-50 dark:bg-zinc-900/40 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800",
-        icon: FileText
-      };
-    }
-
-    // Treat preseeded mock modules as local direct uploads for visualization
-    if (lowerUrl.includes("fisika-rotasi")) {
-      return {
-        label: "Foto",
-        color: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/40",
-        icon: ImageIcon
-      };
-    }
-    if (lowerUrl.includes("integral-trik")) {
-      return {
-        label: "PDF",
-        color: "bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border-red-100 dark:border-red-900/40",
-        icon: FileText
-      };
-    }
-
-    if (lowerUrl.includes("drive.google.com") || lowerUrl.includes("docs.google.com")) {
-      return {
-        label: "Drive",
-        color: "bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-900/40",
-        icon: FolderOpen
-      };
-    } else if (lowerUrl.endsWith(".pdf")) {
-      return {
-        label: "PDF",
-        color: "bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border-red-100 dark:border-red-900/40",
-        icon: FileText
-      };
-    } else if (lowerUrl.endsWith(".png") || lowerUrl.endsWith(".jpg") || lowerUrl.endsWith(".jpeg") || lowerUrl.includes("photos/cam-")) {
-      return {
-        label: "Foto",
-        color: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/40",
-        icon: ImageIcon
-      };
-    }
-    return {
-      label: "Berkas",
-      color: "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/40",
-      icon: FileText
-    };
+    if (lowerUrl.startsWith("data:image/")) return { label: "Foto", color: "bg-emerald-50 text-emerald-600 border-emerald-100", icon: ImageIcon };
+    if (lowerUrl.startsWith("data:application/pdf")) return { label: "PDF", color: "bg-red-50 text-red-600 border-red-100", icon: FileText };
+    return { label: "Berkas", color: "bg-indigo-50 text-indigo-600 border-indigo-100", icon: FileText };
   };
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      {/* 🚀 Header Card with visual glowing effect */}
       <div className="mb-8 text-center sm:text-left relative overflow-hidden bg-gradient-to-r from-indigo-500/10 via-purple-500/5 to-transparent p-6 sm:p-8 border border-indigo-100/50 dark:border-zinc-800/80 rounded-3xl flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl" />
         <div className="max-w-3xl relative z-10">
@@ -257,38 +165,27 @@ export default function ModulesLibraryClient({ initialModules }: ModulesLibraryC
           <h2 className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white sm:text-4xl">
             Pusat Modul & Catatan Belajar
           </h2>
-          <p className="mt-2 text-base text-zinc-650 dark:text-zinc-400 leading-relaxed max-w-2xl">
-            Akses materi, rangkuman rumus, catatan pelajaran reguler, latihan soal UTBK, hingga persiapan Olimpiade yang ditulis langsung oleh teman-temanmu dan ditinjau oleh pengurus OSIS.
-          </p>
         </div>
-
-        {/* Floating action button */}
         <div className="shrink-0 relative z-10 flex justify-center md:justify-end">
-          <a
-            href="/submit"
-            className="inline-flex items-center gap-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 text-sm font-bold shadow-md shadow-indigo-600/10 hover:shadow-lg hover:scale-105 active:scale-95 transition-all duration-200"
-          >
+          <a href="/submit" className="inline-flex items-center gap-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 text-sm font-bold shadow-md hover:scale-105 transition-all">
             Kontribusi Modul <ArrowRight className="h-4.5 w-4.5" />
           </a>
         </div>
       </div>
 
-      {/* 🔍 Search & Controls Bar */}
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 rounded-2xl shadow-sm space-y-4 mb-8">
         <div className="flex flex-col md:flex-row gap-4">
-          {/* Search Input */}
           <div className="relative flex-1">
             <Search className="absolute left-3.5 top-3 h-5 w-5 text-zinc-400" />
             <input 
               type="text" 
-              placeholder="Cari judul modul, mata pelajaran, atau kontributor..."
+              placeholder="Cari judul modul..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 pl-11 pr-4 py-2.5 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-500 dark:text-white transition-all placeholder-zinc-400 shadow-inner"
+              className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 pl-11 pr-4 py-2.5 text-sm rounded-xl focus:outline-none"
             />
           </div>
 
-          {/* Sort Selector */}
           <div className="flex items-center gap-3 shrink-0">
             <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 inline-flex items-center gap-1.5">
               <SlidersHorizontal className="h-4 w-4" /> Urutkan:
@@ -362,6 +259,21 @@ export default function ModulesLibraryClient({ initialModules }: ModulesLibraryC
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Bookmark Filter */}
+          <div className="flex items-center gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+            <button
+              onClick={() => setShowBookmarksOnly(!showBookmarksOnly)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-bold transition-all shadow-sm ${
+                showBookmarksOnly 
+                  ? "bg-indigo-600 border-indigo-600 text-white shadow-indigo-500/20" 
+                  : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+              }`}
+            >
+              {showBookmarksOnly ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
+              Tersimpan
+            </button>
           </div>
         </div>
       </div>
@@ -448,9 +360,21 @@ export default function ModulesLibraryClient({ initialModules }: ModulesLibraryC
                       </p>
                     </div>
 
+                    <button
+                      onClick={(e) => toggleBookmark(mod.id, e)}
+                      className={`inline-flex h-9 w-9 items-center justify-center rounded-xl transition-all cursor-pointer border shadow-sm hover:scale-105 active:scale-95 ${
+                        bookmarks.includes(mod.id)
+                          ? "bg-amber-100 border-amber-200 text-amber-600 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-500"
+                          : "bg-white border-zinc-200 text-zinc-400 hover:text-amber-500 dark:bg-zinc-800 dark:border-zinc-700 dark:hover:text-amber-400"
+                      }`}
+                      title="Simpan Modul"
+                    >
+                      {bookmarks.includes(mod.id) ? <BookmarkCheck className="h-4.5 w-4.5" /> : <Bookmark className="h-4.5 w-4.5" />}
+                    </button>
+
                     <button 
                       type="button"
-                      onClick={() => handleOpenModule(mod.id, mod.contentUrl)}
+                      onClick={() => handleOpenModule(mod.id)}
                       className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer border border-indigo-700"
                       title="Buka Dokumen Modul"
                     >
@@ -502,7 +426,19 @@ export default function ModulesLibraryClient({ initialModules }: ModulesLibraryC
 
             {/* Document sheet body */}
             <div className="flex-1 overflow-y-auto p-6 sm:p-8 bg-zinc-50 dark:bg-zinc-950/85">
-              {selectedReaderModule.contentUrl.startsWith("data:image/") ? (
+              {selectedReaderModule.contentUrl.startsWith("http") && !selectedReaderModule.contentUrl.startsWith("https://nawa-learn.storage") ? (
+                /* EXTERNAL URL (Google Drive, Canva, etc.): Display in iframe */
+                <div className="flex flex-col h-full min-h-[500px] w-full gap-2">
+                  <iframe
+                    src={selectedReaderModule.contentUrl.replace("/view", "/preview")}
+                    className="w-full flex-1 min-h-[600px] rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white"
+                    allowFullScreen
+                  />
+                  <p className="text-xs text-zinc-500 text-center">
+                    Tampilan eksternal • Diunggah oleh <span className="font-bold">{selectedReaderModule.uploaderName || "Anonim"}</span>
+                  </p>
+                </div>
+              ) : selectedReaderModule.contentUrl.startsWith("data:image/") ? (
                 /* REAL PHOTO UPLOAD: Show actual captured/uploaded image */
                 <div className="max-w-2xl mx-auto flex flex-col items-center gap-4">
                   {/* eslint-disable-next-line @next/next/no-img-element */}

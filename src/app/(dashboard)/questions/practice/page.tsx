@@ -22,7 +22,8 @@ import {
   ChevronRight,
   Trash2,
   AlertTriangle,
-  Minus
+  Minus,
+  BrainCircuit
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/components/ui/Toast";
@@ -607,6 +608,25 @@ export default function PracticeMode() {
               <p className="text-sm font-extrabold text-zinc-850 dark:text-zinc-200">-10% / Jawaban Salah</p>
             </div>
           </div>
+        </div>
+
+        {/* Adaptive Quiz CTA */}
+        <div className="bg-gradient-to-r from-purple-500 to-indigo-600 rounded-2xl p-6 text-white mb-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-lg shadow-indigo-500/20">
+          <div className="flex items-center gap-4">
+            <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
+              <BrainCircuit className="h-8 w-8" />
+            </div>
+            <div>
+              <h3 className="text-lg font-black">Mode Latihan Cerdas (Kuis Adaptif)</h3>
+              <p className="text-sm text-indigo-100 max-w-lg mt-1">Sistem Spaced-Repetition: Soal yang salah akan terus diulang sampai kamu benar-benar paham. Sangat efektif untuk menghafal konsep!</p>
+            </div>
+          </div>
+          <Link 
+            href="/questions/adaptive"
+            className="shrink-0 bg-white text-indigo-600 hover:bg-zinc-50 px-6 py-3 rounded-xl font-bold transition-all shadow-md active:scale-95 flex items-center gap-2 cursor-pointer"
+          >
+            Mulai Kuis Pintar <ArrowRight className="h-4 w-4" />
+          </Link>
         </div>
 
         {/* Quiz list */}
