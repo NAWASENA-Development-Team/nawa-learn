@@ -224,14 +224,19 @@ export default function ProfileClient({
         localStorage.setItem(`nawa_photo_${user.id}`, dataUrl);
       }
       try {
-        await fetch('/api/profile/update', {
+        const res = await fetch('/api/profile/update', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ photoUrl: dataUrl }),
         });
+        if (!res.ok) {
+          throw new Error("Gagal menyimpan foto ke server. Ukuran mungkin terlalu besar.");
+        }
+        toastSuccess("Berhasil", "Foto profil berhasil diperbarui.");
         router.refresh();
-      } catch (err) {
+      } catch (err: any) {
         console.error('Photo save to DB failed:', err);
+        toastError("Gagal Menyimpan", err.message || "Gagal menyimpan foto profil.");
       }
     };
     reader.readAsDataURL(file);

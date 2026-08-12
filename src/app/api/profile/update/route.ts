@@ -5,6 +5,10 @@ import { db } from '@/db';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
+export const maxDuration = 15;
+// For Next.js 13+ App Router, body size limit can be configured via route segment config, but actually it's done via `config` or server configuration in Next 15.
+// Let's just catch the error and return it properly so we know.
+
 export async function POST(req: Request) {
   const { userId: clerkId } = await auth();
   if (!clerkId) {

@@ -51,31 +51,31 @@ export default async function PublicProfilePage({ params }: PageProps) {
   const { userId: clerkId } = await auth();
   const isOwnProfile = clerkId ? dbUser.clerkId === clerkId : false;
 
-  // 4. Retrieve rank statistics
-  const [higherPointsResult] = await db
-    .select({ value: count() })
-    .from(users)
-    .where(sql`${users.points} > ${dbUser.points}`);
-
-  const rank = (higherPointsResult?.value || 0) + 1;
-
-  const [totalStudentsResult] = await db
-    .select({ value: count() })
-    .from(users);
-  
-  const totalStudents = totalStudentsResult?.value || 1;
-
-  // 5. Retrieve user's contributed modules
-  // If it's another user, we ONLY show approved modules to keep it clean and private
+  // 4. Retrieve rank statistics & data concurrently for optimization
   const modulesCondition = isOwnProfile 
     ? eq(modules.uploaderId, dbUser.id)
     : sql`${modules.uploaderId} = ${dbUser.id} AND ${modules.status} = 'approved'`;
 
-  const fetchedModules = await db
-    .select()
-    .from(modules)
-    .where(modulesCondition)
-    .orderBy(desc(modules.createdAt));
+  const questionsCondition = isOwnProfile
+    ? eq(questions.uploaderId, dbUser.id)
+    : sql`${questions.uploaderId} = ${dbUser.id} AND ${questions.status} = 'approved'`;
+
+  const [
+    higherPointsResult,
+    totalStudentsResult,
+    fetchedModules,
+    fetchedQuestions,
+    fetchedPointLogs
+  ] = await Promise.all([
+    db.select({ value: count() }).from(users).where(sql`${users.points} > ${dbUser.points}`),
+    db.select({ value: count() }).from(users),
+    db.select().from(modules).where(modulesCondition).orderBy(desc(modules.createdAt)),
+    db.select().from(questions).where(questionsCondition).orderBy(desc(questions.createdAt)),
+    db.select().from(pointsLog).where(eq(pointsLog.userId, dbUser.id)).orderBy(desc(pointsLog.createdAt)).limit(20)
+  ]);
+
+  const rank = (higherPointsResult[0]?.value || 0) + 1;
+  const totalStudents = totalStudentsResult[0]?.value || 1;
 
   const serializedModules = fetchedModules.map((m) => ({
     id: m.id,
@@ -88,18 +88,6 @@ export default async function PublicProfilePage({ params }: PageProps) {
     createdAt: m.createdAt.toISOString(),
   }));
 
-  // 6. Retrieve user's contributed questions
-  // If it's another user, we ONLY show approved questions
-  const questionsCondition = isOwnProfile
-    ? eq(questions.uploaderId, dbUser.id)
-    : sql`${questions.uploaderId} = ${dbUser.id} AND ${questions.status} = 'approved'`;
-
-  const fetchedQuestions = await db
-    .select()
-    .from(questions)
-    .where(questionsCondition)
-    .orderBy(desc(questions.createdAt));
-
   const serializedQuestions = fetchedQuestions.map((q) => ({
     id: q.id,
     questionText: q.questionText,
@@ -107,14 +95,6 @@ export default async function PublicProfilePage({ params }: PageProps) {
     status: q.status,
     createdAt: q.createdAt.toISOString(),
   }));
-
-  // 7. Retrieve user's point logs
-  const fetchedPointLogs = await db
-    .select()
-    .from(pointsLog)
-    .where(eq(pointsLog.userId, dbUser.id))
-    .orderBy(desc(pointsLog.createdAt))
-    .limit(20);
 
   const serializedPointLogs = fetchedPointLogs.map((log) => ({
     id: log.id,
