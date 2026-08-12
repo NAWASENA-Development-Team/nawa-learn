@@ -105,7 +105,6 @@ function ThemeToggle({ compact = false }: { compact?: boolean }) {
 
 // ── Nav items ─────────────────────────────────────────────────────────────────
 const NAV_ITEMS = [
-  { href: "/paths",              label: "Jalur Belajar", icon: Map },
   { href: "/modules",            label: "Modul",        icon: BookOpen },
   { href: "/questions/practice", label: "Latihan Soal", icon: ClipboardList },
   { href: "/leaderboard",        label: "Peringkat",    icon: Trophy },

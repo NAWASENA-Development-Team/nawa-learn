@@ -67,7 +67,7 @@ type QuestionDraft = {
 // ─── Constants & helpers ──────────────────────────────────────────────────────
 
 const DIFFICULTY_OPTIONS = ["Mudah", "Sedang", "Sulit", "Sangat Sulit"];
-const CATEGORY_OPTIONS = ["UTBK-SNBT", "Olimpiade (OSN)", "Ujian Harian", "Reguler", "Campuran"];
+const CATEGORY_OPTIONS = ["UTBK-SNBT", "Olimpiade (OSN)", "Ujian Harian", "Reguler", "Kuis Harian", "Campuran"];
 const EMPTY_DRAFT: QuestionDraft = {
   text: "", optA: "", optB: "", optC: "", optD: "", optE: "", answerKey: "A", explanation: "",
 };
@@ -610,22 +610,26 @@ export default function PracticeMode() {
           </div>
         </div>
 
-        {/* Adaptive Quiz CTA */}
-        <div className="bg-gradient-to-r from-purple-500 to-indigo-600 rounded-2xl p-6 text-white mb-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-lg shadow-indigo-500/20">
-          <div className="flex items-center gap-4">
-            <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
+        {/* Daily Quiz CTA */}
+        <div className="bg-gradient-to-r from-purple-500 to-indigo-600 rounded-2xl p-6 text-white mb-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-lg shadow-indigo-500/20 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
+          <div className="flex items-center gap-4 relative z-10">
+            <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm relative">
               <BrainCircuit className="h-8 w-8" />
+              <div className="absolute -top-2 -right-2 bg-yellow-400 text-yellow-900 text-[10px] font-black px-1.5 py-0.5 rounded-md shadow-sm">+25</div>
             </div>
             <div>
-              <h3 className="text-lg font-black">Mode Latihan Cerdas (Kuis Adaptif)</h3>
-              <p className="text-sm text-indigo-100 max-w-lg mt-1">Sistem Spaced-Repetition: Soal yang salah akan terus diulang sampai kamu benar-benar paham. Sangat efektif untuk menghafal konsep!</p>
+              <h3 className="text-lg font-black flex items-center gap-2">Kuis Harian Berhadiah <Sparkles className="h-4 w-4 text-yellow-300" /></h3>
+              <p className="text-sm text-indigo-100 max-w-lg mt-1">
+                Selesaikan tantangan kuis harian yang soalnya diacak sistem secara adaptif! Kerjakan dan dapatkan hadiah +25 V-Points. (Riset pukul 03:00 WIB).
+              </p>
             </div>
           </div>
           <Link 
-            href="/questions/adaptive"
-            className="shrink-0 bg-white text-indigo-600 hover:bg-zinc-50 px-6 py-3 rounded-xl font-bold transition-all shadow-md active:scale-95 flex items-center gap-2 cursor-pointer"
+            href="/questions/daily"
+            className="shrink-0 bg-white text-indigo-600 hover:bg-zinc-50 px-6 py-3 rounded-xl font-bold transition-all shadow-md active:scale-95 flex items-center gap-2 cursor-pointer relative z-10"
           >
-            Mulai Kuis Pintar <ArrowRight className="h-4 w-4" />
+            Mulai Kuis Harian <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
 

@@ -22,6 +22,8 @@ export const users = pgTable("users", {
   // Level reward tracking
   claimedLevelRewards: jsonb("claimed_level_rewards").$type<number[]>(), // levels already rewarded
   levelFrame: varchar("level_frame", { length: 20 }),                    // "wood"|"bronze"|"silver"|"gold"
+  // Daily quiz tracking
+  lastDailyQuizAt: timestamp("last_daily_quiz_at"),
 });
 
 export const modules = pgTable("modules", {

@@ -20,11 +20,11 @@ interface Question {
   answerKey: string;
 }
 
-interface AdaptiveQuizClientProps {
+interface DailyQuizClientProps {
   initialQuestions: Question[];
 }
 
-export default function AdaptiveQuizClient({ initialQuestions }: AdaptiveQuizClientProps) {
+export default function DailyQuizClient({ initialQuestions }: DailyQuizClientProps) {
   // Shuffle array utility
   const shuffle = (array: any[]) => {
     const newArr = [...array];
@@ -58,6 +58,20 @@ export default function AdaptiveQuizClient({ initialQuestions }: AdaptiveQuizCli
   const currentQ = queue[0];
   const isFinished = queue.length === 0 && totalQuestions > 0;
   const progressPercent = totalQuestions > 0 ? (masteredCount / totalQuestions) * 100 : 0;
+
+  const [claimResult, setClaimResult] = useState<{success: boolean, message: string} | null>(null);
+  const [isClaiming, setIsClaiming] = useState(false);
+
+  useEffect(() => {
+    if (isFinished) {
+      setIsClaiming(true);
+      fetch("/api/quiz/daily-claim", { method: "POST" })
+        .then(res => res.json())
+        .then(data => setClaimResult(data))
+        .catch(err => setClaimResult({ success: false, message: "Gagal memproses hadiah." }))
+        .finally(() => setIsClaiming(false));
+    }
+  }, [isFinished]);
 
   const handleSelect = (key: string) => {
     if (isRevealed) return;
@@ -121,9 +135,22 @@ export default function AdaptiveQuizClient({ initialQuestions }: AdaptiveQuizCli
       <div className="mx-auto max-w-3xl px-4 py-20 text-center animate-in zoom-in duration-500">
         <Trophy className="h-24 w-24 text-yellow-500 mx-auto mb-6 drop-shadow-xl" />
         <h2 className="text-4xl font-black text-zinc-900 dark:text-white mb-4">Sesi Selesai! 🎉</h2>
-        <p className="text-lg text-zinc-600 dark:text-zinc-400 mb-8 max-w-lg mx-auto">
+        <p className="text-lg text-zinc-600 dark:text-zinc-400 mb-6 max-w-lg mx-auto">
           Luar biasa! Kamu telah menguasai {totalQuestions} soal di sesi ini. Otakmu makin tajam!
         </p>
+        
+        <div className="bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 mb-8 max-w-md mx-auto">
+          {isClaiming ? (
+            <p className="text-zinc-500 font-bold animate-pulse">Memproses hadiah harian...</p>
+          ) : claimResult ? (
+            <div>
+              <p className={`font-bold text-lg mb-2 ${claimResult.success ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
+                {claimResult.message}
+              </p>
+              {!claimResult.success && <p className="text-sm text-zinc-500">Kerjakan lagi besok untuk mendapatkan hadiah!</p>}
+            </div>
+          ) : null}
+        </div>
         <div className="flex justify-center gap-4">
           <button 
             onClick={() => window.location.reload()}
