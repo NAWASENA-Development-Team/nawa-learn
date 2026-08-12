@@ -9,10 +9,10 @@ import LeaderboardClient from "@/components/leaderboard/LeaderboardClient";
 export const dynamic = "force-dynamic";
 
 export default async function LeaderboardPage() {
-  // 1. Mengambil 50 kontributor teratas untuk pencarian interaktif di client
+  // 1. Mengambil 100 kontributor teratas untuk pencarian interaktif di client
   const topUsersData = await db.query.users.findMany({
     orderBy: [desc(users.points)],
-    limit: 50,
+    limit: 100,
     columns: {
       id: true,
       name: true,

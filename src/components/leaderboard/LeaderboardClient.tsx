@@ -459,6 +459,8 @@ export default function LeaderboardClient({
                     ? <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-gradient-to-r from-cyan-500 to-teal-500 text-white ml-1 shrink-0">TOP 50</span>
                     : null;
             
+            const { avatar, photo } = getPodiumAvatar(user);
+
             return (
               <div 
                 key={user.id} 
@@ -480,8 +482,16 @@ export default function LeaderboardClient({
 
                 {/* Name & Details column */}
                 <div className="col-span-7 sm:col-span-8 pl-2">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
-                    <div className="flex items-center gap-1">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${avatar.bg} flex items-center justify-center shrink-0 overflow-hidden relative shadow-sm border border-zinc-200 dark:border-zinc-700`}>
+                        {photo
+                          ? <Image src={photo} alt="foto" fill className="object-cover" />
+                          : (avatar as any).svg
+                            ? <Image src={(avatar as any).svg} alt={avatar.label} fill className="object-cover" />
+                            : <span className="text-sm">{(avatar as any).emoji}</span>
+                        }
+                      </div>
                       <h3 className="font-extrabold text-sm text-zinc-900 dark:text-zinc-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                         <Link href={`/profile/${user.id}`}>
                           {user.name}
