@@ -125,11 +125,12 @@ export async function POST(req: Request) {
         .where(eq(users.id, dbUser.id));
     }
 
-    // Update total (floor at 0)
+    // Update total (floor at 0) and promote to contributor if student and getting points
     await db.update(users)
       .set({
         points: sql`GREATEST(0, ${users.points} + ${netChange})`,
         seasonPoints: sql`GREATEST(0, ${users.seasonPoints} + ${netChange})`,
+        role: sql`CASE WHEN ${users.role} = 'student' AND ${netChange} > 0 THEN 'contributor'::role ELSE ${users.role} END`,
       })
       .where(eq(users.id, dbUser.id));
 

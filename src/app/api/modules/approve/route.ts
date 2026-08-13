@@ -78,11 +78,12 @@ export async function POST(req: Request) {
         .where(eq(users.id, submitterId));
     }
 
-    // Increment the user's total points and season points
+    // Increment the user's total points and season points, and promote to contributor if student
     await db.update(users)
       .set({
         points: sql`${users.points} + ${MODULE_APPROVAL_POINTS}`,
         seasonPoints: sql`${users.seasonPoints} + ${MODULE_APPROVAL_POINTS}`,
+        role: sql`CASE WHEN ${users.role} = 'student' THEN 'contributor'::role ELSE ${users.role} END`,
       })
       .where(eq(users.id, submitterId));
 

@@ -576,17 +576,7 @@ export default function ProfileClient({
               )}
             </div>
 
-            {/* Verification / Special Badge */}
-            {user.role === "admin" && (
-              <span className="absolute -top-3 -right-3 bg-rose-500 text-white px-2 py-0.5 rounded-lg text-[10px] font-black tracking-wider uppercase border border-rose-400 flex items-center gap-0.5 shadow-md">
-                <Shield className="h-3 w-3" /> ADMIN
-              </span>
-            )}
-            {user.role === "moderator" && (
-              <span className="absolute -top-3 -right-3 bg-amber-500 text-white px-2 py-0.5 rounded-lg text-[10px] font-black tracking-wider uppercase border border-amber-400 flex items-center gap-0.5 shadow-md">
-                <UserCheck className="h-3 w-3" /> REVIEWER
-              </span>
-            )}
+
             {/* Rank indicator badge */}
             {user.rank <= 3 && (
               <span className="absolute -top-3 -left-3 bg-gradient-to-r from-amber-400 to-yellow-500 text-zinc-900 px-2 py-0.5 rounded-lg text-[10px] font-black tracking-wider uppercase border border-amber-300 shadow-md shadow-amber-500/30">
@@ -598,8 +588,28 @@ export default function ProfileClient({
           {/* User Meta Information */}
           <div className="flex-1 text-center md:text-left">
             <div className="flex flex-col sm:flex-row items-center gap-3 justify-center md:justify-start">
-              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+              <h1 className="text-3xl sm:text-4xl font-black tracking-tight flex items-center gap-2 flex-wrap justify-center md:justify-start">
                 {user.name}
+                {user.role === "admin" && (
+                  <span className="bg-rose-500 text-white px-2.5 py-1 rounded-lg text-xs font-black tracking-wider uppercase border border-rose-400 flex items-center gap-1 shadow-sm">
+                    <Shield className="h-3.5 w-3.5" /> ADMIN
+                  </span>
+                )}
+                {user.role === "moderator" && (
+                  <span className="bg-amber-500 text-white px-2.5 py-1 rounded-lg text-xs font-black tracking-wider uppercase border border-amber-400 flex items-center gap-1 shadow-sm">
+                    <UserCheck className="h-3.5 w-3.5" /> REVIEWER
+                  </span>
+                )}
+                {user.role === "contributor" && (
+                  <span className="bg-indigo-500 text-white px-2.5 py-1 rounded-lg text-xs font-black tracking-wider uppercase border border-indigo-400 flex items-center gap-1 shadow-sm">
+                    <Sparkles className="h-3.5 w-3.5" /> KONTRIBUTOR
+                  </span>
+                )}
+                {user.role === "student" && (
+                  <span className="bg-zinc-500 text-white px-2.5 py-1 rounded-lg text-xs font-black tracking-wider uppercase border border-zinc-400 flex items-center gap-1 shadow-sm">
+                    <BookOpen className="h-3.5 w-3.5" /> SISWA
+                  </span>
+                )}
               </h1>
               <span className="inline-flex items-center gap-1 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold border border-white/10 text-indigo-200">
                 Level {level}

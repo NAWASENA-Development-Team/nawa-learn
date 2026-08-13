@@ -45,7 +45,8 @@ export async function POST() {
       .set({ 
         points: userRecord.points + pointsAwarded,
         seasonPoints: (userRecord.seasonPoints || 0) + pointsAwarded,
-        lastDailyQuizAt: now 
+        lastDailyQuizAt: now,
+        role: userRecord.role === "student" ? "contributor" : userRecord.role
       })
       .where(eq(users.id, userRecord.id));
 
