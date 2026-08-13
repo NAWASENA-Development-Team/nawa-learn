@@ -24,6 +24,9 @@ export const users = pgTable("users", {
   levelFrame: varchar("level_frame", { length: 20 }),                    // "wood"|"bronze"|"silver"|"gold"
   // Daily quiz tracking
   lastDailyQuizAt: timestamp("last_daily_quiz_at"),
+  // Seasonal leaderboard
+  seasonPoints: integer("season_points").default(0).notNull(),   // points earned in current season only
+  seasonResetAt: timestamp("season_reset_at"),                   // when this user's season points were last reset
 });
 
 export const modules = pgTable("modules", {

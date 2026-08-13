@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { users, pointsLog } from "@/db/schema";
 import { eq, sql, and } from "drizzle-orm";
 import { checkAndGrantLevelRewards } from "@/lib/levelRewards";
+import { needsSeasonReset } from "@/lib/season";
 
 const completeSchema = z.object({
   quizId: z.string().min(1),
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
     // Find user in DB
     const dbUser = await db.query.users.findFirst({
       where: eq(users.clerkId, clerkId),
-      columns: { id: true, points: true }
+      columns: { id: true, points: true, seasonPoints: true, seasonResetAt: true }
     });
 
     if (!dbUser) {
@@ -117,9 +118,19 @@ export async function POST(req: Request) {
       });
     }
 
+    // Lazy season reset check
+    if (needsSeasonReset(dbUser.seasonResetAt)) {
+      await db.update(users)
+        .set({ seasonPoints: 0, seasonResetAt: new Date() })
+        .where(eq(users.id, dbUser.id));
+    }
+
     // Update total (floor at 0)
     await db.update(users)
-      .set({ points: sql`GREATEST(0, ${users.points} + ${netChange})` })
+      .set({
+        points: sql`GREATEST(0, ${users.points} + ${netChange})`,
+        seasonPoints: sql`GREATEST(0, ${users.seasonPoints} + ${netChange})`,
+      })
       .where(eq(users.id, dbUser.id));
 
     const newTotal = Math.max(0, dbUser.points + netChange);

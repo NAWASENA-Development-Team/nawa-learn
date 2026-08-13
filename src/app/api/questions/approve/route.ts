@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { questions, submissions, users, pointsLog } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { checkAndGrantLevelRewards } from "@/lib/levelRewards";
+import { needsSeasonReset } from "@/lib/season";
 
 const approveSchema = z.object({
   submissionId: z.string().uuid(),
@@ -47,7 +48,7 @@ export async function POST(req: Request) {
     // Get submitter's current points (for level reward check)
     const submitter = await db.query.users.findFirst({
       where: eq(users.id, submitterId),
-      columns: { id: true, points: true },
+      columns: { id: true, points: true, seasonPoints: true, seasonResetAt: true },
     });
     if (!submitter) return NextResponse.json({ error: "Submitter not found" }, { status: 404 });
 
@@ -73,8 +74,18 @@ export async function POST(req: Request) {
       refId: questionId,
     });
 
+    // Lazy season reset check
+    if (needsSeasonReset(submitter.seasonResetAt)) {
+      await db.update(users)
+        .set({ seasonPoints: 0, seasonResetAt: new Date() })
+        .where(eq(users.id, submitterId));
+    }
+
     await db.update(users)
-      .set({ points: sql`${users.points} + ${pointsAwarded}` })
+      .set({
+        points: sql`${users.points} + ${pointsAwarded}`,
+        seasonPoints: sql`${users.seasonPoints} + ${pointsAwarded}`,
+      })
       .where(eq(users.id, submitterId));
 
     const newPoints = submitter.points + pointsAwarded;

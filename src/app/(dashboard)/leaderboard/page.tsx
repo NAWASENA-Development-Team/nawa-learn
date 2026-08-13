@@ -4,6 +4,7 @@ import { users, modules, questions, pointsLog } from "@/db/schema";
 import { desc, count, eq, sql, inArray } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
 import LeaderboardClient from "@/components/leaderboard/LeaderboardClient";
+import { getSeasonLabel } from "@/lib/season";
 
 // Halaman ini dirender di server untuk memastikan data peringkat selalu up-to-date
 export const dynamic = "force-dynamic";
@@ -11,12 +12,13 @@ export const dynamic = "force-dynamic";
 export default async function LeaderboardPage() {
   // 1. Mengambil 100 kontributor teratas untuk pencarian interaktif di client
   const topUsersData = await db.query.users.findMany({
-    orderBy: [desc(users.points)],
+    orderBy: [desc(users.seasonPoints)],
     limit: 100,
     columns: {
       id: true,
       name: true,
       points: true,
+      seasonPoints: true,
       avatarIndex: true,
       photoUrl: true,
     }
@@ -76,6 +78,7 @@ export default async function LeaderboardPage() {
         id: true,
         name: true,
         points: true,
+        seasonPoints: true,
         avatarIndex: true,
         photoUrl: true,
       }
@@ -86,12 +89,13 @@ export default async function LeaderboardPage() {
       const [higherPointsResult] = await db
         .select({ value: count() })
         .from(users)
-        .where(sql`${users.points} > ${dbUser.points}`);
+        .where(sql`${users.seasonPoints} > ${dbUser.seasonPoints}`);
       
       loggedInUser = {
         id: dbUser.id,
         name: dbUser.name,
         points: dbUser.points,
+        seasonPoints: dbUser.seasonPoints,
         rank: (higherPointsResult?.value || 0) + 1,
         avatarIndex: dbUser.avatarIndex ?? null,
         photoUrl: dbUser.photoUrl ?? null,
@@ -99,11 +103,14 @@ export default async function LeaderboardPage() {
     }
   }
 
+  const seasonLabel = getSeasonLabel();
+
   return (
     <LeaderboardClient 
       topUsers={topUsers}
       loggedInUser={loggedInUser}
       totalStudents={totalStudents}
+      seasonLabel={seasonLabel}
     />
   );
 }

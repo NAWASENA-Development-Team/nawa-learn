@@ -44,6 +44,7 @@ export async function POST() {
     await db.update(users)
       .set({ 
         points: userRecord.points + pointsAwarded,
+        seasonPoints: (userRecord.seasonPoints || 0) + pointsAwarded,
         lastDailyQuizAt: now 
       })
       .where(eq(users.id, userRecord.id));

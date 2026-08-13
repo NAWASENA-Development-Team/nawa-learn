@@ -107,7 +107,10 @@ export async function checkAndGrantLevelRewards(
   // Commit bonus points separately (uses sql expression)
   if (bonusPoints > 0) {
     await db.update(users)
-      .set({ points: sql`${users.points} + ${bonusPoints}` })
+      .set({
+        points: sql`${users.points} + ${bonusPoints}`,
+        seasonPoints: sql`${users.seasonPoints} + ${bonusPoints}`,
+      })
       .where(eq(users.id, userId));
 
     await db.insert(pointsLog).values({

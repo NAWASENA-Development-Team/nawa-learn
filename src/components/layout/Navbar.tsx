@@ -17,6 +17,7 @@ import {
   Sun,
   Moon,
   Map,
+  Shield,
 } from "lucide-react";
 import NawaIcon from "@/components/icons/NawaIcon";
 
@@ -116,6 +117,21 @@ const NAV_ITEMS = [
 export default function Navbar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isModerator, setIsModerator] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (sessionStorage.getItem("moderator_authenticated") === "true") {
+        setIsModerator(true);
+      }
+      fetch("/api/moderator/auth-check")
+        .then(res => res.json())
+        .then(data => {
+          if (data.isModerator) setIsModerator(true);
+        })
+        .catch(() => {});
+    }
+  }, []);
 
   // Close mobile menu on route change
   useEffect(() => { setTimeout(() => setMobileOpen(false), 0); }, [pathname]);
@@ -150,7 +166,7 @@ export default function Navbar() {
             {/* Center: Desktop nav links (signed-in only) */}
             <Show when="signed-in">
               <div className="hidden md:flex items-center gap-0.5 flex-1 justify-center">
-                {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+                {[...NAV_ITEMS, ...(isModerator ? [{ href: "/moderator", label: "Moderator", icon: Shield }] : [])].map(({ href, label, icon: Icon }) => {
                   const active = isActive(href);
                   return (
                     <Link
@@ -236,7 +252,7 @@ export default function Navbar() {
 
             {/* Nav links */}
             <nav className="p-3 space-y-1">
-              {NAV_ITEMS.map(({ href, label, icon: Icon }, idx) => {
+              {[...NAV_ITEMS, ...(isModerator ? [{ href: "/moderator", label: "Moderator", icon: Shield }] : [])].map(({ href, label, icon: Icon }, idx) => {
                 const active = isActive(href);
                 return (
                   <Link

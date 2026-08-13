@@ -87,15 +87,28 @@ export default function ModeratorDashboard() {
   useEffect(() => {
     // Check if already authenticated from sessionStorage
     const isAuth = sessionStorage.getItem("moderator_authenticated") === "true";
-    setTimeout(() => {
-      setIsAuthenticated(isAuth);
-      
-      if (isAuth) {
-        fetchPendingSubmissions();
-        fetchPendingQuestions();
-        fetchHiddenBadges();
-      }
-    }, 0);
+    
+    // Check if user is Top 3 via API
+    fetch("/api/moderator/auth-check")
+      .then(res => res.json())
+      .then(data => {
+        const finalAuth = isAuth || data.isModerator;
+        setIsAuthenticated(finalAuth);
+        
+        if (finalAuth) {
+          fetchPendingSubmissions();
+          fetchPendingQuestions();
+          fetchHiddenBadges();
+        }
+      })
+      .catch(() => {
+        setIsAuthenticated(isAuth);
+        if (isAuth) {
+          fetchPendingSubmissions();
+          fetchPendingQuestions();
+          fetchHiddenBadges();
+        }
+      });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
