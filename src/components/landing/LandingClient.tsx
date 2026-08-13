@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { SignInButton, Show } from "@clerk/nextjs";
+import { SignInButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import { useEffect, useRef, useState, ReactNode } from "react";
 
 /* ─── Animated counter ─────────────────────────────────────────────────────── */
@@ -140,7 +140,7 @@ export default function LandingClient({ stats, sampleModules }: LandingClientPro
 
             {/* CTAs */}
             <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-              <Show when="signed-out">
+              <SignedOut>
                 <Link
                   id="hero-cta-signin"
                   href="/sign-in"
@@ -151,8 +151,8 @@ export default function LandingClient({ stats, sampleModules }: LandingClientPro
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                   </svg>
                 </Link>
-              </Show>
-              <Show when="signed-in">
+              </SignedOut>
+              <SignedIn>
                 <Link
                   id="hero-cta-modules"
                   href="/modules"
@@ -163,7 +163,7 @@ export default function LandingClient({ stats, sampleModules }: LandingClientPro
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                   </svg>
                 </Link>
-              </Show>
+              </SignedIn>
               <Link
                 id="hero-cta-leaderboard"
                 href="/leaderboard"

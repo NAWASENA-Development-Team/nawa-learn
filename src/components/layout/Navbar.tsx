@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { Show, SignInButton, UserButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { useTheme } from "next-themes";
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -164,7 +164,7 @@ export default function Navbar() {
             </Link>
 
             {/* Center: Desktop nav links (signed-in only) */}
-            <Show when="signed-in">
+            <SignedIn>
               <div className="hidden md:flex items-center gap-0.5 flex-1 justify-center">
                 {[...NAV_ITEMS, ...(isModerator ? [{ href: "/moderator", label: "Moderator", icon: Shield }] : [])].map(({ href, label, icon: Icon }) => {
                   const active = isActive(href);
@@ -187,13 +187,13 @@ export default function Navbar() {
                   );
                 })}
               </div>
-            </Show>
+            </SignedIn>
 
             {/* Right: Controls */}
             <div className="flex items-center gap-2 shrink-0">
               <ThemeToggle />
 
-              <Show when="signed-out">
+              <SignedOut>
                 <Link
                   href="/sign-in"
                   className="hidden sm:inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-sm font-bold text-white shadow-md shadow-indigo-500/20 transition-all hover:from-indigo-700 hover:to-violet-700 hover:shadow-indigo-500/30 active:scale-[0.98]"
@@ -207,9 +207,9 @@ export default function Navbar() {
                 >
                   <User className="h-4 w-4" />
                 </Link>
-              </Show>
+              </SignedOut>
 
-              <Show when="signed-in">
+              <SignedIn>
                 <UserButton />
 
                 {/* Mobile hamburger */}
@@ -292,7 +292,7 @@ export default function Navbar() {
             </div>
           </div>
         </div>
-      </Show>
+      </SignedIn>
     </>
   );
 }
