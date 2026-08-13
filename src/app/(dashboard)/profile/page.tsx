@@ -38,24 +38,40 @@ export default async function OwnProfilePage() {
         || "Student";
 
     try {
-      const [insertedUser] = await db.insert(users).values({
-        clerkId: clerkId,
-        email: email,
-        name: name,
-        role: "student",
-        points: 0,
-      }).returning();
-      
-      dbUser = insertedUser;
+      // Case 1: User existed in dev mode with same email but different clerk_id
+      // Try to find by email and update their clerk_id to the new production one
+      const existingByEmail = await db.query.users.findFirst({
+        where: eq(users.email, email),
+      });
+
+      if (existingByEmail) {
+        // Update the old record with the new production clerk_id
+        await db.update(users)
+          .set({ clerkId: clerkId, name: name })
+          .where(eq(users.email, email));
+        dbUser = { ...existingByEmail, clerkId: clerkId, name: name };
+      } else {
+        // Truly new user — insert fresh
+        const [insertedUser] = await db.insert(users).values({
+          clerkId: clerkId,
+          email: email,
+          name: name,
+          role: "student",
+          points: 0,
+        }).returning();
+        dbUser = insertedUser;
+      }
     } catch (err) {
       console.error("Self-healing manual sync failed:", err);
-      // Fallback redirect or error if Neon DB is temporarily down
       return (
         <div className="max-w-md mx-auto p-8 mt-12 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl text-center">
-          <span className="text-4xl">⚠️</span>
+          <span className="text-4xl">&#x26A0;&#xFE0F;</span>
           <h2 className="text-xl font-bold mt-4 text-zinc-900 dark:text-white">Sinkronisasi Gagal</h2>
           <p className="text-sm text-zinc-500 mt-2">
             Profil Anda belum terhubung dengan database sekolah. Silakan muat ulang halaman ini atau hubungi ICT Division.
+          </p>
+          <p className="text-xs text-zinc-400 mt-3 font-mono break-all">
+            Debug: {String(err)}
           </p>
         </div>
       );

@@ -72,6 +72,19 @@ export async function POST(req: Request) {
     const name = resolveName(evt.data as Parameters<typeof resolveName>[0]);
 
     try {
+      // Check if email already exists (e.g. dev → production Clerk migration)
+      const existing = await db.query.users.findFirst({
+        where: eq(users.email, email),
+      });
+
+      if (existing) {
+        // Update clerk_id to the new production one
+        await db.update(users)
+          .set({ clerkId: id, name: name })
+          .where(eq(users.email, email));
+        return new Response('User re-linked to production Clerk', { status: 200 });
+      }
+
       await db.insert(users).values({
         clerkId: id,
         email: email,
