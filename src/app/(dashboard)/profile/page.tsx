@@ -27,7 +27,7 @@ export default async function OwnProfilePage() {
       redirect("/sign-in");
     }
 
-    const email = clerkUser.emailAddresses[0]?.emailAddress;
+    const email = clerkUser.emailAddresses[0]?.emailAddress || `${clerkId}@user.nawasena.site`;
     const isGoogleAuth = clerkUser.externalAccounts?.some(
       (acc) => acc.provider === "google" || acc.provider === "oauth_google",
     );

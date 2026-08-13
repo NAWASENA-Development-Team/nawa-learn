@@ -68,7 +68,7 @@ export async function POST(req: Request) {
   // Sync new user to our database
   if (eventType === 'user.created') {
     const { id, email_addresses } = evt.data;
-    const email = email_addresses[0]?.email_address;
+    const email = email_addresses?.[0]?.email_address || `${id}@user.nawasena.site`;
     const name = resolveName(evt.data as Parameters<typeof resolveName>[0]);
 
     try {
@@ -89,7 +89,7 @@ export async function POST(req: Request) {
   // Keep DB name in sync when user updates their Clerk profile
   if (eventType === 'user.updated') {
     const { id, email_addresses } = evt.data;
-    const email = email_addresses[0]?.email_address;
+    const email = email_addresses?.[0]?.email_address || `${id}@user.nawasena.site`;
     const name = resolveName(evt.data as Parameters<typeof resolveName>[0]);
 
     try {
