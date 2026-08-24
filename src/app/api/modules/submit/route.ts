@@ -56,7 +56,7 @@ export async function POST(req: Request) {
     try {
       dbUser = await db.query.users.findFirst({
         where: eq(users.clerkId, clerkId),
-        columns: { id: true }
+        columns: { id: true, role: true }
       });
     } catch (dbError) {
       console.error("Database query error:", dbError);
@@ -70,6 +70,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ 
         error: "User profile not synced with database. Please try logging out and back in." 
       }, { status: 404 });
+    }
+    
+    if (dbUser.role === "student") {
+      return NextResponse.json({ 
+        error: "Hanya kontributor yang dapat mengunggah modul" 
+      }, { status: 403 });
     }
 
     // 4. Insert module into database

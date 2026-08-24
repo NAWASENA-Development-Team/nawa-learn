@@ -29,9 +29,10 @@ export async function POST(req: Request) {
 
     const dbUser = await db.query.users.findFirst({
       where: eq(users.clerkId, clerkId),
-      columns: { id: true },
+      columns: { id: true, role: true },
     });
     if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (dbUser.role === "student") return NextResponse.json({ error: "Hanya kontributor yang dapat mengunggah soal" }, { status: 403 });
 
     const body = await req.json();
     const data = submitSchema.parse(body);

@@ -4,6 +4,8 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { desc } from "drizzle-orm";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const { userId: clerkId } = await auth();
@@ -11,13 +13,14 @@ export async function GET() {
       return NextResponse.json({ isModerator: false });
     }
 
-    // Get current user and top 3 users by points
+    // Get current user and top 3 users by points (must have > 0 points)
     const [currentUser, top3Users] = await Promise.all([
       db.query.users.findFirst({
         where: (users, { eq }) => eq(users.clerkId, clerkId),
         columns: { id: true },
       }),
       db.query.users.findMany({
+        where: (users, { gt }) => gt(users.seasonPoints, 0),
         orderBy: [desc(users.seasonPoints), desc(users.createdAt)],
         limit: 3,
         columns: { id: true },
