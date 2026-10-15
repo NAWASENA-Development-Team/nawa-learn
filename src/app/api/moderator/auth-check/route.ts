@@ -1,8 +1,13 @@
+// app/api/moderator/auth-check/route.ts
+// Tells the client whether the signed-in user may open the moderator panel.
+// The answer comes solely from `users.role` — never from a hardcoded password
+// or a leaderboard position (both were spoofable / manipulable).
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { desc } from "drizzle-orm";
+import { eq } from "drizzle-orm";
+import { hasReviewerRole } from "@/lib/authz";
 
 export const dynamic = "force-dynamic";
 
@@ -13,27 +18,12 @@ export async function GET() {
       return NextResponse.json({ isModerator: false });
     }
 
-    // Get current user and top 3 users by points (must have > 0 points)
-    const [currentUser, top3Users] = await Promise.all([
-      db.query.users.findFirst({
-        where: (users, { eq }) => eq(users.clerkId, clerkId),
-        columns: { id: true },
-      }),
-      db.query.users.findMany({
-        where: (users, { gt }) => gt(users.seasonPoints, 0),
-        orderBy: [desc(users.seasonPoints), desc(users.createdAt)],
-        limit: 3,
-        columns: { id: true },
-      }),
-    ]);
+    const currentUser = await db.query.users.findFirst({
+      where: eq(users.clerkId, clerkId),
+      columns: { role: true },
+    });
 
-    if (!currentUser) {
-      return NextResponse.json({ isModerator: false });
-    }
-
-    const isTop3 = top3Users.some((u) => u.id === currentUser.id);
-
-    return NextResponse.json({ isModerator: isTop3 });
+    return NextResponse.json({ isModerator: hasReviewerRole(currentUser?.role ?? "guest") });
   } catch (error) {
     console.error("Moderator auth check error:", error);
     return NextResponse.json({ isModerator: false });

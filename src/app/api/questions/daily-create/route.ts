@@ -1,26 +1,18 @@
 // app/api/questions/daily-create/route.ts
 // Moderator-only endpoint to create daily quiz questions directly (auto-approved).
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
-import { questions, users, submissions } from "@/db/schema";
+import { questions, submissions } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { requireModerator } from "@/lib/authz";
 
 export async function POST(req: Request) {
+  // Auto-approved content, so moderator/admin only.
+  const authz = await requireModerator();
+  if (!authz.ok) return authz.response;
+  const dbUser = authz.user;
+
   try {
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Verify the user exists in DB
-    const dbUser = await db.query.users.findFirst({
-      where: eq(users.clerkId, clerkId),
-    });
-    if (!dbUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
     const body = await req.json();
     const { questionText, options, answerKey, difficulty, subject } = body;
 
@@ -74,12 +66,11 @@ export async function POST(req: Request) {
 
 // GET: Fetch all existing daily quiz questions for the moderator to see
 export async function GET() {
-  try {
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  // Includes answer keys — moderator/admin only.
+  const authz = await requireModerator();
+  if (!authz.ok) return authz.response;
 
+  try {
     const dailyQuestions = await db.query.questions.findMany({
       where: eq(questions.category, "Kuis Harian"),
       orderBy: (q, { desc }) => [desc(q.createdAt)],

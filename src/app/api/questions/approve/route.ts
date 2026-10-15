@@ -1,21 +1,21 @@
 // app/api/questions/approve/route.ts
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { questions, submissions, users, pointsLog } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
+import { requireModerator } from "@/lib/authz";
 import { checkAndGrantLevelRewards } from "@/lib/levelRewards";
 import { needsSeasonReset } from "@/lib/season";
 
+// `questionId` and `submitterId` are resolved from the submission row in the
+// database, never from the request body.
 const approveSchema = z.object({
   submissionId: z.string().uuid(),
-  questionId: z.string().uuid(),
-  submitterId: z.string().uuid(),
-  feedback: z.string().optional(),
+  feedback: z.string().max(1000).optional(),
 });
 
-// Points awarded to question creator when their question is approved (per difficulty)
+// Points awarded to the question creator when their question is approved
 const QUESTION_APPROVAL_POINTS: Record<string, number> = {
   mudah:  15,
   sedang: 25,
@@ -23,20 +23,32 @@ const QUESTION_APPROVAL_POINTS: Record<string, number> = {
 };
 
 export async function POST(req: Request) {
+  // 1. Authorization: moderator or admin only.
+  const authz = await requireModerator();
+  if (!authz.ok) return authz.response;
+  const reviewer = authz.user;
+
   try {
-    const { userId: clerkId } = await auth();
-    if (!clerkId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    const reviewer = await db.query.users.findFirst({
-      where: eq(users.clerkId, clerkId),
-      columns: { id: true },
-    });
-    if (!reviewer) return NextResponse.json({ error: "Reviewer not found" }, { status: 404 });
-
     const body = await req.json();
-    const { submissionId, questionId, submitterId, feedback } = approveSchema.parse(body);
+    const { submissionId, feedback } = approveSchema.parse(body);
 
-    // Get the question to check difficulty
+    // 2. Resolve the real target from the database.
+    const submission = await db.query.submissions.findFirst({
+      where: eq(submissions.id, submissionId),
+      columns: { id: true, type: true, refId: true, submitterId: true },
+    });
+
+    if (!submission) {
+      return NextResponse.json({ error: "Submission not found" }, { status: 404 });
+    }
+    if (submission.type !== "question") {
+      return NextResponse.json({ error: "Submission is not a question" }, { status: 400 });
+    }
+
+    const questionId = submission.refId;
+    const submitterId = submission.submitterId;
+
+    // Difficulty (and therefore the reward) comes from the stored question.
     const question = await db.query.questions.findFirst({
       where: eq(questions.id, questionId),
       columns: { difficulty: true },
@@ -45,28 +57,34 @@ export async function POST(req: Request) {
 
     const pointsAwarded = QUESTION_APPROVAL_POINTS[question.difficulty] ?? 15;
 
-    // Get submitter's current points (for level reward check)
+    // Get submitter's current points (for the level reward check)
     const submitter = await db.query.users.findFirst({
       where: eq(users.id, submitterId),
       columns: { id: true, points: true, seasonPoints: true, seasonResetAt: true },
     });
     if (!submitter) return NextResponse.json({ error: "Submitter not found" }, { status: 404 });
 
-    // Approve the question
-    await db.update(questions)
-      .set({ status: "approved" })
-      .where(eq(questions.id, questionId));
-
-    // Update submission
-    await db.update(submissions)
+    // 3. Atomically claim the submission (see modules/approve for rationale).
+    const claimed = await db
+      .update(submissions)
       .set({
         status: "approved",
         reviewerId: reviewer.id,
         feedback: feedback || "Soal disetujui. Terima kasih atas kontribusinya!",
       })
-      .where(eq(submissions.id, submissionId));
+      .where(and(eq(submissions.id, submissionId), eq(submissions.status, "pending")))
+      .returning({ id: submissions.id });
 
-    // Log and award points
+    if (claimed.length === 0) {
+      return NextResponse.json({ error: "Submission already reviewed" }, { status: 409 });
+    }
+
+    // 4. Approve the question.
+    await db.update(questions)
+      .set({ status: "approved" })
+      .where(eq(questions.id, questionId));
+
+    // 5. Log and award points.
     await db.insert(pointsLog).values({
       userId: submitterId,
       action: "question_approved",
@@ -74,14 +92,14 @@ export async function POST(req: Request) {
       refId: questionId,
     });
 
-    // Lazy season reset check
+    // 6. Lazy season reset check
     if (needsSeasonReset(submitter.seasonResetAt)) {
       await db.update(users)
         .set({ seasonPoints: 0, seasonResetAt: new Date() })
         .where(eq(users.id, submitterId));
     }
 
-    // Increment the user's total points and season points, and promote to contributor if student
+    // 7. Increment points, promote to contributor if still a student.
     await db.update(users)
       .set({
         points: sql`${users.points} + ${pointsAwarded}`,
@@ -92,7 +110,7 @@ export async function POST(req: Request) {
 
     const newPoints = submitter.points + pointsAwarded;
 
-    // Check level rewards
+    // 8. Check level rewards.
     const levelRewards = await checkAndGrantLevelRewards(submitterId, submitter.points, newPoints);
 
     return NextResponse.json({
@@ -100,6 +118,7 @@ export async function POST(req: Request) {
       pointsAwarded,
       levelRewards: levelRewards.map(r => r.label),
     }, { status: 200 });
+
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Validation failed", details: error.issues }, { status: 400 });

@@ -1,17 +1,18 @@
 // app/api/submissions/pending/route.ts
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { submissions, modules, users } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
+import { requireModerator } from "@/lib/authz";
 
 export async function GET() {
-  try {
-    const { userId: clerkId } = await auth();
-    if (!clerkId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // The moderation queue is not public: moderator or admin only.
+  const authz = await requireModerator();
+  if (!authz.ok) return authz.response;
 
-    // Fetch pending submissions and join with module and submitter data
-    // Access is controlled by the password gate in the moderator frontend
+  try {
+    // Explicitly scoped to *module* submissions of type "module" so question
+    // submissions can never leak into the module queue.
     const pendingQueue = await db.select({
       submissionId: submissions.id,
       submittedAt: submissions.submittedAt,
@@ -24,7 +25,10 @@ export async function GET() {
     .from(submissions)
     .innerJoin(modules, eq(submissions.refId, modules.id))
     .innerJoin(users, eq(submissions.submitterId, users.id))
-    .where(eq(submissions.status, "pending"))
+    .where(and(
+      eq(submissions.type, "module"),
+      eq(submissions.status, "pending"),
+    ))
     .orderBy(desc(submissions.submittedAt));
 
     return NextResponse.json({ data: pendingQueue }, { status: 200 });

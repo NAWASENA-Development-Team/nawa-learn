@@ -3,8 +3,13 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { questions, submissions, users } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
+import { requireModerator } from "@/lib/authz";
 
 export async function GET() {
+  // Contains unreviewed questions *with their answer keys* — moderators only.
+  const authz = await requireModerator();
+  if (!authz.ok) return authz.response;
+
   try {
     // Get all pending questions with submitter info via submissions table
     const rows = await db

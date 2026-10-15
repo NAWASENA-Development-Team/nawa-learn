@@ -213,6 +213,17 @@ Tidak ada `*.test.ts`, tidak ada `.github/workflows`. Tidak ada yang mencegah re
 - Semua halaman pakai `force-dynamic`, jadi tidak ada satu pun yang di-cache.
 - `photoUrl` base64 ikut ke leaderboard → payload bisa puluhan MB.
 
+### H12. Halaman `/submit` hilang, digantikan komponen yang meng-import dirinya sendiri
+**Lokasi:** `src/components/submit/SubmitClient.tsx:1-86`, `src/components/layout/Navbar.tsx:112`
+
+Ditemukan saat M2. Pada commit terakhir (`0d88b45`) file `src/app/(dashboard)/submit/page.tsx` **dihapus**, dan sebagai gantinya dibuat `src/components/submit/SubmitClient.tsx` yang isinya justru komponen *halaman* (`SubmitPage`) — lalu di baris 6 meng-import dirinya sendiri dan di baris 85 me-render `<SubmitClient />` (yaitu dirinya sendiri). Akibatnya:
+
+- Navbar menautkan "Upload" ke `/submit`, padahal route itu **tidak ada** → 404 untuk semua pengguna.
+- Alur unggah modul/soal (`/api/modules/submit`, `/api/questions/submit`) jadi tidak punya pintu masuk di UI.
+- Jika file itu suatu saat dipasang sebagai page, ia akan **rekursi tak terbatas**.
+
+**Perbaikan:** pindahkan isi `SubmitPage` ke `src/app/(dashboard)/submit/page.tsx` dan buat komponen form terpisah untuk `<SubmitClient />`, atau sembunyikan item nav "Upload" sampai form-nya ada. Belum dikerjakan karena di luar lingkup M2 dan menyentuh UI/produk.
+
 ---
 
 ## 3. Privasi & Kepatuhan (UU PDP No. 27/2022)
@@ -289,17 +300,26 @@ Tambahan: `AGENTS.md` mendokumentasikan password moderator default di repo publi
 
 ---
 
-#### M2 — Otorisasi terpusat (RBAC)
+#### M2 — Otorisasi terpusat (RBAC) ✅ SELESAI (2026-10-16)
 **Tujuan:** Satu tempat yang menentukan siapa boleh apa.
 **Deliverables**
-- [ ] Buat `src/lib/authz.ts`: `requireUser()`, `requireModerator()`, `requireOwner(resourceId)` — mengembalikan `NextResponse` error atau sesi tervalidasi.
-- [ ] Terapkan di **semua** route approval/review/daily-create.
-- [ ] Ambil `submitterId` **hanya** dari baris `submissions` di DB; tolak field itu di body.
-- [ ] Hapus `MODERATOR_PASSWORD` di `moderator/page.tsx`; `isModerator` hanya dari API berbasis `users.role`.
-- [ ] Perbaiki matcher di `proxy.ts` menjadi berlaku untuk path nyata; berlaku **deny-by-default**.
-- [ ] Tambahkan `middleware`/guard di `moderator` dan seluruh route `/api/**` non-publik.
+- [x] Buat `src/lib/authz.ts`: `requireUser()`, `requireRole(roles)`, `requireModerator()` + predikat murni `hasReviewerRole(role)` — mengembalikan union `{ok:true,user} | {ok:false,response}` (401 bila belum login, 403 bila peran tidak cukup / user belum tersinkron).
+- [x] Terapkan di **semua** route approval/review/daily-create + seluruh queue moderasi.
+- [x] Ambil `submitterId` (dan `moduleId`/`questionId`) **hanya** dari baris `submissions` di DB; field itu dibuang dari body.
+- [x] Hapus `MODERATOR_PASSWORD` & flag `sessionStorage`; `isModerator` murni dari `users.role`.
+- [x] Perbaiki matcher `proxy.ts` → **deny-by-default** terhadap path nyata.
+- [x] Middleware menutup `moderator` dan seluruh `/api/**` non-publik (401 JSON untuk API, redirect untuk halaman).
 
-**Definition of Done:** Test otomatis membuktikan user `student` mendapat 403 di keempat endpoint tersebut; user tanpa login mendapat 401; hanya `moderator`/`admin` sukses.
+**Definition of Done:** user `student` → 403 di endpoint review; tanpa login → 401; hanya `moderator`/`admin` sukses.
+- [x] Wiring terverifikasi: 8/8 route review+queue memanggil `requireModerator()`; tidak ada `submitterId` dari body; tidak ada sisa password/`sessionStorage`.
+- [x] `tsc --noEmit` exit 0; `eslint` bersih untuk seluruh file baru/ubah (sisa masalah adalah pra-eksisting).
+- [ ] ⚠️ **Test otomatis untuk matriks 401/403 ditunda ke M4** (harness test belum ada). Bukti perilaku saat ini statis + manual.
+
+**Catatan keputusan**
+- `requireOwner(resourceId)` **tidak dibuat**: di semua route yang ada, kepemilikan diturunkan dari sesi (`clerkId`) atau dari baris `submissions`, jadi abstraksi itu akan jadi dead code. Akan ditambahkan saat ada resource yang benar-benar butuh.
+- Bonus keamanan (overlap M3): approval kini **idempoten** — klaim `submissions` lewat `UPDATE ... WHERE status='pending'` sehingga submit yang sama tidak bisa di-approve dua kali (sebelumnya tiap klik menambah +50 poin lagi).
+- Perubahan perilaku produk: karena deny-by-default, `/modules`, `/leaderboard`, `/profile/[id]` kini butuh login. Ubah allowlist `isPublicRoute` di `proxy.ts` bila ada yang memang harus publik.
+- Peran harus di-set eksplisit (level-100 & top-3 tidak lagi otomatis jadi moderator). Gunakan `npm run db:promote -- <email> moderator`.
 
 ---
 

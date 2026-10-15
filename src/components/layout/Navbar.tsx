@@ -120,17 +120,13 @@ export default function Navbar() {
   const [isModerator, setIsModerator] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      if (sessionStorage.getItem("moderator_authenticated") === "true") {
-        setIsModerator(true);
-      }
-      fetch("/api/moderator/auth-check")
-        .then(res => res.json())
-        .then(data => {
-          if (data.isModerator) setIsModerator(true);
-        })
-        .catch(() => {});
-    }
+    // The server decides: `users.role` is the single source of truth.
+    fetch("/api/moderator/auth-check")
+      .then(res => (res.ok ? res.json() : { isModerator: false }))
+      .then(data => {
+        if (data?.isModerator) setIsModerator(true);
+      })
+      .catch(() => {});
   }, []);
 
   // Close mobile menu on route change

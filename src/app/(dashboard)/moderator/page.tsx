@@ -15,6 +15,7 @@ import {
   Award,
   BookMarked,
   Lock,
+  Loader2,
   Eye,
   ChevronDown,
   Zap,
@@ -49,8 +50,6 @@ type PendingQuestion = {
   submitterName: string;
 };
 
-const MODERATOR_PASSWORD = "nawa2026"; // Change this to your desired password
-
 // User stats returned from /api/moderator/hidden-badges
 type UserStats = {
   id: string;
@@ -68,8 +67,7 @@ const HIDDEN_BADGES = BADGES.filter((b) => b.hidden);
 export default function ModeratorDashboard() {
   const { success, error: toastError, info } = useToast();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [passwordInput, setPasswordInput] = useState("");
-  const [passwordError, setPasswordError] = useState("");
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [activeTab, setActiveTab] = useState<"modules" | "questions" | "badges" | "daily">("modules");
   
   // Modules State
@@ -113,17 +111,17 @@ export default function ModeratorDashboard() {
   });
 
   useEffect(() => {
-    // Check if already authenticated from sessionStorage
-    const isAuth = sessionStorage.getItem("moderator_authenticated") === "true";
-    
-    // Check if user is Top 3 via API
+    // Access is decided server-side from users.role. There is no client-side
+    // password or session flag any more — a flag in sessionStorage proves nothing.
+    let cancelled = false;
+
     fetch("/api/moderator/auth-check")
-      .then(res => res.json())
-      .then(data => {
-        const finalAuth = isAuth || data.isModerator;
-        setIsAuthenticated(finalAuth);
-        
-        if (finalAuth) {
+      .then((res) => (res.ok ? res.json() : { isModerator: false }))
+      .then((data) => {
+        if (cancelled) return;
+        const allowed = Boolean(data?.isModerator);
+        setIsAuthenticated(allowed);
+        if (allowed) {
           fetchPendingSubmissions();
           fetchPendingQuestions();
           fetchHiddenBadges();
@@ -131,15 +129,13 @@ export default function ModeratorDashboard() {
         }
       })
       .catch(() => {
-        setIsAuthenticated(isAuth);
-        if (isAuth) {
-          fetchPendingSubmissions();
-          fetchPendingQuestions();
-          fetchHiddenBadges();
-          fetchDailyQuestions();
-        }
+        if (!cancelled) setIsAuthenticated(false);
+      })
+      .finally(() => {
+        if (!cancelled) setIsCheckingAuth(false);
       });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    return () => { cancelled = true; };
   }, []);
 
   async function fetchHiddenBadges() {
@@ -156,24 +152,6 @@ export default function ModeratorDashboard() {
       setIsLoadingBadges(false);
     }
   }
-
-  const handlePasswordSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setPasswordError("");
-    
-    if (passwordInput === MODERATOR_PASSWORD) {
-      setIsAuthenticated(true);
-      sessionStorage.setItem("moderator_authenticated", "true");
-      setPasswordInput("");
-      fetchPendingSubmissions();
-      fetchPendingQuestions();
-      fetchHiddenBadges();
-      fetchDailyQuestions();
-    } else {
-      setPasswordError("Password salah. Silakan coba lagi.");
-      setPasswordInput("");
-    }
-  };
 
   async function fetchPendingSubmissions() {
     try {
@@ -212,10 +190,9 @@ export default function ModeratorDashboard() {
       const res = await fetch("/api/modules/approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        // The server resolves the module + submitter from the submission row.
         body: JSON.stringify({
           submissionId: sub.submissionId,
-          moduleId: sub.moduleId,
-          submitterId: sub.submitterId,
           feedback: "Modul disetujui. Terima kasih atas kontribusinya untuk SMAN 2 Jonggol!",
         }),
       });
@@ -243,8 +220,6 @@ export default function ModeratorDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           submissionId: q.submissionId,
-          questionId: q.questionId,
-          submitterId: q.submitterId,
           feedback: "Soal disetujui. Terima kasih atas kontribusinya untuk SMAN 2 Jonggol!",
         }),
       });
@@ -280,7 +255,6 @@ export default function ModeratorDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           submissionId: q.submissionId,
-          questionId: q.questionId,
           feedback: "Soal tidak memenuhi standar kualitas.",
         }),
       });
@@ -387,53 +361,35 @@ export default function ModeratorDashboard() {
     }
   };
 
-  // If not authenticated, show password form
+  // Still asking the server who we are.
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-3 text-zinc-500 dark:text-zinc-400">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <p className="text-sm font-semibold">Memeriksa hak akses…</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Signed in, but not a moderator/admin.
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="w-full max-w-md">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 shadow-lg">
-            {/* Lock Icon */}
-            <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center mx-auto mb-6 border border-indigo-100/40">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 shadow-lg text-center">
+            <div className="w-16 h-16 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center mx-auto mb-6 border border-amber-100/40">
               <Lock className="h-8 w-8" />
             </div>
 
-            <h1 className="text-2xl font-extrabold text-zinc-900 dark:text-white text-center mb-2">
-              Ruang Moderator
+            <h1 className="text-2xl font-extrabold text-zinc-900 dark:text-white mb-2">
+              Akses Ditolak
             </h1>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center mb-6">
-              Halaman ini dilindungi. Masukkan password untuk melanjutkan.
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              Halaman ini hanya untuk moderator. Akun Anda tidak memiliki izin untuk membuka
+              Ruang Moderator. Hubungi admin sekolah jika menurut Anda ini sebuah kesalahan.
             </p>
-
-            <form onSubmit={handlePasswordSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="password" className="block text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-2">
-                  Password
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  value={passwordInput}
-                  onChange={(e) => setPasswordInput(e.target.value)}
-                  placeholder="Masukkan password"
-                  className="w-full px-4 py-2.5 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  autoFocus
-                />
-              </div>
-
-              {passwordError && (
-                <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg">
-                  <p className="text-sm text-red-600 dark:text-red-400 font-medium">{passwordError}</p>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-2.5 rounded-xl transition-colors shadow-md shadow-indigo-600/10"
-              >
-                Masuk
-              </button>
-            </form>
           </div>
         </div>
       </div>

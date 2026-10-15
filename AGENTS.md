@@ -44,10 +44,13 @@ The profile page now features 22+ custom SVG avatars with fantasy and sci-fi the
 - Each avatar has a unique gradient background color
 
 ### Moderator Panel Security
-- Moderator panel is hidden from public navigation (removed from navbar)
-- Password-protected access: default password is `nawa2024`
-- Can be changed in `src/app/(dashboard)/moderator/page.tsx` (MODERATOR_PASSWORD constant)
-- Session-based authentication using sessionStorage
+- Moderator panel is hidden from public navigation unless the signed-in user has reviewer rights.
+- Access is **role-based**, not password-based: the panel opens only when `users.role` is `moderator` or `admin`.
+- `isModerator` is resolved server-side via `GET /api/moderator/auth-check`. There is no client-side password or `sessionStorage` flag.
+- All reviewer API routes are guarded by `requireModerator()` from `src/lib/authz.ts`.
+- To grant access, promote a user's role:
+  `npm run db:promote -- someone@example.com moderator` (see `src/db/promote.ts`).
+- Authentication itself (deny-by-default for every route) is enforced in `proxy.ts`.
 
 ## Badge System (80+ Achievements)
 

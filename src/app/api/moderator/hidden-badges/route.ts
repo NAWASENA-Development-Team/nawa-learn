@@ -4,8 +4,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
+import { requireModerator } from "@/lib/authz";
 
 export async function GET() {
+  // Exposes per-student stats, so moderators/admins only.
+  const authz = await requireModerator();
+  if (!authz.ok) return authz.response;
+
   try {
     // Subquery-based aggregation to avoid cartesian product from multi-join
     const rows = await db.execute(sql`
