@@ -3,7 +3,7 @@
 > Tanggal audit: 2026-10-15
 > Commit: `0d88b45` — feat: enhance moderator and user role checks in submission routes
 > Stack: Next.js 16.2.6 (App Router) · React 19 · TypeScript 5 (strict) · Tailwind 4 · Clerk 7 · Drizzle 0.45 + Neon HTTP · Zod 4
-> Catatan: audit awal bersifat statis (`node_modules` belum ter-install saat itu). Pada 2026-10-16 dependensi sudah terpasang, sehingga `tsc --noEmit` dan `eslint` dapat dijalankan dan dipakai untuk memverifikasi perubahan M1/M2/M3. `next build` masih belum bisa dijalankan di environment ini karena `.env.local` (kunci Clerk + `DATABASE_URL`) tidak tersedia.
+> Catatan: audit awal bersifat statis (`node_modules` belum ter-install saat itu). Pada 2026-10-16 dependensi sudah terpasang, `.env.local` tersedia, sehingga `tsc --noEmit`, `eslint`, `npm test`, dan **`next build`** semuanya sudah bisa dijalankan dan dipakai untuk memverifikasi M1–M4.
 
 ---
 
@@ -21,16 +21,16 @@ Kesimpulan singkat dalam satu kalimat:
 |---|---|---|
 | UI / UX visual | 7.5 / 10 | Konsisten, animatif, responsif. Tapi ada mojibake & aksesibilitas minim. |
 | Arsitektur | 4 / 10 | Duplikasi folder API, middleware ganda, logika bisnis di komponen klien 1500+ baris. |
-| Keamanan (authz) | 1.5 / 10 | Approval, poin, dan data sensitif bisa diakses tanpa kontrol peran. |
-| Integritas data | 2 / 10 | Poin, ranking, dan kunci jawaban sepenuhnya dipercaya dari klien. |
+| Keamanan (authz) | 6 / 10 | RBAC terpusat + deny-by-default, 8 endpoint review dijaga, matriks 401/403 teruji. Kurang: rate limiting, security header, validasi input di beberapa route. |
+| Integritas data | 6 / 10 | Poin & skor dinilai server, idempotensi lewat constraint DB, kunci jawaban tidak lagi bocor. Kurang: constraint & indeks tambahan, soft delete. |
 | Privasi & kepatuhan | 2 / 10 | Tidak ada consent, retensi, export/delete, atau kebijakan privasi (UU PDP). |
 | Observability | 2 / 10 | Hanya `console.log`, tanpa error tracking, tanpa health check. |
-| Testing & CI | 0 / 10 | Nol test, nol workflow CI, tanpa versioned migration. |
+| Testing & CI | 7 / 10 | 108 test (unit + integrasi PGlite), CI workflow, coverage 63.74%, `next build` terverifikasi. Kurang: E2E, dan ~10 route masih 0% coverage. |
 | Dokumentasi | 5 / 10 | README rapi, tapi `AGENTS.md` sudah drift dari kode. |
 
 **Estimasi jarak ke "premium":** 3 fase kerja, ~16 milestone. Fase 0 (M1–M3) bersifat darurat dan **harus selesai sebelum platform dipakai lebih luas lagi**, karena saat ini satu akun siswa terautentikasi bisa mengangkat dirinya ke puncak leaderboard dan menyetujui kontennya sendiri.
 
-> **Status per 2026-10-16:** Fase 0 **selesai** — M1 (`52bba95`), M2 (`1f5a6c7`), H12 (`836107f`), M3 (lihat di bawah). Otorisasi approval, kebocoran kunci jawaban, dan integritas poin/ranking sudah ditutup. Yang belum: otomatisasi/QA (M4) dan seluruh Fase 1+.
+> **Status per 2026-10-16:** Fase 0 **selesai** — M1 (`52bba95`), M2 (`1f5a6c7`), H12 (`836107f`), M3 (`dcb9b84`). M4 (test + CI) juga **selesai**: 108 test hijau, CI aktif, `next build` terverifikasi. Otorisasi approval, kebocoran kunci jawaban, dan integritas poin/ranking sudah ditutup. Yang tersisa: E2E, dan seluruh Fase 1+ (M5 ke atas).
 
 ### Yang sudah bagus (jangan dirusak)
 
@@ -200,12 +200,14 @@ Semua endpoint bisa dipanggil ribuan kali per detik: submit modul/soal, kirim la
 ### H8. Tidak ada security header
 Tidak ada CSP, HSTS, `X-Frame-Options`/`frame-ancestors`, `Referrer-Policy`, atau `Permissions-Policy`. Situs bisa di-iframe (clickjacking), dan tanpa CSP setiap celah XSS jadi jauh lebih berbahaya.
 
-### H9. Skema database tanpa migration, langsung `push` ke produksi
+### H9. Skema database tanpa migration, langsung `push` ke produksi — 🔶 SEBAGIAN (M4: migrasi berversi sudah di-generate; workflow produksi belum)
 **Lokasi:** `package.json:10`, `drizzle.config.ts:10-11`
 
 `"db:push": "drizzle-kit push"` dan folder `src/db/migrations` tidak pernah ada. Tidak ada riwayat perubahan, tidak ada rollback, tidak ada review perubahan skema. Untuk produk dengan data siswa ini tidak bisa diterima.
 
-### H10. Nol test, nol CI
+**Sisa yang belum:** `src/db/migrations/` sekarang ada dan dipakai test, tapi database produksi belum pernah di-baseline. Lihat catatan di M5 — migrasi tidak boleh dijalankan mentah ke DB yang sudah dibuat lewat `push`.
+
+### H10. Nol test, nol CI — ✅ SELESAI (M4: 101 test unit + integrasi, CI workflow)
 Tidak ada `*.test.ts`, tidak ada `.github/workflows`. Tidak ada yang mencegah regresi seperti bug otorisasi di atas. `npm run lint` pun tidak pernah dijalankan otomatis.
 
 ### H11. Performa: N+1 query dan query tak terbatas
@@ -369,19 +371,44 @@ Tambahan: `AGENTS.md` mendokumentasikan password moderator default di repo publi
 ### FASE 1 — FONDASI ENGINEERING (target: 3–4 minggu)
 *Kriteria keluar: perubahan apa pun bisa dibuktikan tidak merusak apa pun, dan setiap error di produksi terlihat.*
 
-#### M4 — Testing & CI
+#### M4 - Testing & CI ✅ SELESAI (unit + integrasi) (2026-10-16)
 **Deliverables**
-- [ ] Vitest untuk unit (`levelUtils`, `season`, `badges`, validasi Zod).
-- [ ] Test integrasi route dengan database ephemeral (Neon branch atau Testcontainers).
-- [ ] Playwright untuk alur kritis: sign-up → submit modul → approve → poin naik; kuis → skor → poin.
-- [ ] `.github/workflows/ci.yml`: install → `tsc --noEmit` → `eslint` → `test` → `build` pada setiap PR.
-- [ ] Code coverage minimal (mis. 60% pada `src/lib` dan `src/app/api`).
+- [x] Vitest untuk unit: `levelUtils`, `season`, `badges`, `quizScoring` (aturan skor + validasi Zod), `authz` (matriks peran).
+- [x] Harness: `vitest.config.ts` (alias `@/*`, environment node), skrip `npm test` / `test:watch` / `test:coverage`.
+- [x] **Test integrasi route dengan database ephemeral** — memakai **PGlite** (Postgres asli dikompilasi ke WASM), bukan Neon branch/Testcontainers. Alasan: tanpa Docker, tanpa network, tanpa `DATABASE_URL`, dan **jalan di CI tanpa secret**.
+- [x] `.github/workflows/ci.yml`: install → `tsc --noEmit` → `lint` → `test` → `build` pada setiap PR + push ke `main`.
+- [x] Code coverage: `@vitest/coverage-v8`. Scope `src/lib` + `src/app/api` → total **63.74%**; `authz`/`levelUtils`/`quizScoring`/`season` **100%**, `quiz/submit` **94.7%**, `quiz/daily-claim` **93.5%**, `badges` 99%, `levelRewards` 90%, `questions/approved` 87%, `questions/pending` 92%.
+- [x] Logika skor dipindah ke `src/lib/quizScoring.ts` (murni, tanpa DB) supaya bisa diuji — sebelumnya terkurung di dalam route handler.
+- [x] Migrasi berversi di-generate (`src/db/migrations/0000_*.sql`) dan dipakai sebagai DDL test — satu sumber kebenaran dari `schema.ts`, tanpa DDL tulis-tangan yang bisa drift.
+- [ ] ⏭️ **Playwright** untuk alur kritis (sign-up → submit → approve → poin; kuis → skor → poin) — **ditunda**, butuh app yang jalan + browser. Test integrasi sudah menutup jalur poin/skor/otorisasi di level route.
 
 **Definition of Done:** PR tidak bisa merge jika CI merah; setidaknya 3 skenario keamanan dari M2/M3 ter-cover.
+- [x] `tsc`, `test`, dan `build` **blocking** di CI. `lint` masih `continue-on-error` karena repo membawa ~46 error pra-eksisting → jadi blocking di M14.
+- [x] **Total 108 test di 9 file, semuanya hijau.**
+- [x] **Batas API dikunci test** (`tests/integration/api-surface.test.ts`, 7 test): respons `/api/questions/approved` **tidak mengandung** `answerKey`/`explanation` bahkan saat diperiksa sebagai **teks mentah** (bukan hanya field yang kita ingat); hanya soal berstatus `approved` yang keluar; `isOwnQuestion` benar. `/api/moderator/auth-check` mengembalikan `false` untuk anonim/`student`/`contributor`/user-belum-tersinkron, dan `true` hanya untuk `moderator`/`admin`.
+- [x] **Simulasi penyerang M3 benar-benar dieksekusi** (`tests/integration/quiz-submit.test.ts`, 11 test):
+  1. Body `{ difficulty: "sangat sulit", score: 100, quizId: acak, pointsAwarded: 999999 }` → server tetap membayar **5 poin** (nilai asli soal "mudah"), bukan 100.
+  2. `quizId` acak 10x berturut-turut → **0 poin tambahan** setiap kali.
+  3. Idempotensi dijamin **constraint database**: insert duplikat ke `points_log` ditolak oleh Postgres.
+  4. Jawaban salah = 0 poin, dan percobaan tetap "terbakar" (menjawab benar setelahnya juga 0).
+  5. Soal milik sendiri tidak memberi poin; soal berstatus `pending` diabaikan; id sampel (`q1`) tidak bisa dinilai.
+  6. Bonus level 5 dijalankan (495 + 10 + 250 = 755 poin).
+- [x] **Matriks 401/403 M2 dieksekusi** untuk seluruh 8 endpoint review (`tests/integration/authz-matrix.test.ts`): anonim → 401, `student`/`contributor` → 403, `moderator`/`admin` lolos.
+- [x] `daily-claim` diuji: menolak tanpa bukti, menolak soal non-"Kuis Harian", menolak percobaan basi (48 jam), membayar 25 sekali lalu menolak klaim kedua.
+- [x] **`next build` berhasil diverifikasi** untuk pertama kali (compiled + TypeScript + 23 halaman). Tabel route mengonfirmasi `/api/quiz/submit` ada dan `/api/quiz/complete` sudah hilang.
+- [x] **Bonus temuan:** test unit menangkap bug nyata — `getLevel()` mengembalikan `NaN` untuk poin negatif/NaN (akan tampil "Level NaN" di UI). Diperbaiki dengan clamp; ada test regresinya.
+
+**Catatan keputusan**
+- **PGlite, bukan Testcontainers:** test harus bisa jalan di CI tanpa Docker daemon dan tanpa kredensial. PGlite memberi Postgres asli (enum, FK, unique index, `ON CONFLICT`) sehingga constraint yang justru jadi inti keamanan M3 benar-benar teruji.
+- `@/db` di-`vi.mock` dengan getter supaya route memakai instance PGlite test, bukan klien Neon. `@clerk/nextjs/server` juga di-mock untuk mengontrol sesi.
+- Tabel tidak di-truncate antar test; setiap test memakai user/soal baru dengan id unik, jadi isolasi tidak bergantung pada urutan.
+- Coverage `60.87%` sudah melewati target 60%, tapi tidak merata: route yang belum punya test (`exams/*`, `profile/*`, `modules/download`, `webhooks/clerk`) masih 0%. Angka ini yang harus naik di milestone berikutnya.
+- **Catatan build (sudah diperbaiki):** `next build` sempat memperingatkan "multiple lockfiles" karena ada `bun.lock` di direktori home pengguna, sehingga Turbopack memilih home directory sebagai workspace root. Diperbaiki dengan `turbopack.root` (absolute path ke direktori proyek) di `next.config.ts`.
+- **Temuan baru yang tercatat (belum dikerjakan):** `requireUser()`/`requireModerator()` baru dipakai di 8 route review + 2 route kuis. Route user-facing lain masih memakai `await auth()` mentah (`modules/submit`, `questions/submit`, `profile/update`, `profile/status`, `profile/report`, `exams/create`, `questions/approved`, `moderator/auth-check`). Konsekuensinya: route itu (a) tidak memverifikasi bahwa user benar-benar ada di tabel `users`, dan (b) memulangkan bentuk error yang berbeda-beda. Eksposur saat ini terbatas karena `proxy.ts` tetap menolak request tanpa sesi, tapi ini utang yang harus dibayar - kandidat kuat untuk M7/M9.
 
 ---
 
-#### M5 — Migrasi database terkelola
+#### M5 - Migrasi database terkelola
 **Deliverables**
 - [ ] Ganti `db:push` dengan `drizzle-kit generate` + `drizzle-kit migrate`.
 - [ ] Commit folder `src/db/migrations`; semua perubahan skema lewat PR.
@@ -390,6 +417,8 @@ Tambahan: `AGENTS.md` mendokumentasikan password moderator default di repo publi
 - [ ] Tambah `updatedAt` + soft delete (`deletedAt`) pada tabel konten.
 - [ ] Hapus tabel tak terpakai (`reviews`, `bookmarks`) atau implementasikan dengan benar.
 - [ ] Pisahkan seed ke `src/db/seed.ts` dengan environment guard.
+
+> ⚠️ **Sudah sebagian dikerjakan lebih awal di M4** (karena test integrasi butuh DDL asli): `src/db/migrations/0000_*.sql` sudah ada, dan `npm run db:generate` sudah ditambahkan. **Jangan jalankan `drizzle-kit migrate` ke database produksi mentah-mentah** — tabelnya sudah dibuat lewat `push`, jadi migrasi akan gagal dengan "relation already exists". M5 harus: (1) menjalankan migrasi ini di database bersih untuk mendapat baseline, lalu (2) menandai migrasi 0000 sebagai sudah diterapkan di DB produksi (`__drizzle_migrations`), atau memakai `drizzle-kit push` sekali lagi untuk menyelaraskan lalu baseline. `db:push` **tetap dipakai** sampai langkah ini selesai — dan karena itu **`npm run db:push` masih wajib dijalankan** untuk membuat index unik M3.
 
 **Definition of Done:** DB produksi bisa dibuat ulang dari nol hanya dengan `migrate` + `seed`; rollback teruji.
 

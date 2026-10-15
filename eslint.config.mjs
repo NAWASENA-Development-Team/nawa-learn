@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated output: coverage reports are build artefacts, not source.
+    // They are gitignored too, but ESLint still walks them otherwise.
+    "coverage/**",
+    ".vitest/**",
   ]),
 ]);
 

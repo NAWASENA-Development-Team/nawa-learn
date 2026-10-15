@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Typecheck, lint, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Migrations match the schema
+        # The integration tests build their database from src/db/migrations, so a
+        # schema change without a regenerated migration would silently be tested
+        # against stale DDL. Regenerate and fail if anything differs.
+        run: |
+          npx drizzle-kit generate
+          git add -A -- src/db/migrations
+          git diff --cached --exit-code -- src/db/migrations
+
+      - name: Lint
+        # TODO(M14): the repository still carries ~46 pre-existing eslint errors
+        # (mostly react-hooks/set-state-in-effect), so this step reports without
+        # blocking yet. Remove `continue-on-error` once that backlog is paid down.
+        continue-on-error: true
+        run: npm run lint
+
+      - name: Unit + integration tests
+        # Integration tests run against PGlite (real Postgres in WASM), so this
+        # step needs no database secret and no network.
+        run: npm run test
+
+      - name: Build
+        # `next build` imports the route modules, and src/db/index.ts throws
+        # without DATABASE_URL, so the three secrets below must exist on the repo.
+        run: npm run build
+        env:
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}

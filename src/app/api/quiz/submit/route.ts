@@ -13,22 +13,12 @@ import { pointsLog, questions, users } from "@/db/schema";
 import { requireUser } from "@/lib/authz";
 import { checkAndGrantLevelRewards } from "@/lib/levelRewards";
 import { needsSeasonReset } from "@/lib/season";
-
-// We accept only answers. Every other field a legacy client may send is dropped.
-const submitSchema = z.object({
-  answers: z.record(z.string(), z.string().min(1).max(8)),
-});
-
-// Reward per correctly answered question, derived from the difficulty that is
-// stored in the database — never from a string the client chose.
-const QUESTION_POINTS: Record<string, number> = {
-  mudah: 5,
-  sedang: 10,
-  sulit: 15,
-};
-
-const MAX_ANSWERS = 100;
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import {
+  isGradeableQuestionId,
+  MAX_ANSWERS_PER_SUBMISSION,
+  pointsForAnswer,
+  quizSubmitSchema,
+} from "@/lib/quizScoring";
 
 type GradedQuestion = {
   questionId: string;
@@ -71,14 +61,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
     }
 
-    const { answers } = submitSchema.parse(body);
+    const { answers } = quizSubmitSchema.parse(body);
 
     // Only ids that can exist in `questions` are gradeable. Sample/demo quizzes
     // are hardcoded in the browser with ids like "q1"; they are fine to practise
     // with, they just cannot earn points because nothing can verify them.
     const ids = Object.keys(answers)
-      .filter((id) => UUID_RE.test(id))
-      .slice(0, MAX_ANSWERS);
+      .filter(isGradeableQuestionId)
+      .slice(0, MAX_ANSWERS_PER_SUBMISSION);
 
     if (ids.length === 0) return notRewardable();
 
@@ -118,7 +108,7 @@ export async function POST(req: Request) {
       let credited = false;
 
       if (!selfAuthored) {
-        const delta = isCorrect ? (QUESTION_POINTS[q.difficulty] ?? 5) : 0;
+        const delta = pointsForAnswer(q.difficulty, isCorrect);
 
         // One attempt per question per user. `onConflictDoNothing` + the unique
         // index on (user_id, action, ref_id) is what enforces it, so re-playing
