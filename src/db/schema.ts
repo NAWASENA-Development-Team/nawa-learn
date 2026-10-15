@@ -1,5 +1,5 @@
 // db/schema.ts
-import { pgTable, uuid, varchar, text, timestamp, integer, jsonb, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, text, timestamp, integer, jsonb, pgEnum, uniqueIndex } from "drizzle-orm/pg-core";
 
 // Enums
 export const roleEnum = pgEnum("role", ["guest", "student", "contributor", "moderator", "admin"]);
@@ -106,7 +106,14 @@ export const pointsLog = pgTable("points_log", {
   delta: integer("delta").notNull(), // Positive or negative
   refId: uuid("ref_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  // Idempotency lives in the database, not in application code: a user can only
+  // be credited once per (action, ref). Rows with a NULL ref are unaffected,
+  // because Postgres treats NULLs as distinct in a unique index.
+  //   quiz_answer    + refId = questionId  → one attempt per question, ever
+  //   module_approved+ refId = moduleId    → a module can only pay out once
+  uniqueIndex("points_log_user_action_ref_unique").on(table.userId, table.action, table.refId),
+]);
 
 export const reports = pgTable("reports", {
   id: uuid("id").defaultRandom().primaryKey(),

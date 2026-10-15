@@ -1,6 +1,10 @@
 // app/api/questions/approved/route.ts
-// Returns all approved questions for the practice quiz page.
-// Includes an `isOwnQuestion` flag so the frontend can enforce anti-cheat.
+// Returns approved questions for the practice quiz page.
+//
+// `answerKey` and `explanation` are deliberately NOT sent to the browser: the
+// score is decided server-side in /api/quiz/submit, so the client never needs
+// the answers. The review screen gets the correct keys back *after* grading.
+// `isOwnQuestion` lets the UI hide a user's own questions from a quiz run.
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
@@ -26,8 +30,6 @@ export async function GET() {
         id: questions.id,
         questionText: questions.questionText,
         options: questions.options,
-        answerKey: questions.answerKey,
-        explanation: questions.explanation,
         difficulty: questions.difficulty,
         subject: questions.subject,
         category: questions.category,

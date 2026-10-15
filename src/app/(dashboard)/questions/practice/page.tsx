@@ -178,6 +178,10 @@ export default function PracticeMode() {
   const [alreadyCompleted, setAlreadyCompleted] = useState(false);
   const [levelRewardsGranted, setLevelRewardsGranted] = useState<string[]>([]);
   const [blockedByAntiCheat, setBlockedByAntiCheat] = useState(false);
+  // Server-graded truth for the finished quiz: questionId → correctness + key.
+  const [gradedResults, setGradedResults] = useState<Record<string, { correct: boolean; correctKey: string }>>({});
+  // True when the finished quiz contains no database-backed questions at all.
+  const [notRewardable, setNotRewardable] = useState(false);
 
   // ── Exam creation modal ────────────────────────────────────────────────────
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -212,7 +216,7 @@ export default function PracticeMode() {
               D: (q.options as Record<string,string>)?.D || "",
               E: (q.options as Record<string,string>)?.E || "",
             },
-            answerKey: q.answerKey,
+            answerKey: "", // never sent to the browser any more; grading is server-side
             subject: q.subject || "Umum",
             category: q.category || "UTBK",
             uploaderId: q.uploaderId,
@@ -380,40 +384,49 @@ export default function PracticeMode() {
   const calculateCorrectCount = () => {
     let correct = 0;
     questions.forEach((q) => {
-      if (answers[q.id] === q.answerKey) correct++;
+      // The server's verdict wins; the local key is only a fallback for the
+      // sample/demo quizzes that are not stored in the database.
+      const graded = gradedResults[q.id];
+      if (graded) {
+        if (graded.correct) correct++;
+        return;
+      }
+      if (q.answerKey && answers[q.id] === q.answerKey) correct++;
     });
     return correct;
   };
 
-  // ── Award V-Points when quiz is finished ──────────────────────────────────
+  // ── Grade the quiz on the server when it is finished ──────────────────────
+  // The browser sends only the answers it collected. The score, the reward and
+  // the anti-replay key are all decided by /api/quiz/submit from the database.
   useEffect(() => {
     if (!isFinished || !selectedQuiz) return;
 
-    const correct = questions.filter(q => answers[q.id] === q.answerKey).length;
-    const wrong = questions.length - correct;
-    const score = questions.length ? Math.round((correct / questions.length) * 100) : 0;
-
     setTimeout(() => setPointsLoading(true), 0);
-    fetch("/api/quiz/complete", {
+    fetch("/api/quiz/submit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        quizId: selectedQuiz.id,
-        difficulty: selectedQuiz.difficulty,
-        score,
-        wrongAnswers: wrong,
-      }),
+      body: JSON.stringify({ answers }),
     })
       .then((res) => res.json())
       .then((data) => {
-        if (data.success) {
-          setPointsAwarded(data.pointsAwarded);
-          setPenaltyPoints(data.penaltyPoints ?? 0);
-          setAlreadyCompleted(data.alreadyCompleted ?? false);
-          setLevelRewardsGranted(data.levelRewards ?? []);
+        if (!data.success) return;
+
+        if (Array.isArray(data.results)) {
+          const map: Record<string, { correct: boolean; correctKey: string }> = {};
+          for (const r of data.results as { questionId: string; correct: boolean; correctKey: string }[]) {
+            map[r.questionId] = { correct: r.correct, correctKey: r.correctKey };
+          }
+          setGradedResults(map);
         }
+
+        setNotRewardable(data.rewardable === false);
+        setPointsAwarded(data.pointsAwarded ?? 0);
+        setPenaltyPoints(data.penaltyPoints ?? 0);
+        setAlreadyCompleted(data.alreadyCompleted ?? false);
+        setLevelRewardsGranted(data.levelRewards ?? []);
       })
-      .catch((err) => console.error("Quiz point award error:", err))
+      .catch((err) => console.error("Quiz grading error:", err))
       .finally(() => setPointsLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFinished]);
@@ -429,6 +442,8 @@ export default function PracticeMode() {
     setAlreadyCompleted(false);
     setLevelRewardsGranted([]);
     setBlockedByAntiCheat(false);
+    setGradedResults({});
+    setNotRewardable(false);
   };
 
   // ── Delete custom exam (removes from UI only; DB deletion not exposed)  ───
@@ -1273,6 +1288,16 @@ export default function PracticeMode() {
                 <div className="h-5 w-5 rounded-full border-2 border-indigo-300 border-t-indigo-600 animate-spin shrink-0" />
                 <p className="text-sm font-bold text-indigo-700 dark:text-indigo-300">Menghitung V-Point kamu...</p>
               </div>
+            ) : notRewardable ? (
+              <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-lg shrink-0">ℹ️</div>
+                <div className="text-left">
+                  <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Latihan Tanpa V-Point</p>
+                  <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mt-0.5">
+                    Kuis ini tidak tersimpan sebagai soal terverifikasi di basis data, jadi tidak bisa dinilai server dan tidak memberi V-Point. Kuis hasil kontribusi siswa dan Kuis Harian tetap memberi poin.
+                  </p>
+                </div>
+              </div>
             ) : alreadyCompleted ? (
               <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-lg shrink-0">🔒</div>
@@ -1292,7 +1317,7 @@ export default function PracticeMode() {
                     <div className="text-left">
                       <p className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">Reward Selesai Kuis</p>
                       <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">
-                        Kuis <span className="font-bold">{selectedQuiz?.difficulty}</span>
+                        Dihitung server dari <span className="font-bold">{correctCount}</span> jawaban benar
                       </p>
                     </div>
                   </div>
@@ -1369,7 +1394,11 @@ export default function PracticeMode() {
             <h3 className="text-xl font-black text-zinc-900 dark:text-white border-b border-zinc-200 dark:border-zinc-800 pb-3 mb-6">Kunci Jawaban & Pembahasan</h3>
             {questions.map((q, idx) => {
               const userAnswer = answers[q.id];
-              const isCorrect = userAnswer === q.answerKey;
+              const graded = gradedResults[q.id];
+              // Prefer the key the server graded against; fall back to the local
+              // key for sample/demo quizzes that live only in the browser.
+              const correctKey = graded?.correctKey ?? q.answerKey;
+              const isCorrect = graded ? graded.correct : userAnswer === correctKey;
               return (
                 <div key={q.id} className={`p-5 rounded-2xl border ${isCorrect ? "bg-emerald-50/50 dark:bg-emerald-950/10 border-emerald-200 dark:border-emerald-900/30" : "bg-red-50/50 dark:bg-red-950/10 border-red-200 dark:border-red-900/30"}`}>
                   <div className="flex gap-3 items-start mb-4">
@@ -1391,7 +1420,7 @@ export default function PracticeMode() {
                     <div className="p-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
                       <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1">Kunci Jawaban</p>
                       <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                        {q.answerKey}. {q.options[q.answerKey]}
+                        {correctKey ? `${correctKey}. ${q.options[correctKey]}` : "- Tidak tersedia -"}
                       </p>
                     </div>
                   </div>

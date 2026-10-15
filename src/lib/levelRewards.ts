@@ -1,6 +1,10 @@
 // lib/levelRewards.ts
-// Level-based reward system: frames, bonus points, and moderator access
+// Level-based reward system: frames and bonus points.
 // Pure math helpers live in levelUtils.ts (no server deps) — re-exported here.
+//
+// NOTE: levelling up NEVER grants a role. Moderator access is an administrative
+// decision (`users.role`, set via `npm run db:promote`), not something a student
+// can earn by farming points — that was a privilege-escalation path.
 
 import { db } from "@/db";
 import { users, pointsLog } from "@/db/schema";
@@ -15,13 +19,12 @@ export const LEVEL_REWARDS = [
   { level: 25,  type: "frame"      as const, value: "bronze",    label: "Frame Perunggu (Level 25)"       },
   { level: 50,  type: "frame"      as const, value: "silver",    label: "Frame Silver (Level 50)"         },
   { level: 60,  type: "frame"      as const, value: "gold",      label: "Frame Emas (Level 60)"           },
-  { level: 100, type: "role"       as const, value: "moderator", label: "Akses Moderator (Level 100)"     },
 ];
 
 export type GrantedReward = {
   level: number;
   label: string;
-  type: "points" | "frame" | "role";
+  type: "points" | "frame";
   value: number | string;
 };
 
@@ -52,7 +55,6 @@ export async function checkAndGrantLevelRewards(
   const newClaimed = [...claimed];
   let bonusPoints = 0;
   let newFrame: string | null = null;
-  let grantModerator = false;
   const granted: GrantedReward[] = [];
 
   // Pass 1: rewards for levels crossed in this award
@@ -67,8 +69,6 @@ export async function checkAndGrantLevelRewards(
         bonusPoints += reward.value as number;
       } else if (reward.type === "frame") {
         newFrame = reward.value as string;
-      } else if (reward.type === "role") {
-        grantModerator = true;
       }
       granted.push({ level: reward.level, label: reward.label, type: reward.type, value: reward.value });
     }
@@ -87,7 +87,6 @@ export async function checkAndGrantLevelRewards(
       ) {
         newClaimed.push(reward.level);
         if (reward.type === "frame") newFrame = reward.value as string;
-        else if (reward.type === "role") grantModerator = true;
         granted.push({ level: reward.level, label: reward.label, type: reward.type, value: reward.value });
       }
     }
@@ -95,12 +94,11 @@ export async function checkAndGrantLevelRewards(
 
   if (granted.length === 0) return [];
 
-  // Commit all non-points changes (claimed list, frame, role)
+  // Commit all non-points changes (claimed list, frame)
   await db.update(users)
     .set({
       claimedLevelRewards: newClaimed,
       ...(newFrame ? { levelFrame: newFrame } : {}),
-      ...(grantModerator ? { role: "moderator" as const } : {}),
     })
     .where(eq(users.id, userId));
 

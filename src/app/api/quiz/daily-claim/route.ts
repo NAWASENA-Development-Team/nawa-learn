@@ -1,68 +1,101 @@
+// app/api/quiz/daily-claim/route.ts
+// Flat daily bonus for finishing the daily quiz.
+//
+// Two things the old version did not do:
+//   1. It paid out without any proof that the user touched the daily quiz.
+//   2. It decided "already claimed" by reading a timestamp and writing it back,
+//      which two concurrent requests could both pass.
+// Now the bonus requires a *graded* attempt recorded by /api/quiz/submit, and
+// the once-per-day rule is enforced by the unique index on points_log.
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { and, eq, gte, sql } from "drizzle-orm";
+import { createHash } from "node:crypto";
 import { db } from "@/db";
-import { users, pointsLog } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { pointsLog, questions, users } from "@/db/schema";
+import { requireUser } from "@/lib/authz";
+
+const DAILY_REWARD = 25;
+// 03:00 WIB === 20:00 UTC of the previous day.
+const RESET_HOUR_UTC = 20;
+
+function startOfDailyWindow(now: Date): Date {
+  const start = new Date(now);
+  if (start.getUTCHours() < RESET_HOUR_UTC) {
+    start.setUTCDate(start.getUTCDate() - 1);
+  }
+  start.setUTCHours(RESET_HOUR_UTC, 0, 0, 0);
+  return start;
+}
+
+/** Stable UUID-shaped key so the DB unique index can enforce "once per window". */
+function deterministicUuid(input: string): string {
+  const h = createHash("sha1").update(input).digest("hex");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
+}
 
 export async function POST() {
+  const authz = await requireUser();
+  if (!authz.ok) return authz.response;
+  const user = authz.user;
+
   try {
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userRecord = await db.query.users.findFirst({
-      where: eq(users.clerkId, clerkId),
-    });
-
-    if (!userRecord) {
-      return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
-    }
-
     const now = new Date();
-    // 03:00 WIB is 20:00 UTC of the previous day
-    const resetHourUTC = 20; 
-    let lastReset = new Date(now);
-    
-    if (now.getUTCHours() < resetHourUTC) {
-      // If it's currently before 20:00 UTC, the most recent reset was yesterday at 20:00 UTC
-      lastReset.setUTCDate(lastReset.getUTCDate() - 1);
-    }
-    lastReset.setUTCHours(resetHourUTC, 0, 0, 0);
+    const windowStart = startOfDailyWindow(now);
 
-    const canClaim = !userRecord.lastDailyQuizAt || new Date(userRecord.lastDailyQuizAt) < lastReset;
+    // Proof of participation: at least one graded answer on a Kuis Harian
+    // question since the reset. Those rows are written by /api/quiz/submit
+    // after grading against the database, so they cannot be forged client-side.
+    const proof = await db
+      .select({ id: pointsLog.id })
+      .from(pointsLog)
+      .innerJoin(questions, eq(pointsLog.refId, questions.id))
+      .where(
+        and(
+          eq(pointsLog.userId, user.id),
+          eq(pointsLog.action, "quiz_answer"),
+          eq(questions.category, "Kuis Harian"),
+          gte(pointsLog.createdAt, windowStart),
+        ),
+      )
+      .limit(1);
 
-    if (!canClaim) {
+    if (proof.length === 0) {
       return NextResponse.json({
         success: false,
-        message: "Reward Kuis Harian sudah diklaim hari ini. Kembali lagi besok setelah pukul 03.00 WIB!"
+        message: "Kerjakan dulu minimal satu soal Kuis Harian hari ini untuk mengklaim hadiah.",
       });
     }
 
-    // Grant +25 V-Points
-    const pointsAwarded = 25;
-    await db.update(users)
-      .set({ 
-        points: userRecord.points + pointsAwarded,
-        seasonPoints: (userRecord.seasonPoints || 0) + pointsAwarded,
-        lastDailyQuizAt: now,
-        role: userRecord.role === "student" ? "contributor" : userRecord.role
-      })
-      .where(eq(users.id, userRecord.id));
+    // Atomic claim: if this row already exists, the bonus was taken today.
+    const dayRef = deterministicUuid(`${user.id}:daily:${windowStart.toISOString()}`);
+    const inserted = await db
+      .insert(pointsLog)
+      .values({ userId: user.id, action: "daily_quiz", refId: dayRef, delta: DAILY_REWARD })
+      .onConflictDoNothing()
+      .returning({ id: pointsLog.id });
 
-    // Log the transaction
-    await db.insert(pointsLog).values({
-      userId: userRecord.id,
-      action: "Kuis Harian Adaptif",
-      delta: pointsAwarded,
-    });
+    if (inserted.length === 0) {
+      return NextResponse.json({
+        success: false,
+        message: "Reward Kuis Harian sudah diklaim hari ini. Kembali lagi besok setelah pukul 03.00 WIB!",
+      });
+    }
+
+    await db
+      .update(users)
+      .set({
+        points: sql`${users.points} + ${DAILY_REWARD}`,
+        seasonPoints: sql`${users.seasonPoints} + ${DAILY_REWARD}`,
+        lastDailyQuizAt: now,
+        role: sql`CASE WHEN ${users.role} = 'student' THEN 'contributor'::role ELSE ${users.role} END`,
+      })
+      .where(eq(users.id, user.id));
 
     return NextResponse.json({
       success: true,
-      pointsAwarded,
-      message: "Berhasil menyelesaikan Kuis Harian! +25 V-Points"
+      pointsAwarded: DAILY_REWARD,
+      message: `Berhasil menyelesaikan Kuis Harian! +${DAILY_REWARD} V-Points`,
     });
-
   } catch (error) {
     console.error("Daily claim error:", error);
     return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });

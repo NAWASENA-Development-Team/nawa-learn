@@ -17,7 +17,8 @@ interface Question {
   id: string;
   questionText: string;
   options: any;
-  answerKey: string;
+  // No `answerKey` here on purpose: the server grades every answer and hands
+  // back the correct key only after the answer has been committed.
 }
 
 interface DailyQuizClientProps {
@@ -42,7 +43,9 @@ export default function DailyQuizClient({ initialQuestions }: DailyQuizClientPro
   
   // Current question state
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
-  const [isRevealed, setIsRevealed] = useState(false);
+  // Verdict returned by the server after "Cek Jawaban": correctness + the key.
+  const [revealed, setRevealed] = useState<{ correct: boolean; correctKey: string } | null>(null);
+  const [isChecking, setIsChecking] = useState(false);
   const [streak, setStreak] = useState(0);
 
   // Initialize queue on mount
@@ -74,31 +77,50 @@ export default function DailyQuizClient({ initialQuestions }: DailyQuizClientPro
   }, [isFinished]);
 
   const handleSelect = (key: string) => {
-    if (isRevealed) return;
+    if (revealed) return;
     setSelectedOption(key);
   };
 
-  const handleCheck = () => {
-    if (!selectedOption) return;
-    setIsRevealed(true);
-    
-    if (selectedOption === currentQ.answerKey) {
-      setStreak(s => s + 1);
-      if (streak + 1 > 3 && (streak + 1) % 3 === 0) {
-        confetti({
-          particleCount: 50,
-          spread: 60,
-          origin: { y: 0.8 },
-          colors: ['#a855f7', '#6366f1', '#3b82f6']
-        });
+  const handleCheck = async () => {
+    if (!selectedOption || !currentQ || isChecking) return;
+
+    setIsChecking(true);
+    try {
+      // The answer key lives on the server. We submit the single answer and get
+      // the verdict back — the browser never holds the correct answer.
+      const res = await fetch("/api/quiz/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answers: { [currentQ.id]: selectedOption } }),
+      });
+      const data = await res.json();
+      const graded = data?.results?.[0] as { correct: boolean; correctKey: string } | undefined;
+      if (!data?.success || !graded) return;
+
+      setRevealed({ correct: graded.correct, correctKey: graded.correctKey });
+
+      if (graded.correct) {
+        setStreak(s => s + 1);
+        if (streak + 1 > 3 && (streak + 1) % 3 === 0) {
+          confetti({
+            particleCount: 50,
+            spread: 60,
+            origin: { y: 0.8 },
+            colors: ['#a855f7', '#6366f1', '#3b82f6']
+          });
+        }
+      } else {
+        setStreak(0);
       }
-    } else {
-      setStreak(0);
+    } catch (err) {
+      console.error("Quiz check error:", err);
+    } finally {
+      setIsChecking(false);
     }
   };
 
   const handleNext = () => {
-    const isCorrect = selectedOption === currentQ.answerKey;
+    const isCorrect = revealed?.correct ?? false;
     
     setQueue(prev => {
       const newQueue = [...prev.slice(1)];
@@ -114,7 +136,7 @@ export default function DailyQuizClient({ initialQuestions }: DailyQuizClientPro
     });
     
     setSelectedOption(null);
-    setIsRevealed(false);
+    setRevealed(null);
   };
 
   if (initialQuestions.length === 0) {
@@ -210,8 +232,8 @@ export default function DailyQuizClient({ initialQuestions }: DailyQuizClientPro
         <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-xl overflow-hidden relative transition-all duration-300">
           {/* Card Top Banner (shows red/green if revealed) */}
           <div className={`h-2 w-full transition-colors duration-300 ${
-            !isRevealed ? "bg-indigo-500" :
-            selectedOption === currentQ.answerKey ? "bg-emerald-500" : "bg-red-500"
+            !revealed ? "bg-indigo-500" :
+            revealed.correct ? "bg-emerald-500" : "bg-red-500"
           }`} />
 
           <div className="p-6 sm:p-8">
@@ -224,12 +246,12 @@ export default function DailyQuizClient({ initialQuestions }: DailyQuizClientPro
             <div className="space-y-3">
               {Object.entries(currentQ.options).map(([key, text]) => {
                 const isSelected = selectedOption === key;
-                const isCorrectAnswer = key === currentQ.answerKey;
+                const isCorrectAnswer = key === revealed?.correctKey;
                 
                 let btnClass = "border-zinc-200 dark:border-zinc-700 hover:border-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20";
                 let checkIcon = null;
 
-                if (isRevealed) {
+                if (revealed) {
                   if (isCorrectAnswer) {
                     btnClass = "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-900 dark:text-emerald-100 ring-1 ring-emerald-500";
                     checkIcon = <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />;
@@ -247,21 +269,21 @@ export default function DailyQuizClient({ initialQuestions }: DailyQuizClientPro
                   <button
                     key={key}
                     onClick={() => handleSelect(key)}
-                    disabled={isRevealed}
+                    disabled={revealed !== null}
                     className={`w-full text-left p-4 rounded-2xl border-2 transition-all flex items-center justify-between gap-4 ${btnClass}`}
                   >
                     <div className="flex gap-4 items-start">
                       <span className={`font-black mt-0.5 ${
-                        isRevealed && isCorrectAnswer ? "text-emerald-600 dark:text-emerald-400" :
-                        isRevealed && isSelected && !isCorrectAnswer ? "text-red-600 dark:text-red-400" :
+                        revealed && isCorrectAnswer ? "text-emerald-600 dark:text-emerald-400" :
+                        revealed && isSelected && !isCorrectAnswer ? "text-red-600 dark:text-red-400" :
                         isSelected ? "text-indigo-600 dark:text-indigo-400" :
                         "text-zinc-400"
                       }`}>
                         {key}
                       </span>
                       <span className={`font-medium ${
-                        isRevealed && isCorrectAnswer ? "text-emerald-900 dark:text-emerald-100" :
-                        isRevealed && isSelected && !isCorrectAnswer ? "text-red-900 dark:text-red-100" :
+                        revealed && isCorrectAnswer ? "text-emerald-900 dark:text-emerald-100" :
+                        revealed && isSelected && !isCorrectAnswer ? "text-red-900 dark:text-red-100" :
                         "text-zinc-700 dark:text-zinc-300"
                       }`}>
                         {text as string}
@@ -280,13 +302,13 @@ export default function DailyQuizClient({ initialQuestions }: DailyQuizClientPro
               Sisa {queue.length} Soal
             </span>
             
-            {!isRevealed ? (
+            {!revealed ? (
               <button
                 onClick={handleCheck}
-                disabled={!selectedOption}
+                disabled={!selectedOption || isChecking}
                 className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-md active:scale-95 flex items-center gap-2"
               >
-                Cek Jawaban <CheckCircle2 className="h-4 w-4" />
+                {isChecking ? "Memeriksa..." : "Cek Jawaban"} <CheckCircle2 className="h-4 w-4" />
               </button>
             ) : (
               <button

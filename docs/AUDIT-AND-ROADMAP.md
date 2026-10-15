@@ -3,7 +3,7 @@
 > Tanggal audit: 2026-10-15
 > Commit: `0d88b45` — feat: enhance moderator and user role checks in submission routes
 > Stack: Next.js 16.2.6 (App Router) · React 19 · TypeScript 5 (strict) · Tailwind 4 · Clerk 7 · Drizzle 0.45 + Neon HTTP · Zod 4
-> Catatan: audit awal bersifat statis (`node_modules` belum ter-install saat itu). Pada 2026-10-16 dependensi sudah terpasang, sehingga `tsc --noEmit` dan `eslint` dapat dijalankan dan dipakai untuk memverifikasi perubahan M1/M2. `next build` masih belum bisa dijalankan di environment ini karena `.env.local` (kunci Clerk + `DATABASE_URL`) tidak tersedia.
+> Catatan: audit awal bersifat statis (`node_modules` belum ter-install saat itu). Pada 2026-10-16 dependensi sudah terpasang, sehingga `tsc --noEmit` dan `eslint` dapat dijalankan dan dipakai untuk memverifikasi perubahan M1/M2/M3. `next build` masih belum bisa dijalankan di environment ini karena `.env.local` (kunci Clerk + `DATABASE_URL`) tidak tersedia.
 
 ---
 
@@ -30,6 +30,8 @@ Kesimpulan singkat dalam satu kalimat:
 
 **Estimasi jarak ke "premium":** 3 fase kerja, ~16 milestone. Fase 0 (M1–M3) bersifat darurat dan **harus selesai sebelum platform dipakai lebih luas lagi**, karena saat ini satu akun siswa terautentikasi bisa mengangkat dirinya ke puncak leaderboard dan menyetujui kontennya sendiri.
 
+> **Status per 2026-10-16:** Fase 0 **selesai** — M1 (`52bba95`), M2 (`1f5a6c7`), H12 (`836107f`), M3 (lihat di bawah). Otorisasi approval, kebocoran kunci jawaban, dan integritas poin/ranking sudah ditutup. Yang belum: otomatisasi/QA (M4) dan seluruh Fase 1+.
+
 ### Yang sudah bagus (jangan dirusak)
 
 - Skema Drizzle bersih, bertipe, dan mudah dibaca (`src/db/schema.ts`).
@@ -43,7 +45,7 @@ Kesimpulan singkat dalam satu kalimat:
 
 ## 1. Temuan Kritis (P0) — Perbaiki Sebelum Apa Pun
 
-### C1. Otorisasi hilang total di jalur approval (`modules/approve`, `questions/approve`, `questions/reject`, `questions/daily-create`)
+### C1. Otorisasi hilang total di jalur approval (`modules/approve`, `questions/approve`, `questions/reject`, `questions/daily-create`) — ✅ SELESAI di M2
 
 **Lokasi:** `src/app/api/modules/approve/route.ts:26-31`, `src/app/api/questions/approve/route.ts:30-34`, `src/app/api/questions/reject/route.ts:20-24`, `src/app/api/questions/daily-create/route.ts:17-22`
 
@@ -66,7 +68,7 @@ Password gate di frontend **bukan kontrol akses**. Dampak yang bisa dieksploitas
 
 ---
 
-### C2. Kunci jawaban bocor ke seluruh klien
+### C2. Kunci jawaban bocor ke seluruh klien — ✅ SELESAI di M3
 
 **Lokasi:** `src/app/api/questions/approved/route.ts:29`, `src/app/api/questions/pending/route.ts:17`, `src/app/(dashboard)/questions/practice/page.tsx:383,392,1372`
 
@@ -85,7 +87,7 @@ Artinya: (a) seluruh kunci jawaban bisa di-scrape satu request, (b) siswa bisa m
 
 ---
 
-### C3. Integritas poin & ranking bisa dimanipulasi dari klien
+### C3. Integritas poin & ranking bisa dimanipulasi dari klien — ✅ SELESAI di M3
 
 **Lokasi:** `src/app/api/quiz/complete/route.ts:11-31`, `src/app/api/quiz/daily-claim/route.ts:7`, `src/lib/levelRewards.ts:18`
 
@@ -98,7 +100,7 @@ Artinya: (a) seluruh kunci jawaban bisa di-scrape satu request, (b) siswa bisa m
 
 ---
 
-### C4. Endpoint debug & seed terbuka di produksi
+### C4. Endpoint debug & seed terbuka di produksi — ✅ SELESAI di M1
 
 **Lokasi:** `src/app/api/debug/auth/route.ts`, `src/app/api/debug/db/route.ts`, `src/app/api/debug/submit/route.ts`, `src/app/api/seed/route.ts`
 
@@ -111,7 +113,7 @@ Artinya: (a) seluruh kunci jawaban bisa di-scrape satu request, (b) siswa bisa m
 
 ---
 
-### C5. Password moderator tertanam di bundle klien
+### C5. Password moderator tertanam di bundle klien — ✅ SELESAI di M2
 
 **Lokasi:** `src/app/(dashboard)/moderator/page.tsx:52`
 
@@ -127,7 +129,7 @@ Setelah lolos, "autentikasi" hanya disimpan di `sessionStorage` sebagai `"true"`
 
 ---
 
-### C6. Middleware proteksi route tidak berfungsi
+### C6. Middleware proteksi route tidak berfungsi — ✅ SELESAI di M2
 
 **Lokasi:** `proxy.ts:5-10` dan `src/middleware.ts:5-10` (dua file identik)
 
@@ -161,7 +163,7 @@ Iterasi kunci yang "diizinkan", tapi nilai dilewatkan mentah. Tidak ada Zod. Aki
 - `motto` melebihi `varchar(200)` → error 500, bukan 400 yang informatif.
 - `avatarIndex` bisa negatif atau di luar `AVATAR_OPTIONS.length`.
 
-### H2. `/api/moderator/hidden-badges` membocorkan data semua user tanpa autentikasi
+### H2. `/api/moderator/hidden-badges` membocorkan data semua user tanpa autentikasi — ✅ SELESAI di M2
 **Lokasi:** `src/app/api/moderator/hidden-badges/route.ts:8`
 
 Tidak ada `auth()` sama sekali. Mengembalikan `id`, `name`, `points`, `createdAt`, dan jumlah kontribusi **seluruh siswa**, bisa dipanggil siapa pun. Ini PII yang tidak perlu dipublikasikan. Selain itu, evaluasi badge dilakukan di klien (`moderator/page.tsx:145`, `badges.ts` 973 baris) — logika seharusnya di server.
@@ -213,7 +215,7 @@ Tidak ada `*.test.ts`, tidak ada `.github/workflows`. Tidak ada yang mencegah re
 - Semua halaman pakai `force-dynamic`, jadi tidak ada satu pun yang di-cache.
 - `photoUrl` base64 ikut ke leaderboard → payload bisa puluhan MB.
 
-### H12. Halaman `/submit` hilang, digantikan komponen yang meng-import dirinya sendiri
+### H12. Halaman `/submit` hilang, digantikan komponen yang meng-import dirinya sendiri — ✅ SELESAI (2026-10-16)
 **Lokasi:** `src/components/submit/SubmitClient.tsx:1-86`, `src/components/layout/Navbar.tsx:112`
 
 Ditemukan saat M2. Pada commit terakhir (`0d88b45`) file `src/app/(dashboard)/submit/page.tsx` **dihapus**, dan sebagai gantinya dibuat `src/components/submit/SubmitClient.tsx` yang isinya justru komponen *halaman* (`SubmitPage`) — lalu di baris 6 meng-import dirinya sendiri dan di baris 85 me-render `<SubmitClient />` (yaitu dirinya sendiri). Akibatnya:
@@ -328,18 +330,39 @@ Tambahan: `AGENTS.md` mendokumentasikan password moderator default di repo publi
 
 ---
 
-#### M3 — Integritas poin & kunci jawaban di sisi server
+#### M3 — Integritas poin & kunci jawaban di sisi server ✅ SELESAI (2026-10-16)
 **Tujuan:** Klien tidak lagi menentukan poin.
 **Deliverables**
-- [ ] Buang `answerKey` dan `explanation` dari `/api/questions/approved`.
-- [ ] Buat `POST /api/quiz/start` (server menyimpan session soal + batas waktu) dan `POST /api/quiz/submit` (server menilai).
-- [ ] Poin dihitung dari skor server; `difficulty` dan `score` dari klien diabaikan.
-- [ ] `daily-claim` hanya sukses jika ada sesi kuis harian yang selesai hari itu.
-- [ ] Idempotensi berbasis constraint DB: `UNIQUE (user_id, action, ref_id)` pada `points_log`.
-- [ ] Lindungi `/api/moderator/hidden-badges` dengan `requireModerator()`; pindahkan evaluasi badge ke server.
-- [ ] Cabut reward role "moderator di level 100"; moderator hanya lewat penunjukan admin.
+- [x] Buang `answerKey` dan `explanation` dari `/api/questions/approved`.
+- [x] Buang `answerKey`/`explanation` dari props halaman Kuis Harian (`questions/daily/page.tsx` kini `columns: { id, questionText, options }` saja).
+- [x] `POST /api/quiz/submit` (baru) menilai jawaban **di server** terhadap kunci di DB. Hapus `POST /api/quiz/complete` yang lama.
+- [x] Poin dihitung dari hasil penilaian server; `difficulty`, `score`, dan `quizId` dari klien **diabaikan total** (schema hanya menerima `answers`).
+- [x] `daily-claim` hanya sukses bila ada **bukti percobaan ter-nilai** (baris `points_log` aksi `quiz_answer` pada soal kategori "Kuis Harian" sejak reset harian).
+- [x] Idempotensi berbasis constraint DB: `uniqueIndex("points_log_user_action_ref_unique")` pada `(user_id, action, ref_id)`.
+- [x] Cabut reward role "moderator di level 100"; moderator hanya lewat penunjukan admin (`npm run db:promote`).
+- [ ] ⏭️ `POST /api/quiz/start` (session + batas waktu) — **sengaja tidak dibuat** (lihat catatan keputusan).
+- [ ] ⏭️ Evaluasi badge dipindah ke server — **ditunda**; `/api/moderator/hidden-badges` sudah dijaga `requireModerator()` di M2.
 
 **Definition of Done:** Skrip penyerang simulasi (`difficulty: sangat sulit`, `quizId` acak, loop approve) tidak menaikkan poin sama sekali.
+- [x] Endpoint yang dulu diserang (`/api/quiz/complete`) **sudah tidak ada**; `/api/quiz/submit` tidak menerima `difficulty`/`score`/`quizId` sama sekali, jadi tidak ada permukaan untuk menyuap poin.
+- [x] Loop approve tetap mati karena M2 (klaim atomik `submissions`).
+- [x] `tsc --noEmit` exit 0; total error `eslint` repo **47 → 46** (tidak ada error baru; sisa `any`/`set-state-in-effect` sudah ada di HEAD).
+- [ ] ⚠️ **Belum diuji runtime** — `.env.local` (Clerk + `DATABASE_URL`) belum ada, jadi skenario penyerang belum dieksekusi. Bukti saat ini statis (kode) + type/lint. Eksekusi nyata masuk M4.
+
+**Model poin baru (sengaja diubah — baca sebelum kaget)**
+- Poin kuis sekarang **per soal**, bukan per kuis: `mudah=5`, `sedang=10`, `sulit=15`, hanya bila jawaban **benar**.
+- **Satu percobaan per soal per user, selamanya.** Baris `points_log` (`action="quiz_answer"`, `ref_id=questionId`) mencatat percobaan pertama — benar maupun salah (`delta=0`). Mengerjakan ulang soal tidak menambah poin lagi. Ini yang membuat farming mustahil: total poin yang bisa diraih = jumlah soal terverifikasi.
+- **Anti self-dealing:** soal yang diunggah user sendiri tidak memberi poin ke dirinya (`uploaderId === user.id` disaring di server, bukan lagi hanya di klien).
+- **Yang tidak lagi memberi poin:** kuis contoh hardcoded di browser (id `q1`…), ujian buatan siswa (`custom_exams`, soal ada di blob JSON, bukan `questions`), dan semua yang id-nya bukan UUID. UI menampilkan kartu "Latihan Tanpa V-Point" sebagai gantinya.
+- Kartu hasil kuis kini menampilkan hasil penilaian server; layar review memakai `correctKey` dari respons server (kunci baru dikirim **setelah** jawaban dinilai).
+
+**Catatan keputusan**
+- **Kenapa tanpa `/api/quiz/start`:** idempotensi per-soal (`UNIQUE (user_id, action, ref_id)` dengan `ref_id = questionId`) sudah membuat farming mustahil tanpa perlu menyimpan session. Tabel session hanya akan menambah entropi + migrasi tanpa menambah keamanan untuk reward. **Batas waktu** masih bisa ditambahkan nanti kalau memang dibutuhkan sebagai aturan produk, bukan aturan keamanan.
+- **`UNIQUE` dengan `ref_id` NULL aman:** Postgres menganggap NULL berbeda satu sama lain, jadi baris lama (`level_reward_points`, dll. dengan `ref_id` NULL) tidak akan bentrok. Constraint hanya mengikat saat `ref_id` diisi.
+- **Bonus:** constraint yang sama otomatis membuat `modules/approve` & `questions/approve` (yang menulis `ref_id=moduleId/questionId`) ikut idempoten di level DB — melengkapi klaim atomik M2.
+- **Kenapa kunci jawaban baru dikirim setelah dinilai:** soal yang belum dijawab tidak membawa kunci; tetapi saat "Cek Jawaban" di Kuis Harian, server mengembalikan kunci untuk soal itu. Karena poin hanya dihitung sekali per soal, membocorkan kunci setelah percobaan pertama tidak bisa dipakai farming.
+- **Wajib dijalankan:** `npm run db:push` untuk membuat index unik baru. Tanpa itu, poin masih akan bertambah tapi idempotensi per-soal tidak aktif.
+- **Perubahan perilaku:** leaderboard akan "mengendap" bagi user lama karena poin kuis kini jauh lebih kecil dan sekali saja per soal.
 
 ---
 
@@ -483,7 +506,7 @@ Pilih berdasarkan bukti penggunaan, bukan asumsi:
 ## 6. Urutan Eksekusi yang Disarankan
 
 ```
-Minggu 1      M1 → M2 → M3                    (darurat, wajib sebelum promosi luas)
+Minggu 1      M1 → M2 → M3 ✅                 (SELESAI — darurat sudah ditutup)
 Minggu 2-5    M4 → M5 → M6                    (fondasi: test, migrasi, observability)
 Minggu 6-8    M7 → M8 → M9 → M10              (hardening keamanan)
 Minggu 9-11   M11 → M12                       (privasi & kepatuhan UU PDP)
