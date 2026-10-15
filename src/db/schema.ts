@@ -1,5 +1,6 @@
 // db/schema.ts
-import { pgTable, uuid, varchar, text, timestamp, integer, jsonb, pgEnum, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, text, timestamp, integer, jsonb, pgEnum, uniqueIndex, index, check } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 // Enums
 export const roleEnum = pgEnum("role", ["guest", "student", "contributor", "moderator", "admin"]);
@@ -27,7 +28,16 @@ export const users = pgTable("users", {
   // Seasonal leaderboard
   seasonPoints: integer("season_points").default(0).notNull(),   // points earned in current season only
   seasonResetAt: timestamp("season_reset_at"),                   // when this user's season points were last reset
-});
+  // Maintained by a database trigger, not by application code, so it stays
+  // truthful even for updates that forget to set it.
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  // The leaderboard orders by season points and pages through the whole table.
+  index("users_season_points_idx").on(table.seasonPoints.desc()),
+  // `avatar_index` is an index into AVATAR_OPTIONS[]; a negative value would
+  // render a broken avatar. NULL is allowed (user never picked one).
+  check("users_avatar_index_non_negative", sql`${table.avatarIndex} IS NULL OR ${table.avatarIndex} >= 0`),
+]);
 
 export const modules = pgTable("modules", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -40,7 +50,11 @@ export const modules = pgTable("modules", {
   status: statusEnum("status").default("pending").notNull(),
   downloads: integer("downloads").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  // The library and the moderation queue both filter on status and subject.
+  index("modules_status_subject_idx").on(table.status, table.subject),
+]);
 
 export const questions = pgTable("questions", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -56,7 +70,12 @@ export const questions = pgTable("questions", {
   uploaderId: uuid("uploader_id").references(() => users.id).notNull(),
   status: statusEnum("status").default("pending").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  // The practice quiz loads approved questions, the daily quiz loads approved
+  // daily questions — both filter on these two columns.
+  index("questions_status_category_idx").on(table.status, table.category),
+]);
 
 export const submissions = pgTable("submissions", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -67,23 +86,20 @@ export const submissions = pgTable("submissions", {
   reviewerId: uuid("reviewer_id").references(() => users.id),
   feedback: text("feedback"),
   submittedAt: timestamp("submitted_at").defaultNow().notNull(),
-});
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  // Only one *pending* submission may exist per content item, so the moderation
+  // queue cannot fill up with duplicates (the insert used to be a racy
+  // find-then-insert). Approved and rejected rows are deliberately exempt, so a
+  // piece of content can be resubmitted after a rejection.
+  uniqueIndex("submissions_pending_ref_unique")
+    .on(table.type, table.refId)
+    .where(sql`${table.status} = 'pending'`),
+]);
 
-export const reviews = pgTable("reviews", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  moduleId: uuid("module_id").references(() => modules.id).notNull(),
-  reviewerId: uuid("reviewer_id").references(() => users.id).notNull(),
-  rating: integer("rating").notNull(), // 1 to 5
-  comment: text("comment"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const bookmarks = pgTable("bookmarks", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id").references(() => users.id).notNull(),
-  questionId: uuid("question_id").references(() => questions.id).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+// `reviews` and `bookmarks` were dropped in M5: neither table was referenced
+// anywhere in src/ (the bookmark button is client-side state, not this table).
+// They can come back — with proper constraints — once those features exist.
 
 export const customExams = pgTable("custom_exams", {
   id: uuid("id").defaultRandom().primaryKey(),

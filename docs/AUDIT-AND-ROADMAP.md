@@ -22,15 +22,16 @@ Kesimpulan singkat dalam satu kalimat:
 | UI / UX visual | 7.5 / 10 | Konsisten, animatif, responsif. Tapi ada mojibake & aksesibilitas minim. |
 | Arsitektur | 4 / 10 | Duplikasi folder API, middleware ganda, logika bisnis di komponen klien 1500+ baris. |
 | Keamanan (authz) | 6 / 10 | RBAC terpusat + deny-by-default, 8 endpoint review dijaga, matriks 401/403 teruji. Kurang: rate limiting, security header, validasi input di beberapa route. |
-| Integritas data | 6 / 10 | Poin & skor dinilai server, idempotensi lewat constraint DB, kunci jawaban tidak lagi bocor. Kurang: constraint & indeks tambahan, soft delete. |
+| Integritas data | 8 / 10 | Poin & skor dinilai server, idempotensi ditegakkan constraint DB, kunci jawaban tidak bocor, index + CHECK + partial-unique ditambahkan, `updatedAt` dijaga trigger. Kurang: soft delete (belum ada fitur hapus) & rollback teruji. |
+| Database & migrasi | 8 / 10 | Migrasi berversi, CI menolak drift skema, `db:push` dihapus, seed berpengaman, adopsi database lama terbukti nol kehilangan data. Kurang: rollback/down-migration belum diuji. |
 | Privasi & kepatuhan | 2 / 10 | Tidak ada consent, retensi, export/delete, atau kebijakan privasi (UU PDP). |
 | Observability | 2 / 10 | Hanya `console.log`, tanpa error tracking, tanpa health check. |
-| Testing & CI | 7 / 10 | 108 test (unit + integrasi PGlite), CI workflow, coverage 63.74%, `next build` terverifikasi. Kurang: E2E, dan ~10 route masih 0% coverage. |
+| Testing & CI | 7 / 10 | 117 test di 10 file (unit + integrasi PGlite + migrasi), CI workflow, `next build` terverifikasi. Kurang: E2E, dan ~10 route masih 0% coverage. |
 | Dokumentasi | 5 / 10 | README rapi, tapi `AGENTS.md` sudah drift dari kode. |
 
 **Estimasi jarak ke "premium":** 3 fase kerja, ~16 milestone. Fase 0 (M1–M3) bersifat darurat dan **harus selesai sebelum platform dipakai lebih luas lagi**, karena saat ini satu akun siswa terautentikasi bisa mengangkat dirinya ke puncak leaderboard dan menyetujui kontennya sendiri.
 
-> **Status per 2026-10-16:** Fase 0 **selesai** — M1 (`52bba95`), M2 (`1f5a6c7`), H12 (`836107f`), M3 (`dcb9b84`). M4 (test + CI) juga **selesai**: 108 test hijau, CI aktif, `next build` terverifikasi. Otorisasi approval, kebocoran kunci jawaban, dan integritas poin/ranking sudah ditutup. Yang tersisa: E2E, dan seluruh Fase 1+ (M5 ke atas).
+> **Status per 2026-10-16:** Fase 0 **selesai** — M1 (`52bba95`), M2 (`1f5a6c7`), H12 (`836107f`), M3 (`dcb9b84`), M4 (`7c5ee5f`). Fase 1 dimulai: **M5 (migrasi database terkelola) selesai** — 117 test hijau, CI aktif, dan **database produksi sudah diadopsi ke sistem migrasi dengan nol kehilangan data**. Otorisasi approval, kebocoran kunci jawaban, integritas poin/ranking, dan workflow skema sudah ditutup. Yang tersisa: E2E, rollback migration, dan M6 ke atas.
 
 ### Yang sudah bagus (jangan dirusak)
 
@@ -109,7 +110,7 @@ Artinya: (a) seluruh kunci jawaban bisa di-scrape satu request, (b) siswa bisa m
 - `POST /api/debug/submit` — melewati aturan peran (tidak ada cek `role === "student"` seperti di endpoint submit sebenarnya) dan mengembalikan log internal detail ke klien.
 - `ERROR_TROUBLESHOOTING.md` mendokumentasikan endpoint ini sebagai fitur, sehingga kecil kemungkinan dihapus tanpa disadari.
 
-**Perbaikan:** hapus semuanya dari repo. Debugging pakai observability (M6), bukan endpoint publik. `insert_data.ts` sudah jadi versi script yang benar — pakai itu.
+**Perbaikan:** hapus semuanya dari repo. Debugging pakai observability (M6), bukan endpoint publik. Untuk data contoh lokal, pakai `src/db/seed.ts` (butuh `ALLOW_SEED=1`, dan idempoten) — bukan endpoint HTTP.
 
 ---
 
@@ -200,14 +201,14 @@ Semua endpoint bisa dipanggil ribuan kali per detik: submit modul/soal, kirim la
 ### H8. Tidak ada security header
 Tidak ada CSP, HSTS, `X-Frame-Options`/`frame-ancestors`, `Referrer-Policy`, atau `Permissions-Policy`. Situs bisa di-iframe (clickjacking), dan tanpa CSP setiap celah XSS jadi jauh lebih berbahaya.
 
-### H9. Skema database tanpa migration, langsung `push` ke produksi — 🔶 SEBAGIAN (M4: migrasi berversi sudah di-generate; workflow produksi belum)
-**Lokasi:** `package.json:10`, `drizzle.config.ts:10-11`
+### H9. Skema database tanpa migration, langsung `push` ke produksi — ✅ SELESAI (M5: migrasi berversi + adopsi database asli terverifikasi)
+**Lokasi dulu:** `package.json:10`, `drizzle.config.ts:10-11`
 
 `"db:push": "drizzle-kit push"` dan folder `src/db/migrations` tidak pernah ada. Tidak ada riwayat perubahan, tidak ada rollback, tidak ada review perubahan skema. Untuk produk dengan data siswa ini tidak bisa diterima.
 
-**Sisa yang belum:** `src/db/migrations/` sekarang ada dan dipakai test, tapi database produksi belum pernah di-baseline. Lihat catatan di M5 — migrasi tidak boleh dijalankan mentah ke DB yang sudah dibuat lewat `push`.
+**Selesai:** `src/db/migrations/` di-commit dan database produksi sudah diadopsi ke sistem migrasi (baseline 0000 + `migrate` 0001) dengan **nol kehilangan data**. `db:push` dihapus dari `package.json`, CI menolak drift antara `schema.ts` dan migrasi, dan seed diberi pengaman. Sisa jujur: rollback/down-migration belum teruji (lihat M5).
 
-### H10. Nol test, nol CI — ✅ SELESAI (M4: 101 test unit + integrasi, CI workflow)
+### H10. Nol test, nol CI — ✅ SELESAI (M4: 108 test unit + integrasi, CI workflow; M5 menambah 9 test migrasi)
 Tidak ada `*.test.ts`, tidak ada `.github/workflows`. Tidak ada yang mencegah regresi seperti bug otorisasi di atas. `npm run lint` pun tidak pernah dijalankan otomatis.
 
 ### H11. Performa: N+1 query dan query tak terbatas
@@ -363,7 +364,7 @@ Tambahan: `AGENTS.md` mendokumentasikan password moderator default di repo publi
 - **`UNIQUE` dengan `ref_id` NULL aman:** Postgres menganggap NULL berbeda satu sama lain, jadi baris lama (`level_reward_points`, dll. dengan `ref_id` NULL) tidak akan bentrok. Constraint hanya mengikat saat `ref_id` diisi.
 - **Bonus:** constraint yang sama otomatis membuat `modules/approve` & `questions/approve` (yang menulis `ref_id=moduleId/questionId`) ikut idempoten di level DB — melengkapi klaim atomik M2.
 - **Kenapa kunci jawaban baru dikirim setelah dinilai:** soal yang belum dijawab tidak membawa kunci; tetapi saat "Cek Jawaban" di Kuis Harian, server mengembalikan kunci untuk soal itu. Karena poin hanya dihitung sekali per soal, membocorkan kunci setelah percobaan pertama tidak bisa dipakai farming.
-- **Wajib dijalankan:** `npm run db:push` untuk membuat index unik baru. Tanpa itu, poin masih akan bertambah tapi idempotensi per-soal tidak aktif.
+- **Sudah diterapkan di produksi (2026-10-16):** index unik `points_log_user_action_ref_unique` sudah dibuat di database asli lewat prosedur adopsi M5. Idempotensi per-soal kini aktif, bukan sekadar ada di kode.
 - **Perubahan perilaku:** leaderboard akan "mengendap" bagi user lama karena poin kuis kini jauh lebih kecil dan sekali saja per soal.
 
 ---
@@ -408,19 +409,38 @@ Tambahan: `AGENTS.md` mendokumentasikan password moderator default di repo publi
 
 ---
 
-#### M5 - Migrasi database terkelola
+#### M5 - Migrasi database terkelola ✅ SELESAI (2026-10-16)
 **Deliverables**
-- [ ] Ganti `db:push` dengan `drizzle-kit generate` + `drizzle-kit migrate`.
-- [ ] Commit folder `src/db/migrations`; semua perubahan skema lewat PR.
-- [ ] Tambah constraint: unique di `bookmarks`, `reviews`, `submissions`, `points_log`; `CHECK (rating BETWEEN 1 AND 5)`; `CHECK (avatar_index >= 0)`.
-- [ ] Tambah indeks: `modules(status, subject)`, `questions(status, category)`, `users(season_points DESC)`, `points_log(user_id, action)`.
-- [ ] Tambah `updatedAt` + soft delete (`deletedAt`) pada tabel konten.
-- [ ] Hapus tabel tak terpakai (`reviews`, `bookmarks`) atau implementasikan dengan benar.
-- [ ] Pisahkan seed ke `src/db/seed.ts` dengan environment guard.
-
-> ⚠️ **Sudah sebagian dikerjakan lebih awal di M4** (karena test integrasi butuh DDL asli): `src/db/migrations/0000_*.sql` sudah ada, dan `npm run db:generate` sudah ditambahkan. **Jangan jalankan `drizzle-kit migrate` ke database produksi mentah-mentah** — tabelnya sudah dibuat lewat `push`, jadi migrasi akan gagal dengan "relation already exists". M5 harus: (1) menjalankan migrasi ini di database bersih untuk mendapat baseline, lalu (2) menandai migrasi 0000 sebagai sudah diterapkan di DB produksi (`__drizzle_migrations`), atau memakai `drizzle-kit push` sekali lagi untuk menyelaraskan lalu baseline. `db:push` **tetap dipakai** sampai langkah ini selesai — dan karena itu **`npm run db:push` masih wajib dijalankan** untuk membuat index unik M3.
+- [x] Ganti `db:push` dengan `drizzle-kit generate` + `drizzle-kit migrate`. Script `db:push` **dihapus** dari `package.json`: tidak boleh ada lagi jalan pintas yang bisa menyimpangkan skema produksi tanpa riwayat.
+- [x] `src/db/migrations/` di-commit; setiap perubahan skema lewat PR, dan CI gagal bila `schema.ts` menyimpang dari migrasi.
+- [x] Constraint: `points_log(user_id, action, ref_id)` unik (M3); **partial** unique `submissions(type, ref_id) WHERE status='pending'`; `CHECK (users.avatar_index IS NULL OR avatar_index >= 0)`.
+- [x] Index: `modules(status, subject)`, `questions(status, category)`, `users(season_points DESC NULLS LAST)`.
+- [x] `updatedAt` pada `users`, `modules`, `questions`, `submissions` — **dijaga trigger database** (`set_updated_at()`), bukan oleh disiplin kode aplikasi.
+- [x] **Hapus tabel mati** `reviews` dan `bookmarks` (keduanya nol referensi di `src/`; bookmark di UI adalah state klien).
+- [x] Seed dipindah ke `src/db/seed.ts` **dengan pengaman**: menolak jalan kecuali `ALLOW_SEED=1`, mencetak host target, dan idempoten. `insert_data.ts` lama (yang menulis tanpa syarat ke `DATABASE_URL` mana pun) dihapus.
+- [ ] ⏭️ `points_log(user_id, action)` **sengaja tidak dibuat** — index unik M3 sudah `(user_id, action, ref_id)` dan `(user_id, action)` adalah prefix-nya, jadi index terpisah hanya duplikasi.
+- [ ] ⏭️ `deletedAt` (soft delete) **ditunda**. Tidak ada satu pun operasi hapus di seluruh `src/`, jadi kolomnya akan jadi kolom mati — dan soft delete setengah jalan (kolom ada, query tidak memfilter) lebih buruk daripada tidak ada. Harus dikerjakan bersama fitur hapusnya.
 
 **Definition of Done:** DB produksi bisa dibuat ulang dari nol hanya dengan `migrate` + `seed`; rollback teruji.
+- [x] Database asli **sudah dimigrasikan dan diverifikasi** pada 2026-10-16.
+- [x] **Nol kehilangan data**: jumlah baris identik sebelum dan sesudah (6 users, 10 modules, 2 questions, 9 submissions, 26 points_log, 1 custom_exam).
+- [x] Index, CHECK constraint, dan 4 trigger terverifikasi ada di database asli lewat inspeksi read-only setelah migrasi.
+- [x] `tests/integration/migrations.test.ts` (9 test) menjalankan file SQL asli terhadap Postgres nyata (PGlite) yang **sudah berisi data lama**: 0000 → isi data legacy (termasuk baris di tabel yang akan dihapus) → 0001 → verifikasi data, index, trigger, partial-unique, dan CHECK. Total suite: **117 test di 10 file**, coverage tetap **63.74%** (test migrasi menjalankan SQL, bukan kode `src/`).
+- [ ] ⚠️ **Rollback belum teruji secara eksplisit.** Drizzle tidak punya down-migration; rollback nyata hanya PITR Neon atau restore dari backup. Perubahan additive (index/kolom) mudah dibalik, tapi `DROP TABLE` tidak. DoD ini karena itu **belum sepenuhnya terpenuhi** — dicatat apa adanya.
+
+**Prosedur adopsi database yang sudah ada (dijalankan sekali, 2026-10-16)**
+1. **Backup** seluruh tabel ke JSON (63 baris) sebagai jaring kedua di samping PITR Neon.
+2. **Inspeksi read-only**: daftar tabel/index/constraint + cek duplikat yang bisa menggagalkan constraint baru (hasil: nol duplikat, `avatar_index` nol negatif).
+3. **Sinkron ke 0000**: satu-satunya selisih database asli vs migrasi 0000 adalah index unik M3 (karena `db:push` belum pernah dijalankan) → `CREATE UNIQUE INDEX IF NOT EXISTS`.
+4. **Baseline**: catat 0000 sebagai sudah diterapkan di `drizzle.__drizzle_migrations` (hash = sha256 isi file; `created_at` = `when` dari `_journal.json`).
+5. **`npx drizzle-kit migrate`** menerapkan 0001 lewat migrator resmi Drizzle, bukan SQL buatan sendiri.
+6. **Verifikasi ulang** dengan inspeksi read-only.
+
+**Catatan keputusan**
+- **Kenapa `db:push` dihapus:** perintah itu menyelaraskan database langsung dari `schema.ts` tanpa riwayat, tanpa review, dan bisa menjatuhkan kolom/tabel secara diam-diam. Selama perintahnya ada, cepat atau lambat ada yang memakainya pada database produksi.
+- **Kenapa `updatedAt` pakai trigger:** kalau hanya kolomnya yang ditambah, setiap jalur kode yang lupa mengisinya akan menulis timestamp bohong. Trigger membuatnya benar tanpa bergantung pada ingatan penulis kode.
+- **Hash migrasi dicatat, bukan dibandingkan:** migrator `neon-http` Drizzle membandingkan `created_at`, bukan hash (`node_modules/drizzle-orm/neon-http/migrator.js`). Hash tetap dihitung dengan cara yang sama supaya catatannya konsisten.
+- **`DROP TABLE ... CASCADE` aman di sini** karena `bookmarks` dan `reviews` tidak direferensikan siapa pun dan keduanya kosong di produksi (diverifikasi sebelum migrasi, bukan diasumsikan).
 
 ---
 

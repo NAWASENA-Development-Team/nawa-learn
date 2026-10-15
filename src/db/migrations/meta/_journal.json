@@ -8,6 +8,13 @@
       "when": 1792101998270,
       "tag": "0000_absurd_warhawk",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792104855700,
+      "tag": "0001_clever_lady_mastermind",
+      "breakpoints": true
     }
   ]
 }
