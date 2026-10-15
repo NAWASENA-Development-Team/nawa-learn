@@ -1,4 +1,14 @@
-# Error Troubleshooting Guide
+# Error Troubleshooting Guide (ARCHIVED)
+
+> **Status: ARSIP — sebagian sudah tidak berlaku.**
+>
+> Sejak **Fase 0 / M1**, endpoint berikut **dihapus dari repo** karena membuka akses tulis/baca data tanpa autentikasi:
+> `/api/debug/auth`, `/api/debug/db`, `/api/debug/submit`, dan `/api/seed`.
+>
+> Oleh karena itu **Section 2 di bawah sudah obsolete.** Untuk debugging sekarang gunakan observability
+> terstruktur (error tracking + structured logging + `/api/health`), yang direncanakan di **M6**.
+> Dokumen ini disimpan sebagai arsip untuk bagian yang masih relevan (masalah browser/extension,
+> Clerk dev keys, dan checklist umum).
 
 ## 1. "A listener indicated an asynchronous response by returning true..."
 
@@ -33,6 +43,8 @@ Error ini **BUKAN masalah aplikasi Anda**, tapi dari browser/extension. Aman unt
 ---
 
 ## 2. "Failed to load resource: the server responded with a status of 500"
+
+> ⚠️ **OBSOLETE:** langkah berikut memakai `/api/debug/*` yang sudah dihapus. Lihat banner di atas.
 
 ### Penyebab
 API endpoint `/api/modules/submit` mengalami error server. Kemungkinan:
