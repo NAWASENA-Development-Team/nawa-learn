@@ -3,7 +3,7 @@
 > Tanggal audit: 2026-10-15
 > Commit: `0d88b45` — feat: enhance moderator and user role checks in submission routes
 > Stack: Next.js 16.2.6 (App Router) · React 19 · TypeScript 5 (strict) · Tailwind 4 · Clerk 7 · Drizzle 0.45 + Neon HTTP · Zod 4
-> Catatan: `node_modules` tidak ter-install di environment audit, jadi `tsc --noEmit` dan `eslint` **tidak bisa dijalankan**. Semua temuan di bawah berasal dari pembacaan kode statis, bukan hasil build/test.
+> Catatan: audit awal bersifat statis (`node_modules` belum ter-install saat itu). Pada 2026-10-16 dependensi sudah terpasang, sehingga `tsc --noEmit` dan `eslint` dapat dijalankan dan dipakai untuk memverifikasi perubahan M1/M2. `next build` masih belum bisa dijalankan di environment ini karena `.env.local` (kunci Clerk + `DATABASE_URL`) tidak tersedia.
 
 ---
 
@@ -222,7 +222,12 @@ Ditemukan saat M2. Pada commit terakhir (`0d88b45`) file `src/app/(dashboard)/su
 - Alur unggah modul/soal (`/api/modules/submit`, `/api/questions/submit`) jadi tidak punya pintu masuk di UI.
 - Jika file itu suatu saat dipasang sebagai page, ia akan **rekursi tak terbatas**.
 
-**Perbaikan:** pindahkan isi `SubmitPage` ke `src/app/(dashboard)/submit/page.tsx` dan buat komponen form terpisah untuk `<SubmitClient />`, atau sembunyikan item nav "Upload" sampai form-nya ada. Belum dikerjakan karena di luar lingkup M2 dan menyentuh UI/produk.
+**Perbaikan (SELESAI 2026-10-16):** arsitektur yang dimaksud commit `0d88b45` dipulihkan dengan benar:
+
+- `src/components/submit/SubmitClient.tsx` kembali menjadi **form unggah (client)** — 1296 baris yang hilang dipulihkan utuh dari `0d88b45^`, kemudian dirapikan (nama komponen, komentar header, 6 temuan lint warisan diperbaiki).
+- `src/app/(dashboard)/submit/page.tsx` kembali menjadi **halaman server** yang memverifikasi sesi + peran, menampilkan layar "Akses Terkunci" untuk siswa, dan me-render `<SubmitClient />`.
+- Navbar "Upload" → `/submit` berfungsi lagi; tidak ada lagi self-import/rekursi.
+- Catatan: `/api/modules/submit` dan `/api/questions/submit` **sudah** menolak siswa dengan 403, jadi gate di halaman murni UX (pesan ramah, bukan pengamanan).
 
 ---
 
