@@ -137,6 +137,15 @@ repositories):
 Without required status checks, the CI jobs added in M10 are advisory only: a red
 `Secret scan` or a failing `audit:gate` can still be merged.
 
+There is a second reason to enable them, and it is not theoretical: this
+repository's CI had **never** passed. From M5 — when the workflow landed — to M10,
+every run died at the `Build` step, because that step read a `secrets.DATABASE_URL`
+which was never configured on the repository, and the two proxy gates under it were
+therefore skipped on every single run. Nothing was gating `main` while that was
+true. The job is hermetic now (it reads no repository secret at all, and
+`tests/unit/ci-gates.test.ts` fails if one is reintroduced), but the branch
+protection above is what makes a future red run *matter*.
+
 ## 📄 License
 
 This project is proprietary and developed by the Nawasena Development Team. All rights reserved.
