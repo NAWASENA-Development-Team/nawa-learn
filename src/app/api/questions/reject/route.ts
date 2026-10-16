@@ -6,6 +6,7 @@ import { questions, submissions } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { requireModerator } from "@/lib/authz";
 import { requestLogger } from "@/lib/logger";
+import { parseJsonBody } from "@/lib/validation";
 
 // A moderation take-down. The client may identify the target either by
 // submission id (the moderation queue) or by question id (the daily-quiz list,
@@ -18,6 +19,7 @@ const rejectSchema = z
     questionId: z.string().uuid().optional(),
     feedback: z.string().max(1000).optional(),
   })
+  .strict()
   .refine((d) => Boolean(d.submissionId || d.questionId), {
     message: "submissionId or questionId is required",
   });
@@ -30,8 +32,9 @@ export async function POST(req: Request) {
   const reviewer = authz.user;
 
   try {
-    const body = await req.json();
-    const { submissionId, questionId, feedback } = rejectSchema.parse(body);
+    const parsed = await parseJsonBody(req, rejectSchema);
+    if (!parsed.ok) return parsed.response;
+    const { submissionId, questionId, feedback } = parsed.data;
 
     // 2. Resolve the submission row.
     let submission = submissionId
@@ -73,9 +76,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Validation failed", details: error.issues }, { status: 400 });
-    }
     log.error("Question reject error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }

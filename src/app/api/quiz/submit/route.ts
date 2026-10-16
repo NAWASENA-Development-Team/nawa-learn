@@ -6,7 +6,6 @@
 // the score, the reward and the anti-replay key are all derived here, from the
 // answer keys stored in the database.
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { pointsLog, questions, users } from "@/db/schema";
@@ -22,6 +21,7 @@ import {
 } from "@/lib/quizScoring";
 import { requestLogger } from "@/lib/logger";
 import { rateLimit } from "@/lib/rateLimit";
+import { parseJsonBody } from "@/lib/validation";
 
 type GradedQuestion = {
   questionId: string;
@@ -61,14 +61,10 @@ export async function POST(req: Request) {
   if (!limit.ok) return limit.response;
 
   try {
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-    }
+    const parsed = await parseJsonBody(req, quizSubmitSchema);
+    if (!parsed.ok) return parsed.response;
 
-    const { answers } = quizSubmitSchema.parse(body);
+    const { answers } = parsed.data;
 
     // Only ids that can exist in `questions` are gradeable. Sample/demo quizzes
     // are hardcoded in the browser with ids like "q1"; they are fine to practise
@@ -190,9 +186,6 @@ export async function POST(req: Request) {
       levelRewards: levelRewards.map((r) => r.label),
     }, { status: 200 });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Validation failed", details: error.issues }, { status: 400 });
-    }
     log.error("Quiz submit error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }

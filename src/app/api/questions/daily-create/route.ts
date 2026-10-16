@@ -4,8 +4,36 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { questions, submissions } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 import { requireModerator } from "@/lib/authz";
 import { requestLogger } from "@/lib/logger";
+import { parseJsonBody, shortText } from "@/lib/validation";
+
+// A question written straight into the daily quiz, so it is approved on arrival
+// and never passes a reviewer. The schema is therefore the only gate: A and B
+// are mandatory, C and D are required too because the daily quiz always renders
+// four options, and the answer key has to point at a non-empty option.
+const dailyQuestionSchema = z
+  .object({
+    questionText: shortText(2000, 10),
+    options: z
+      .object({
+        A: shortText(500),
+        B: shortText(500),
+        C: shortText(500),
+        D: shortText(500),
+        E: shortText(500).optional(),
+      })
+      .strict(),
+    answerKey: z.enum(["A", "B", "C", "D", "E"]),
+    difficulty: z.enum(["mudah", "sedang", "sulit"]),
+    subject: shortText(100, 2).optional().default("Umum"),
+  })
+  .strict()
+  .refine((data) => Boolean(data.options[data.answerKey]), {
+    message: "Answer key must match one of the provided options",
+    path: ["answerKey"],
+  });
 
 export async function POST(req: Request) {
   const log = requestLogger(req);
@@ -15,23 +43,9 @@ export async function POST(req: Request) {
   const dbUser = authz.user;
 
   try {
-    const body = await req.json();
-    const { questionText, options, answerKey, difficulty, subject } = body;
-
-    // Validate required fields
-    if (!questionText || !options || !answerKey || !difficulty) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-    }
-
-    // Validate options has at least A-D
-    if (!options.A || !options.B || !options.C || !options.D) {
-      return NextResponse.json({ error: "Options must include at least A, B, C, D" }, { status: 400 });
-    }
-
-    // Validate answerKey is one of the option keys
-    if (!options[answerKey]) {
-      return NextResponse.json({ error: "Answer key must match one of the options" }, { status: 400 });
-    }
+    const parsed = await parseJsonBody(req, dailyQuestionSchema);
+    if (!parsed.ok) return parsed.response;
+    const { questionText, options, answerKey, difficulty, subject } = parsed.data;
 
     // Insert question directly as approved with category "Kuis Harian"
     const [newQuestion] = await db.insert(questions).values({
@@ -39,7 +53,7 @@ export async function POST(req: Request) {
       options,
       answerKey,
       difficulty,
-      subject: subject || "Umum",
+      subject,
       category: "Kuis Harian",
       uploaderId: dbUser.id,
       status: "approved", // Auto-approved since moderator creates it

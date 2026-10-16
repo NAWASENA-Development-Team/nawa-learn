@@ -150,3 +150,29 @@ To add new badges, edit `src/lib/badges.ts`:
 - A tripped limit logs the alertable event `rate_limit_exceeded` and answers `429` with `Retry-After` and `cache-control: no-store`.
 - `src/lib/abuse.ts` — `flagPointSpike()` logs `point_spike_detected` when a user's credited points in a 10-minute window pass `POINT_SPIKE_THRESHOLD`. It is a deliberately blunt tripwire, not a precise detector; alert on it from a log drain.
 - Tests reset the in-memory counters through `tests/setup.ts` (registered as `setupFiles`), so one test never spends the next one's budget.
+
+## Input validation & uploads
+
+### One way to read a JSON body
+- `src/lib/validation.ts` — every POST route reads its body through `parseJsonBody(req, schema)` (or `readJsonBody` when there is no schema). Do not call `req.json()` directly; the only exception is `webhooks/clerk`, where svix signature verification needs the untouched raw body.
+- Usage: `const parsed = await parseJsonBody(req, mySchema); if (!parsed.ok) return parsed.response;` — `parsed.data` is typed from the schema.
+- Rejections are uniform and all carry `cache-control: no-store`:
+  - **400** `{ error, details: [{ path, message }] }` — schema failure. `path` is a **dotted string** (`"options.A"`), and `"(root)"` for a whole-body issue. `fieldErrors()` also splits `.strict()` failures into one entry per unknown key.
+  - **413** — body over the ceiling (`MAX_JSON_BODY_BYTES`, 64 KB by default; `exams/create` raises it to 256 KB).
+  - **415** — a JSON route called with a non-JSON `content-type`.
+- Schemas are `.strict()`, so a typo'd key is a 400 rather than a silent no-op. Reusable field helpers: `shortText`, `optionalText`, `httpUrl` (`httpUrl` refuses `data:` and `javascript:`).
+
+### Uploads go to object storage, never into a column
+- `src/lib/storage.ts` — Vercel Blob driver over raw `fetch` (no `@vercel/blob` dependency), plus the magic-byte sniffer and `isOwnStorageUrl()`. It reads `BLOB_READ_WRITE_TOKEN` (and optional `VERCEL_BLOB_API_URL`).
+- `src/lib/uploadClient.ts` — the browser half. `uploadFile(file, "avatar" | "module")` posts multipart to `/api/uploads` and returns `{ ok, url?, error? }`. Its `MAX_*`/`ACCEPTED_*` constants are **mirrors** of `storage.ts` (which imports `node:crypto` and cannot be bundled client-side); a unit test asserts they stay in sync.
+- `POST /api/uploads` — `requireUser()` + `rateLimit(req, "uploads/create", user.id)`, then a `content-length` pre-check, then multipart parsing, then **magic-byte** detection.
+  - Accepted: avatar → png/jpeg/webp (≤2 MB); module → the same plus PDF (≤10 MB). SVG is deliberately excluded (it can carry script and is served inline).
+  - A declared `content-type` that disagrees with the sniffed bytes is **rejected** (`type_mismatch`), not silently rewritten.
+  - Returns **503** when `BLOB_READ_WRITE_TOKEN` is unset. There is deliberately **no base64 fallback** — an unconfigured deploy must fail loudly, not quietly re-bloat Postgres.
+  - Object path is `uploads/<userId>/<uuid>.<ext>`; overwrite and random-suffix are both off.
+- Where a URL is stored:
+  - `users.photo_url` (via `profile/update`) may only be `null` or an `isOwnStorageUrl()` URL. An arbitrary https URL would turn the leaderboard into a third-party image host and a tracking pixel. Replacing or clearing the photo deletes the old object (best effort, non-fatal).
+  - `modules.content_url` (via `modules/submit`) must be `http(s)`; `data:` is refused. Google Drive links remain valid.
+- `next.config.ts` — `images.remotePatterns` is a single explicit entry, `*.public.blob.vercel-storage.com`. Never widen it back to `**`: that makes the image optimizer an open proxy (SSRF).
+- The module reader (`ModulesLibraryClient`) renders own-blob PDFs/images directly and still supports the legacy `data:` PDF rows. Replacing a just-uploaded file before submitting leaves an orphaned blob; there is no garbage collector yet (tracked as future work).
+

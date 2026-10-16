@@ -7,22 +7,27 @@ import { questions, submissions, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requestLogger } from "@/lib/logger";
 import { rateLimit } from "@/lib/rateLimit";
+import { optionalText, parseJsonBody, shortText } from "@/lib/validation";
 
-const submitSchema = z.object({
-  questionText: z.string().min(10, "Pertanyaan terlalu pendek"),
-  options: z.object({
-    A: z.string().min(1),
-    B: z.string().min(1),
-    C: z.string().optional().default("-"),
-    D: z.string().optional().default("-"),
-    E: z.string().optional().default("-"),
-  }),
-  answerKey: z.enum(["A", "B", "C", "D", "E"]),
-  explanation: z.string().optional(),
-  difficulty: z.enum(["mudah", "sedang", "sulit"]),
-  subject: z.string().min(2),
-  category: z.string().min(2),
-});
+const submitSchema = z
+  .object({
+    questionText: shortText(2000, 10),
+    options: z
+      .object({
+        A: shortText(500),
+        B: shortText(500),
+        C: shortText(500).optional().default("-"),
+        D: shortText(500).optional().default("-"),
+        E: shortText(500).optional().default("-"),
+      })
+      .strict(),
+    answerKey: z.enum(["A", "B", "C", "D", "E"]),
+    explanation: optionalText(2000),
+    difficulty: z.enum(["mudah", "sedang", "sulit"]),
+    subject: shortText(100, 2),
+    category: shortText(100, 2),
+  })
+  .strict();
 
 export async function POST(req: Request) {
   const log = requestLogger(req);
@@ -40,8 +45,20 @@ export async function POST(req: Request) {
     const limit = await rateLimit(req, "questions/submit", dbUser.id);
     if (!limit.ok) return limit.response;
 
-    const body = await req.json();
-    const data = submitSchema.parse(body);
+    const parsed = await parseJsonBody(req, submitSchema);
+    if (!parsed.ok) return parsed.response;
+    const data = parsed.data;
+
+    // The answer key must point at an option that actually has content.
+    if (!data.options[data.answerKey]) {
+      return NextResponse.json(
+        {
+          error: "Validation failed",
+          details: [{ path: "answerKey", message: `Option ${data.answerKey} is empty` }],
+        },
+        { status: 400, headers: { "cache-control": "no-store" } },
+      );
+    }
 
     // Insert question
     const [question] = await db.insert(questions).values({
@@ -66,9 +83,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, questionId: question.id }, { status: 201 });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Validation failed", details: error.issues }, { status: 400 });
-    }
     log.error("Question submit error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }

@@ -15,10 +15,14 @@ vi.mock("@clerk/nextjs/server", () => ({ auth: vi.fn() }));
 
 import { auth } from "@clerk/nextjs/server";
 import { POST as updateProfile } from "@/app/api/profile/update/route";
+import { AVATAR_OPTIONS } from "@/lib/avatars";
 import { RATE_LIMITS, resetInMemoryCounters } from "@/lib/rateLimit";
 
 const authMock = vi.mocked(auth);
 const IP_LIMIT = RATE_LIMITS["profile/update"].perIp.limit;
+// `avatarIndex` is range-checked now, so the budget loop has to stay inside the
+// real list while still sending a distinct, valid value each round.
+const VALID_AVATAR_INDEX = (i: number) => i % AVATAR_OPTIONS.length;
 
 let db: TestDb;
 
@@ -57,7 +61,9 @@ describe("POST /api/profile/update", () => {
     await signIn();
 
     for (let i = 0; i < IP_LIMIT; i += 1) {
-      const allowed = await updateProfile(update("198.51.100.77", JSON.stringify({ avatarIndex: i })));
+      const allowed = await updateProfile(
+        update("198.51.100.77", JSON.stringify({ avatarIndex: VALID_AVATAR_INDEX(i) })),
+      );
       expect(allowed.status).toBe(200);
     }
 

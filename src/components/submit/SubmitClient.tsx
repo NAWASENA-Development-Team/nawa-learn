@@ -6,6 +6,11 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useToast } from "@/components/ui/Toast";
+import {
+  ACCEPTED_MODULE_FILE_TYPES,
+  MAX_MODULE_FILE_BYTES,
+  uploadFile,
+} from "@/lib/uploadClient";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -44,8 +49,11 @@ const moduleSchema = z.object({
   subject: z.string().min(2, "Mata pelajaran wajib dipilih atau diisi"),
   grade: z.string().min(1, "Kelas wajib dipilih"),
   category: z.string().min(2, "Kategori wajib dipilih"),
+  // https only. `data:` used to be accepted here, which is how base64 documents
+  // ended up in a Postgres text column; binary content now goes through
+  // /api/uploads and comes back as a URL.
   contentUrl: z.string().refine(
-    (val) => val.startsWith("data:") || /^https?:\/\/.+/.test(val),
+    (val) => /^https?:\/\/.+/.test(val),
     { message: "Wajib menyertakan URL file/dokumen yang valid atau unggah berkas terlebih dahulu" }
   ),
 });
@@ -111,6 +119,9 @@ export default function SubmitClient() {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isShutterFlash, setIsShutterFlash] = useState(false);
+  // The uploaded URL for a camera snapshot. The data URL in `capturedImage` is
+  // only ever a local preview and is never sent to the server.
+  const [attachedPhotoUrl, setAttachedPhotoUrl] = useState<string | null>(null);
 
   // Load active modules count from database
   useEffect(() => {
@@ -150,6 +161,7 @@ export default function SubmitClient() {
   const selectedGrade = watch("grade");
   const selectedCategory = watch("category");
   const currentContentUrl = watch("contentUrl");
+  const photoAttached = attachedPhotoUrl !== null && currentContentUrl === attachedPhotoUrl;
 
   // Clean up camera stream on unmount or tab change
   useEffect(() => {
@@ -179,17 +191,18 @@ export default function SubmitClient() {
   const handleLocalFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      startLocalFileUpload(files[0]);
+      void startLocalFileUpload(files[0]);
     }
   };
 
-  const startLocalFileUpload = (file: File) => {
+  const startLocalFileUpload = async (file: File) => {
     setFileError(null);
-    const maxSizeBytes = 1 * 1024 * 1024; // 1MB — data URL disimpan langsung di DB
-    if (file.size > maxSizeBytes) {
+
+    if (file.size > MAX_MODULE_FILE_BYTES) {
       setFileError(
-        `Ukuran file melebihi batas 1MB! (Berkas Anda: ${(file.size / 1024 / 1024).toFixed(2)}MB). ` +
-        `Untuk file lebih besar, unggah ke Google Drive terlebih dahulu lalu paste link-nya di tab Google Drive.`
+        `Ukuran berkas melebihi batas ${Math.round(MAX_MODULE_FILE_BYTES / 1024 / 1024)}MB! ` +
+        `(Berkas Anda: ${(file.size / 1024 / 1024).toFixed(2)}MB). ` +
+        `Untuk berkas lebih besar, unggah ke Google Drive terlebih dahulu lalu tempel tautannya di tab Google Drive.`
       );
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
@@ -197,39 +210,28 @@ export default function SubmitClient() {
 
     setLocalFile(file);
     setIsUploading(true);
-    setUploadProgress(10);
-    setUploadStateText("Membaca berkas...");
+    setUploadProgress(15);
+    setUploadStateText("Mengunggah berkas...");
 
-    const reader = new FileReader();
+    // This used to read the file into a base64 data URL and store that in
+    // Postgres. The bytes now go to object storage and only the URL is kept.
+    const outcome = await uploadFile(file, "module");
 
-    reader.onprogress = (e) => {
-      if (e.lengthComputable) {
-        const pct = Math.round((e.loaded / e.total) * 80) + 10;
-        setUploadProgress(Math.min(90, pct));
-      }
-    };
-
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      setUploadProgress(100);
-      setUploadStateText("Berkas berhasil dimuat!");
-      setIsUploading(false);
-      setValue("contentUrl", dataUrl);
-      trigger("contentUrl");
-    };
-
-    reader.onerror = () => {
-      setFileError("Gagal membaca berkas. Silakan coba lagi.");
+    if (!outcome.ok || !outcome.url) {
+      setFileError(outcome.error ?? "Gagal mengunggah berkas. Silakan coba lagi.");
+      setUploadProgress(0);
+      setUploadStateText("");
       setIsUploading(false);
       setLocalFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
-    };
+      return;
+    }
 
-    // Animate initial steps while FileReader runs
-    setTimeout(() => { setUploadProgress(40); setUploadStateText("Memproses berkas..."); }, 200);
-    setTimeout(() => { setUploadProgress(70); setUploadStateText("Menyiapkan data..."); }, 500);
-
-    reader.readAsDataURL(file);
+    setUploadProgress(100);
+    setUploadStateText("Berkas berhasil diunggah!");
+    setIsUploading(false);
+    setValue("contentUrl", outcome.url);
+    trigger("contentUrl");
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -240,13 +242,14 @@ export default function SubmitClient() {
     e.preventDefault();
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      startLocalFileUpload(files[0]);
+      void startLocalFileUpload(files[0]);
     }
   };
 
   const clearLocalFile = () => {
     setLocalFile(null);
     setUploadProgress(0);
+    setUploadStateText("");
     setValue("contentUrl", "");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -318,23 +321,51 @@ export default function SubmitClient() {
       if (ctx) {
         // Draw the current video frame into canvas
         ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        // Local preview only. It is uploaded in `usePhoto`, so a snapshot the
+        // student discards never leaves the browser.
         const dataUrl = canvas.toDataURL("image/png");
         setCapturedImage(dataUrl);
+        setAttachedPhotoUrl(null);
         stopCamera();
       }
     }
   };
 
-  const usePhoto = () => {
-    if (capturedImage) {
-      // Store actual base64 data URL — no fake URL
-      setValue("contentUrl", capturedImage);
-      trigger("contentUrl");
+  const usePhoto = async () => {
+    if (!capturedImage) return;
+
+    setFileError(null);
+    setIsUploading(true);
+    setUploadProgress(30);
+    setUploadStateText("Mengunggah foto...");
+
+    // The snapshot used to be embedded in the module row as a base64 data URL.
+    // Turn it back into a real file and store the bytes instead.
+    const blob = await (await fetch(capturedImage)).blob();
+    const file = new File([blob], `kamera-${Date.now()}.png`, { type: "image/png" });
+    const outcome = await uploadFile(file, "module");
+
+    if (!outcome.ok || !outcome.url) {
+      setFileError(outcome.error ?? "Gagal mengunggah foto. Silakan coba lagi.");
+      setUploadProgress(0);
+      setUploadStateText("");
+      setIsUploading(false);
+      return;
     }
+
+    setAttachedPhotoUrl(outcome.url);
+    setUploadProgress(100);
+    setUploadStateText("Foto terpasang!");
+    setIsUploading(false);
+    setValue("contentUrl", outcome.url);
+    trigger("contentUrl");
   };
 
   const clearPhoto = () => {
     setCapturedImage(null);
+    setAttachedPhotoUrl(null);
+    setUploadProgress(0);
+    setUploadStateText("");
     setValue("contentUrl", "");
   };
 
@@ -443,9 +474,10 @@ export default function SubmitClient() {
         } else if (res.status === 404) {
           toastError("Profil Tidak Ditemukan", "Logout dan login kembali untuk menyinkronkan profil.");
         } else if (res.status === 400 && err.details) {
-          // Extract the first meaningful Zod validation issue
+          // `details` is the shared field-error shape from src/lib/validation.ts:
+          // `path` is a dotted string, with `(root)` for the whole body.
           const firstIssue = err.details[0];
-          const fieldName = firstIssue?.path?.[0] ?? "field";
+          const fieldName = firstIssue?.path ?? "field";
           const fieldMap: Record<string, string> = {
             questionText: "teks pertanyaan",
             subject: "mata pelajaran",
@@ -952,14 +984,14 @@ export default function SubmitClient() {
                             Pilih file atau seret file Anda di sini
                           </p>
                           <p className="text-xs text-zinc-400 dark:text-zinc-505 mt-1">
-                            Mendukung dokumen .pdf, .docx, .png, .jpg (maks. 5MB)
+                            Mendukung dokumen .pdf dan gambar .png, .jpg, .webp (maks. 10MB)
                           </p>
                           
                           <input 
                             type="file"
                             ref={fileInputRef}
                             onChange={handleLocalFileChange}
-                            accept=".pdf,.docx,.doc,.png,.jpg,.jpeg"
+                            accept={ACCEPTED_MODULE_FILE_TYPES}
                             className="hidden"
                           />
                         </div>
@@ -1173,13 +1205,14 @@ export default function SubmitClient() {
                             <button
                               type="button"
                               onClick={usePhoto}
-                              className={`flex-1 text-white py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all shadow-md ${
-                                (currentContentUrl.startsWith("https://nawa-learn.storage/photos/cam-") || (capturedImage && currentContentUrl === capturedImage))
+                              disabled={isUploading}
+                              className={`flex-1 text-white py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all shadow-md disabled:opacity-60 disabled:cursor-wait ${
+                                photoAttached
                                   ? "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/10 border border-emerald-600"
                                   : "bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/10 border border-indigo-600"
                               }`}
                             >
-                              {(currentContentUrl.startsWith("https://nawa-learn.storage/photos/cam-") || (capturedImage && currentContentUrl === capturedImage)) ? (
+                              {photoAttached ? (
                                 <>
                                   <CheckCircle2 className="h-3.5 w-3.5" /> Terpasang
                                 </>

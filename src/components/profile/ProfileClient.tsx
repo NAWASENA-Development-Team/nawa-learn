@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import { BADGES, Badge, getDaysOldAccount, getRarityColor, getRarityTextColor, BadgeUnlockData, getSpecialtyBadge } from "@/lib/badges";
 import { AVATAR_OPTIONS, AvatarOption } from "@/lib/avatars";
+import { ACCEPTED_AVATAR_TYPES, MAX_AVATAR_BYTES, uploadFile } from "@/lib/uploadClient";
 import { useToast } from "@/components/ui/Toast";
 import { useRouter } from "next/navigation";
 
@@ -209,37 +210,52 @@ export default function ProfileClient({
     }
     return null;
   });
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
+    // Clear the input so choosing the same file again still fires `change`.
+    e.target.value = "";
+
+    if (file.size > MAX_AVATAR_BYTES) {
       toastError("Foto Terlalu Besar", "Ukuran foto maksimal 2MB.");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const dataUrl = reader.result as string;
-      setCustomPhoto(dataUrl);
+
+    setIsUploadingPhoto(true);
+    try {
+      // The browser used to turn the file into a base64 data URL and hand that
+      // to /api/profile/update, which stored it in Postgres. The bytes now go to
+      // object storage and only the resulting URL is saved.
+      const uploaded = await uploadFile(file, "avatar");
+      if (!uploaded.ok || !uploaded.url) {
+        toastError("Gagal Mengunggah", uploaded.error ?? "Coba lagi.");
+        return;
+      }
+
+      setCustomPhoto(uploaded.url);
       if (typeof window !== "undefined") {
-        localStorage.setItem(`nawa_photo_${user.id}`, dataUrl);
+        localStorage.setItem(`nawa_photo_${user.id}`, uploaded.url);
       }
-      try {
-        const res = await fetch('/api/profile/update', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ photoUrl: dataUrl }),
-        });
-        if (!res.ok) {
-          throw new Error("Gagal menyimpan foto ke server. Ukuran mungkin terlalu besar.");
-        }
-        toastSuccess("Berhasil", "Foto profil berhasil diperbarui.");
-        router.refresh();
-      } catch (err: any) {
-        console.error('Photo save to DB failed:', err);
-        toastError("Gagal Menyimpan", err.message || "Gagal menyimpan foto profil.");
+
+      const res = await fetch('/api/profile/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photoUrl: uploaded.url }),
+      });
+      if (!res.ok) {
+        toastError("Gagal Menyimpan", "Foto sudah terunggah, tetapi gagal disimpan ke profil.");
+        return;
       }
-    };
-    reader.readAsDataURL(file);
+
+      toastSuccess("Berhasil", "Foto profil berhasil diperbarui.");
+      router.refresh();
+    } catch (err) {
+      console.error('Photo upload failed:', err);
+      toastError("Gagal Menyimpan", "Terjadi kesalahan saat menyimpan foto profil.");
+    } finally {
+      setIsUploadingPhoto(false);
+    }
   };
   const handleRemovePhoto = async () => {
     setCustomPhoto(null);
@@ -683,16 +699,17 @@ export default function ProfileClient({
                   <input
                     ref={photoInputRef}
                     type="file"
-                    accept="image/*"
+                    accept={ACCEPTED_AVATAR_TYPES}
                     onChange={handlePhotoUpload}
                     className="hidden"
                   />
                   <button
                     onClick={() => photoInputRef.current?.click()}
-                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700 text-white px-4 py-2.5 text-xs font-black shadow-lg shadow-purple-500/20 border border-purple-400/30 transition-all hover:scale-[1.02] active:scale-95 cursor-pointer"
+                    disabled={isUploadingPhoto}
+                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700 text-white px-4 py-2.5 text-xs font-black shadow-lg shadow-purple-500/20 border border-purple-400/30 transition-all hover:scale-[1.02] active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-wait"
                     title="Unggah foto profil custom (Hak Istimewa Top 10)"
                   >
-                    <Camera className="h-4 w-4" /> Foto Profil Custom
+                    <Camera className="h-4 w-4" /> {isUploadingPhoto ? "Mengunggah…" : "Foto Profil Custom"}
                     <span className="text-[9px] bg-purple-400/30 px-1.5 py-0.5 rounded font-bold">TOP 10</span>
                   </button>
                 </>

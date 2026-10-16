@@ -7,18 +7,22 @@ import { modules, submissions, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requestLogger } from "@/lib/logger";
 import { rateLimit } from "@/lib/rateLimit";
+import { httpUrl, parseJsonBody, shortText } from "@/lib/validation";
 
-// Validate incoming request body using Zod
-const submitSchema = z.object({
-  title: z.string().min(5),
-  subject: z.string().min(2),
-  grade: z.string().min(1).optional().default("Umum"),
-  category: z.string().min(2),
-  contentUrl: z.string().refine(
-    (val) => val.startsWith("data:") || /^https?:\/\/.+/.test(val),
-    { message: "URL tidak valid" }
-  ),
-});
+// Validate incoming request body using Zod.
+//
+// `contentUrl` used to accept a `data:` URL as well, which is how whole PDFs
+// ended up inside a text column. Binary content now goes through /api/uploads,
+// which hands back an https URL; a link pasted from Google Drive is still fine.
+const submitSchema = z
+  .object({
+    title: shortText(200, 5),
+    subject: shortText(100, 2),
+    grade: shortText(50).optional().default("Umum"),
+    category: shortText(100, 2),
+    contentUrl: httpUrl(),
+  })
+  .strict();
 
 export async function POST(req: Request) {
   const log = requestLogger(req);
@@ -32,27 +36,9 @@ export async function POST(req: Request) {
     }
 
     // 2. Parse and validate the request body
-    let body;
-    try {
-      body = await req.json();
-    } catch (parseError) {
-      log.error("JSON parse error:", parseError);
-      return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 });
-    }
-
-    let validatedData;
-    try {
-      validatedData = submitSchema.parse(body);
-    } catch (validationError) {
-      log.error("Validation error:", validationError);
-      if (validationError instanceof z.ZodError) {
-        return NextResponse.json({ 
-          error: "Invalid data", 
-          details: validationError.issues 
-        }, { status: 400 });
-      }
-      throw validationError;
-    }
+    const parsed = await parseJsonBody(req, submitSchema, { message: "Invalid data" });
+    if (!parsed.ok) return parsed.response;
+    const validatedData = parsed.data;
 
     // 3. Look up the internal Neon User ID using the Clerk ID
     let dbUser;

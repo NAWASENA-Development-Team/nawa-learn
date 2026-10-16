@@ -6,11 +6,15 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { requestLogger } from "@/lib/logger";
 import { rateLimit } from "@/lib/rateLimit";
+import { parseJsonBody, shortText } from "@/lib/validation";
 
-const reportSchema = z.object({
-  issueType: z.string().min(1),
-  description: z.string().min(10),
-});
+const reportSchema = z
+  .object({
+    // Mirrors the three options the report dialog offers.
+    issueType: z.enum(["bug", "content", "other"]),
+    description: shortText(2000, 10),
+  })
+  .strict();
 
 export async function POST(req: Request) {
   const log = requestLogger(req);
@@ -27,8 +31,9 @@ export async function POST(req: Request) {
     const limit = await rateLimit(req, "profile/report", dbUser.id);
     if (!limit.ok) return limit.response;
 
-    const body = await req.json();
-    const data = reportSchema.parse(body);
+    const parsed = await parseJsonBody(req, reportSchema);
+    if (!parsed.ok) return parsed.response;
+    const data = parsed.data;
 
     await db.insert(reports).values({
       userId: dbUser.id,
@@ -39,9 +44,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Validation failed", details: error.issues }, { status: 400 });
-    }
     log.error("Submit report error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }

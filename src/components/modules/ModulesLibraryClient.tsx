@@ -24,6 +24,28 @@ import {
   ChevronDown
 } from "lucide-react";
 
+// ─── Own-storage helpers ──────────────────────────────────────────────────────
+// Uploads now live in our own Vercel Blob store. These two helpers let the
+// reader tell a hosted PDF from a hosted image; the `data:`/external-URL paths
+// are kept for rows written before the upload change.
+const OWN_BLOB_HOST_SUFFIX = ".public.blob.vercel-storage.com";
+
+const isOwnBlobUrl = (url: string) => {
+  try {
+    return new URL(url).hostname.endsWith(OWN_BLOB_HOST_SUFFIX);
+  } catch {
+    return false;
+  }
+};
+
+/** Reads the media type off the file extension of a hosted object. */
+const blobFileKind = (url: string): "PDF" | "Foto" | null => {
+  const path = url.split("?")[0].toLowerCase();
+  if (path.endsWith(".pdf")) return "PDF";
+  if (/\.(png|jpe?g|webp)$/.test(path)) return "Foto";
+  return null;
+};
+
 interface Module {
   id: string;
   title: string;
@@ -149,6 +171,14 @@ export default function ModulesLibraryClient({ initialModules }: ModulesLibraryC
 
   const getFileTypeDetails = (url: string) => {
     const lowerUrl = url.toLowerCase();
+    // New uploads live in our own Vercel Blob store, so the media type has to be
+    // read off the file extension. The `data:` branches below stay because three
+    // modules were stored as base64 before uploads moved to object storage.
+    if (isOwnBlobUrl(url)) {
+      const kind = blobFileKind(url);
+      if (kind === "Foto") return { label: "Foto", color: "bg-emerald-50 text-emerald-600 border-emerald-100", icon: ImageIcon };
+      if (kind === "PDF") return { label: "PDF", color: "bg-red-50 text-red-600 border-red-100", icon: FileText };
+    }
     if (lowerUrl.startsWith("data:image/")) return { label: "Foto", color: "bg-emerald-50 text-emerald-600 border-emerald-100", icon: ImageIcon };
     if (lowerUrl.startsWith("data:application/pdf")) return { label: "PDF", color: "bg-red-50 text-red-600 border-red-100", icon: FileText };
     return { label: "Berkas", color: "bg-indigo-50 text-indigo-600 border-indigo-100", icon: FileText };
@@ -426,7 +456,35 @@ export default function ModulesLibraryClient({ initialModules }: ModulesLibraryC
 
             {/* Document sheet body */}
             <div className="flex-1 overflow-y-auto p-6 sm:p-8 bg-zinc-50 dark:bg-zinc-950/85">
-              {selectedReaderModule.contentUrl.startsWith("http") && !selectedReaderModule.contentUrl.startsWith("https://nawa-learn.storage") ? (
+              {isOwnBlobUrl(selectedReaderModule.contentUrl) ? (
+                /* HOSTED IN OUR OWN STORAGE: these bytes are ours, so render
+                   them directly rather than through the external-URL iframe. */
+                blobFileKind(selectedReaderModule.contentUrl) === "PDF" ? (
+                  <div className="flex flex-col h-full min-h-[500px] gap-2">
+                    <embed
+                      src={selectedReaderModule.contentUrl}
+                      type="application/pdf"
+                      className="w-full flex-1 min-h-[500px] rounded-xl border border-zinc-200 dark:border-zinc-700"
+                    />
+                    <p className="text-xs text-zinc-500 text-center">
+                      Diunggah oleh <span className="font-bold">{selectedReaderModule.uploaderName || "Anonim"}</span>
+                    </p>
+                  </div>
+                ) : (
+                  <div className="max-w-2xl mx-auto flex flex-col items-center gap-4">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={selectedReaderModule.contentUrl}
+                      alt={selectedReaderModule.title}
+                      className="rounded-2xl shadow-lg max-w-full object-contain border border-zinc-200 dark:border-zinc-700"
+                    />
+                    <p className="text-xs text-zinc-500 text-center">
+                      Diunggah oleh <span className="font-bold">{selectedReaderModule.uploaderName || "Anonim"}</span> •{" "}
+                      {new Date(selectedReaderModule.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+                    </p>
+                  </div>
+                )
+              ) : selectedReaderModule.contentUrl.startsWith("http") && !selectedReaderModule.contentUrl.startsWith("https://nawa-learn.storage") ? (
                 /* EXTERNAL URL (Google Drive, Canva, etc.): Display in iframe */
                 <div className="flex flex-col h-full min-h-[500px] w-full gap-2">
                   <iframe

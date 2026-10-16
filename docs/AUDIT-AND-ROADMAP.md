@@ -31,7 +31,7 @@ Kesimpulan singkat dalam satu kalimat:
 
 **Estimasi jarak ke "premium":** 3 fase kerja, ~16 milestone. Fase 0 (M1–M3) bersifat darurat dan **harus selesai sebelum platform dipakai lebih luas lagi**, karena saat ini satu akun siswa terautentikasi bisa mengangkat dirinya ke puncak leaderboard dan menyetujui kontennya sendiri.
 
-> **Status per 2026-10-16:** Fase 0 **selesai** — M1 (`52bba95`), M2 (`1f5a6c7`), H12 (`836107f`), M3 (`dcb9b84`), M4 (`7c5ee5f`), M5 (`eafd76b`), M6 (`9543af0`). Fase 1 berjalan: **M5 (migrasi database terkelola) selesai** — database produksi diadopsi ke sistem migrasi dengan nol kehilangan data. **M6 (observability) sebagian selesai**: logger terstruktur dengan redaksi PII teruji + `/api/health`, dipakai seluruh route API. **M7 (rate limiting & anti-abuse) sebagian selesai**: 8 endpoint mutasi dibatasi per user + per IP dengan 429, plus alarm lonjakan poin; bot protection sign-up tinggal toggle dashboard Clerk. Otorisasi approval, kebocoran kunci jawaban, integritas poin/ranking, workflow skema, dan penyalahgunaan endpoint sudah ditutup. Sisa jujur: rate limiting **efektif penuh hanya dengan Upstash** (env), error tracking (Sentry) butuh DSN, E2E, rollback migration, dan M8 ke atas.
+> **Status per 2026-10-16:** Fase 0 **selesai** — M1 (`52bba95`), M2 (`1f5a6c7`), H12 (`836107f`), M3 (`dcb9b84`), M4 (`7c5ee5f`), M5 (`eafd76b`), M6 (`9543af0`), M7 (`8d03153`). Fase 1 berjalan: **M5 (migrasi database terkelola) selesai** — database produksi diadopsi ke sistem migrasi dengan nol kehilangan data. **M6 (observability) sebagian selesai**: logger terstruktur dengan redaksi PII teruji + `/api/health`, dipakai seluruh route API. **M7 (rate limiting & anti-abuse) sebagian selesai**: 8 endpoint mutasi dibatasi per user + per IP dengan 429, plus alarm lonjakan poin; bot protection sign-up tinggal toggle dashboard Clerk. **M8 (validasi & penanganan unggahan) selesai** (menunggu commit): setiap route POST punya schema Zod, base64 tidak lagi masuk DB (unggahan ke Vercel Blob + validasi magic-byte), dan `remotePatterns` dipersempit. Otorisasi approval, kebocoran kunci jawaban, integritas poin/ranking, workflow skema, penyalahgunaan endpoint, dan jalur unggahan sudah ditutup. Sisa jujur: rate limiting **efektif penuh hanya dengan Upstash** (env), unggahan **belum diverifikasi live** tanpa `BLOB_READ_WRITE_TOKEN`, error tracking (Sentry) butuh DSN, E2E, rollback migration, dan M9 ke atas.
 
 ### Yang sudah bagus (jangan dirusak)
 
@@ -156,13 +156,15 @@ Selain itu ada **dua file middleware** (`/proxy.ts` dan `/src/middleware.ts`) de
 
 ## 2. Temuan Tinggi (P1)
 
-### H1. `/api/profile/update` tanpa skema, tanpa batas, tanpa sanitasi
+### H1. `/api/profile/update` tanpa skema, tanpa batas, tanpa sanitasi — ✅ SELESAI di M8
 **Lokasi:** `src/app/api/profile/update/route.ts:26-46`
 
 Iterasi kunci yang "diizinkan", tapi nilai dilewatkan mentah. Tidak ada Zod. Akibatnya:
 - `photoUrl` = data-URL base64 sebesar apa pun. Cek 2MB hanya ada di klien (`ProfileClient.tsx:215`) dan mudah dilewati → **bloat Postgres**, dan karena `photoUrl` juga dikirim ke halaman leaderboard, satu pengguna bisa membengkakkan payload 100 user sekaligus.
 - `motto` melebihi `varchar(200)` → error 500, bukan 400 yang informatif.
 - `avatarIndex` bisa negatif atau di luar `AVATAR_OPTIONS.length`.
+
+**Status (M8):** route ditulis ulang dengan Zod `.strict()` + `.refine()` (body kosong ditolak), `avatarIndex` dibatasi `0..AVATAR_OPTIONS.length-1`, `bio` ≤ 500, `motto` ≤ 200, dan `photoUrl` **hanya boleh `null` atau URL di object storage sendiri** (`isOwnStorageUrl`) — jadi base64 tidak mungkin lagi masuk lewat jalur ini, dan leaderboard tidak bisa dijadikan host gambar pihak ketiga / tracking pixel. Route juga sekarang memakai `requireUser()`, yang sekaligus menghapus bug "200 tanpa efek" untuk user yang belum tersinkron (dulu hanya 500/200 palsu). Lihat M8 untuk detail dan test-nya.
 
 ### H2. `/api/moderator/hidden-badges` membocorkan data semua user tanpa autentikasi — ✅ SELESAI di M2
 **Lokasi:** `src/app/api/moderator/hidden-badges/route.ts:8`
@@ -174,10 +176,12 @@ Tidak ada `auth()` sama sekali. Mengembalikan `id`, `name`, `points`, `createdAt
 
 `clerkId` boleh `null`; `authorName` fallback ke `"Siswa SMAN 2"`. Siapa pun bisa membanjiri database dengan ujian custom berisi 50 soal JSON. Vektor spam/abuse + penyimpanan. Juga tidak ada moderasi konten buatan siswa.
 
-### H4. `/api/modules/download` bisa dipakai tanpa login & tanpa validasi UUID
+### H4. `/api/modules/download` bisa dipakai tanpa login & tanpa validasi UUID — ✅ SELESAI di M2+M7+M8
 **Lokasi:** `src/app/api/modules/download/route.ts:7-18`
 
 Menambah counter untuk UUID apa pun, tanpa autentikasi, tanpa rate limit. Angka unduhan menentukan badge ("Hundred Downloads") dan omzet sinyal sosial → mudah dimanipulasi. UUID invalid → error 500 alih-alih 400.
+
+**Status:** (a) M2 — `proxy.ts` menolak request tanpa sesi untuk seluruh route API di luar `PUBLIC_ROUTES`, jadi endpoint ini tidak lagi anonim; (b) M7 — dibatasi `modules/download` 60/menit per IP; (c) M8 — `moduleId` divalidasi `z.uuid()` sehingga id ngawur jadi **400**, bukan 500 dari cast Postgres. Sisa utang: counter tetap dapat dinaikkan oleh user yang login berulang kali; itu batas desain (counter unduhan memang publik bagi user), bukan bug.
 
 ### H5. Webhook Clerk tidak lengkap & tidak idempoten
 **Lokasi:** `src/app/api/webhooks/clerk/route.ts:69-117`
@@ -187,13 +191,15 @@ Menambah counter untuk UUID apa pun, tanpa autentikasi, tanpa rate limit. Angka 
 - Re-link berdasarkan email (`:76-86`) menautkan ulang akun ke `clerkId` baru; di migrasi dev→prod ini OK, tapi sebagai jalur produksi permanen ia membuka pintu pengambilalihan akun jika verifikasi email pernah dilonggarkan.
 - Tidak ada idempotensi berbasis `svix-id` → Clerk mengirim ulang = efek ganda.
 
-### H6. `next.config.ts` mengizinkan gambar dari host apa pun
+### H6. `next.config.ts` mengizinkan gambar dari host apa pun — ✅ SELESAI di M8
 **Lokasi:** `next.config.ts:4-11`
 
 ```ts
 images: { remotePatterns: [{ protocol: 'https', hostname: '**' }] }
 ```
 Next.js image optimizer akan mem-fetch URL apa pun yang diminta → **SSRF / open image proxy** atas nama domain Anda (biaya bandwidth + potensi probing jaringan internal). Ganti ke daftar hostname eksplisit (`drive.google.com`, `res.cloudinary.com`, dll.).
+
+**Status (M8):** daftar liar itu diganti satu entri eksplisit, `*.public.blob.vercel-storage.com` — satu-satunya host gambar jarak jauh yang benar-benar dipakai (foto profil hasil unggahan). Karena `photoUrl` sekarang juga wajib menunjuk ke storage sendiri (H1), tidak ada lagi jalur yang bisa membuat optimizer mem-fetch host sembarangan. Diverifikasi ke produksi sebelum mempersempit: kolom `users.photo_url` berisi 0 URL jarak jauh (3 `NULL`, 3 `data:`), jadi tidak ada foto lama yang rusak.
 
 ### H7. Tidak ada rate limiting di mana pun — ✅ SELESAI di M7
 Semua endpoint bisa dipanggil ribuan kali per detik: submit modul/soal, kirim laporan, klaim poin, increment download, dan login. Wajib ada pembatasan per IP + per user (Upstash Ratelimit / @vercel/firewall).
@@ -210,7 +216,7 @@ Tidak ada CSP, HSTS, `X-Frame-Options`/`frame-ancestors`, `Referrer-Policy`, ata
 
 **Selesai:** `src/db/migrations/` di-commit dan database produksi sudah diadopsi ke sistem migrasi (baseline 0000 + `migrate` 0001) dengan **nol kehilangan data**. `db:push` dihapus dari `package.json`, CI menolak drift antara `schema.ts` dan migrasi, dan seed diberi pengaman. Sisa jujur: rollback/down-migration belum teruji (lihat M5).
 
-### H10. Nol test, nol CI — ✅ SELESAI (M4: 108 test, CI workflow; M5: +9 test migrasi; M6: +18 test logger & health; M7: +21 test rate limiting & alarm)
+### H10. Nol test, nol CI — ✅ SELESAI (M4: 108 test, CI workflow; M5: +9 test migrasi; M6: +18 test logger & health; M7: +21 test rate limiting & alarm; M8: +76 test validasi & unggahan → 232 test / 21 file)
 Tidak ada `*.test.ts`, tidak ada `.github/workflows`. Tidak ada yang mencegah regresi seperti bug otorisasi di atas. `npm run lint` pun tidak pernah dijalankan otomatis.
 
 ### H11. Performa: N+1 query dan query tak terbatas
@@ -407,7 +413,7 @@ Tambahan: `AGENTS.md` mendokumentasikan password moderator default di repo publi
 - Tabel tidak di-truncate antar test; setiap test memakai user/soal baru dengan id unik, jadi isolasi tidak bergantung pada urutan.
 - Coverage `60.87%` sudah melewati target 60%, tapi tidak merata: route yang belum punya test (`exams/*`, `profile/*`, `modules/download`, `webhooks/clerk`) masih 0%. Angka ini yang harus naik di milestone berikutnya.
 - **Catatan build (sudah diperbaiki):** `next build` sempat memperingatkan "multiple lockfiles" karena ada `bun.lock` di direktori home pengguna, sehingga Turbopack memilih home directory sebagai workspace root. Diperbaiki dengan `turbopack.root` (absolute path ke direktori proyek) di `next.config.ts`.
-- **Temuan baru yang tercatat (belum dikerjakan):** `requireUser()`/`requireModerator()` baru dipakai di 8 route review + 2 route kuis. Route user-facing lain masih memakai `await auth()` mentah (`modules/submit`, `questions/submit`, `profile/update`, `profile/status`, `profile/report`, `exams/create`, `questions/approved`, `moderator/auth-check`). Konsekuensinya: route itu (a) tidak memverifikasi bahwa user benar-benar ada di tabel `users`, dan (b) memulangkan bentuk error yang berbeda-beda. Eksposur saat ini terbatas karena `proxy.ts` tetap menolak request tanpa sesi, tapi ini utang yang harus dibayar - kandidat kuat untuk M7/M9.
+- **Temuan baru yang tercatat (belum dikerjakan):** `requireUser()`/`requireModerator()` baru dipakai di 8 route review + 2 route kuis. Route user-facing lain masih memakai `await auth()` mentah (`modules/submit`, `questions/submit`, `profile/status`, `profile/report`, `exams/create`, `questions/approved`, `moderator/auth-check`; `profile/update` **sudah** dipindah ke `requireUser()` di M8). Konsekuensinya: route itu (a) tidak memverifikasi bahwa user benar-benar ada di tabel `users`, dan (b) memulangkan bentuk error yang berbeda-beda. Eksposur saat ini terbatas karena `proxy.ts` tetap menolak request tanpa sesi, tapi ini utang yang harus dibayar - kandidat kuat untuk M9.
 
 ---
 
@@ -497,12 +503,50 @@ Tambahan: `AGENTS.md` mendokumentasikan password moderator default di repo publi
 
 Sumber: `src/lib/rateLimit.ts`, `src/lib/abuse.ts`.
 
-#### M8 — Validasi & penanganan unggahan menyeluruh
-- [ ] Zod schema untuk **setiap** endpoint; `safeParse` → 400 konsisten.
-- [ ] Batas ukuran body per route (`avatarIndex` 0–22, `bio` ≤ 500, `motto` ≤ 200).
-- [ ] Hentikan base64 di DB: unggah ke object storage (Vercel Blob / Cloudinary / S3) + URL + validasi tipe & ukuran di server.
-- [ ] Sanitasi konten di semua titik render; jangan pernah `dangerouslySetInnerHTML` (saat ini aman, jaga agar tetap begitu).
-- [ ] `next.config.ts`: ganti `hostname: '**'` dengan allowlist eksplisit.
+#### M8 — Validasi & penanganan unggahan menyeluruh ✅ SELESAI (2026-10-16)
+**Deliverables**
+- [x] Zod schema untuk **setiap** endpoint POST. Satu helper (`parseJsonBody` di `src/lib/validation.ts`) membaca body dengan batas ukuran, menolak content-type yang salah, dan memetakan kegagalan schema ke **satu bentuk error**: `400 { error, details: [{ path, message }] }`.
+- [x] Batas ukuran body: default `MAX_JSON_BODY_BYTES = 64 KB` (body sah terbesar adalah ujian custom ~25 KB), `exams/create` 256 KB. Body lebih besar → **413**.
+- [x] Base64 di DB dihentikan. `POST /api/uploads` menerima `multipart/form-data`, menyaring **magic bytes** (bukan `content-type` klien), dan mengembalikan URL object storage.
+- [x] `next.config.ts`: `hostname: '**'` diganti allowlist eksplisit (lihat H6).
+- [x] Sanitasi render: tidak ada `dangerouslySetInnerHTML` di seluruh repo (diverifikasi), dan sekarang dijaga oleh kenyataan bahwa URL modul wajib `http(s)`.
+
+**Definition of Done:** setiap route mutasi menolak body cacat dengan 400/413/415 yang konsisten, dan tidak ada jalur yang menulis blob besar ke Postgres.
+
+**Verifikasi:** 232 test lulus (dari 156), 21 file. Coverage total **73.5%** (dari 68.09%). `storage.ts` 100%, `uploadClient.ts` 100%, `api/uploads` 100%, `api/profile/update` 95.2%, `api/modules/download` 88.5%, `validation.ts` 97.8%. `tsc --noEmit` bersih; `next build` sukses (34 route); `eslint .` **45 error / 34 warning** — satu error *lebih sedikit* dari baseline M7 (46/34), semuanya `react-hooks/*` yang sudah ada sebelumnya di komponen klien.
+
+**Test baru**
+- `tests/unit/validation.test.ts` (16) — 415 non-JSON, 413 lewat pengukuran **dan** lewat petunjuk `content-length`, body kosong, JSON rusak, path bertitik, `(root)`, key tak dikenal pada schema `.strict()`, pesan kustom.
+- `tests/unit/storage.test.ts` (20) — magic-byte png/jpeg/webp/pdf, `type_mismatch` (byte menang atas klaim), `application/octet-stream`/null diterima, GIF/SVG/teks ditolak, batas ukuran tepat di ambang, PDF ditolak untuk avatar, `isOwnStorageUrl` (termasuk `blob.vercel-storage.com.evil.test`), bentuk `buildPathname`, `putObject` (URL, header, parsing token, jalur error), `deleteObject`.
+- `tests/unit/uploadClient.test.ts` (6) — bentuk multipart, pesan error server diteruskan, fallback saat body bukan JSON, 200 tanpa `url` = gagal, error jaringan jadi pesan; **plus test yang mengunci agar limit klien tidak menyimpang dari `storage.ts`**.
+- `tests/integration/uploads.test.ts` (14) — 401 tanpa sesi, 403 user belum tersinkron, **503 saat storage belum dikonfigurasi** (tanpa fallback base64 dan tanpa memanggil `fetch`), 400 non-multipart / purpose hilang / file hilang, `unsupported_type`, `type_mismatch`, `not_allowed_for_purpose`, 413 lewat `content-length` (tanpa body) dan lewat file 11 MB sungguhan, 201 dengan `fetch` di-mock, 502 saat storage gagal.
+- `tests/integration/profile-update.test.ts` (15) — 401/403, key tak dikenal ditolak, body kosong, `avatarIndex` di luar rentang, `photoUrl` base64 **dan** host asing ditolak, `motto` kepanjangan, JSON rusak → 400 bukan 500, penulisan `avatarIndex`/`bio`/`motto`, penyimpanan URL sendiri, **penghapusan objek lama saat diganti**, tidak ada penghapusan saat URL sama, dan edit tetap sukses bila penghapusan gagal.
+- `tests/integration/modules-download.test.ts` (5) — id ngawur → 400 (dulu 500 dari cast Postgres), id hilang, key tak dikenal, counter naik, id tak dikenal tetap 200.
+- `tests/integration/rate-limit.test.ts` diperbaiki: loop budget dulu mengirim `avatarIndex` 0..29, yang kini ilegal untuk indeks 23–29.
+
+**Catatan keputusan**
+- **Magic bytes, bukan `content-type`.** Klien menentukan header-nya sendiri, jadi header tidak membuktikan apa pun. Format ditentukan dari beberapa byte pertama, dan bila tipe yang diklaim **berbeda** dari yang terbaca, request **ditolak** (`type_mismatch`) — bukan diam-diam ditulis ulang. Diam-diam memperbaiki berarti file tersimpan dengan tipe yang tidak pernah dipilih penggunanya.
+- **Allowlist per tujuan, bukan satu daftar global.** `purpose` mempersempit tipe: avatar hanya png/jpeg/webp, modul menambah PDF. Konsekuensinya SVG **tidak** diizinkan: SVG bisa berisi script dan disajikan inline oleh blob store, jadi ia adalah vektor XSS, bukan gambar biasa.
+- **Tipe unggahan modul dipersempit ke PDF + png/jpeg/webp.** `.docx`/`.doc`/`.pptx` yang dulu diiklankan dihapus: pembaca di aplikasi tidak bisa merender Office, dan menyajikannya dari blob berarti mengunduh file Office milik orang lain ke mesin siswa. Tab Google Drive tetap jadi jalan keluar untuk format lain.
+- **503, bukan fallback base64.** Saat `BLOB_READ_WRITE_TOKEN` belum ada, endpoint menjawab 503 dengan log yang berisik. Jalan pintas "kalau storage tidak ada, tulis base64 ke DB" persis masalah yang M8 selesaikan; membiarkannya sebagai fallback berarti masalah itu kembali diam-diam di produksi.
+- **`photoUrl` hanya boleh `null` atau storage sendiri.** Tanpa batas ini, leaderboard (yang mengirim `photoUrl` 100 user sekaligus) berubah jadi CDN gambar gratis dan **tracking pixel** yang menyala untuk setiap pengunjung. Objek lama dihapus saat diganti/dikosongkan; kegagalan penghapusan bersifat *best effort* (objek yatim = masalah kebersihan, bukan edit profil yang gagal).
+- **`contentUrl` wajib `http(s)`; `data:` ditolak.** Ini mematikan jalur base64 PDF yang dulu dipakai `SubmitClient`. Tautan Google Drive tetap diterima.
+- **Bentuk error 400: `path` berupa string bertitik**, bukan array milik Zod. Hanya satu konsumen yang membaca `details` (`SubmitClient`), dan ia sudah disesuaikan. `fieldErrors` juga **memecah** kegagalan `.strict()` menjadi satu entri per key (`unrecognized_keys` di Zod 4 membawa `path` kosong + daftar `keys`); tanpa itu, key salah ketik hanya muncul sebagai `(root)` yang tidak menolong siapa pun.
+- **Kontrak jalur blob yang dikunci, tanpa dependensi baru.** `src/lib/storage.ts` bicara ke Vercel Blob lewat `fetch` murni (pola yang sama dengan klien Upstash di M7), bukan SDK `@vercel/blob`. Yang dibutuhkan hanya `PUT` dan `POST /delete`, jadi SDK 2.8.2 hanya menambah bobot. Kontraknya diambil dari sumber SDK dan diuji eksplisit: base `https://vercel.com/api/blob` (**bukan** `blob.vercel-storage.com`), `x-api-version: 13`, `x-add-random-suffix: 0`, `x-allow-overwrite: 0`, dan store id dibaca dari `token.split("_")[3]`.
+- **Tidak ada overwrite, dan pathname berisi uuid.** `uploads/<userId>/<uuid>.<ext>`: path yang ditebak tidak bisa menimpa file orang lain, dan dua unggahan tidak bisa bertabrakan.
+- **Perbaikan bug di luar fokus:** `exams/create` mengirim `explanation: null` untuk soal tanpa pembahasan, sedangkan schema-nya `z.string().optional()` → menyimpan ujian dengan satu pembahasan kosong dulu **selalu** 400. Kini `optionalText(2000).nullable()`. `profile/report` juga kini `z.enum(["bug","content","other"])`, cocok dengan tiga pilihan di dialog.
+- **`webhooks/clerk` sengaja tetap `req.json()` mentah.** Verifikasi tanda tangan svix butuh body asli; membungkusnya dengan schema yang membaca ulang body akan merusaknya.
+- **Keterbatasan yang dicatat, belum dikerjakan:** blob yang diunggah lalu *diganti sebelum disubmit* (pilih file A → ganti ke file B) meninggalkan objek yatim. Membersihkannya butuh sapuan berkala berbasis referensi (`contentUrl`/`photoUrl` yang tidak lagi dirujuk baris mana pun) — kandidat untuk M13/M14, bukan penambahan yang aman dilakukan diam-diam di sini.
+- **Data produksi yang perlu dibersihkan (bukan bug kode):** 3 modul punya `contentUrl` menunjuk host palsu `https://nawa-learn.storage/uploads/local-...` dan 1 menunjuk `https://drive.google.com/test` — tautan mati. 3 modul lain menyimpan PDF `data:` base64 yang **tetap harus** didukung pembaca (baris lama belum dimigrasikan). Lihat catatan migrasi data di akhir bagian ini.
+
+**Diblokir sampai kredensial ada:** verifikasi unggahan sungguhan ke Vercel Blob butuh `BLOB_READ_WRITE_TOKEN`. Tanpa itu, unit test memakai `fetch` yang di-mock dan route menjawab 503. Buat store di dashboard Vercel, salin token ke `.env.local`, lalu jalankan alur unggah avatar dan modul sekali secara manual.
+
+**Migrasi data yang disarankan (dijalankan manual, bukan bagian dari kode M8)**
+1. **Tautan mati:** perbarui/arsipkan 3 modul ber-`contentUrl` `https://nawa-learn.storage/...` dan 1 modul ber-`https://drive.google.com/test`. Keduanya tidak akan pernah bisa dibuka siswa.
+2. **PDF `data:`:** unggah ulang 3 modul yang menyimpan PDF base64 ke Blob, lalu ganti `content_url` dengan URL hasil unggahan. Pembaca tetap mendukung `data:` sampai ini selesai, jadi langkah ini bisa dicicil.
+3. Setelah (2) selesai, kandidat berikutnya adalah menambahkan `CHECK`/validasi agar `content_url` baru selalu `http(s)` — saat ini penjagaan itu ada di schema request, bukan di kolom.
+
+Sumber: `src/lib/validation.ts`, `src/lib/storage.ts`, `src/lib/uploadClient.ts`, `src/app/api/uploads/route.ts`, `src/app/api/profile/update/route.ts`, `src/components/submit/SubmitClient.tsx`, `src/components/modules/ModulesLibraryClient.tsx`, `next.config.ts`.
 
 #### M9 — Header keamanan, CSRF, dan sesi
 - [ ] CSP ketat (nonce-based) + `report-uri`.
@@ -589,8 +633,8 @@ Pilih berdasarkan bukti penggunaan, bukan asumsi:
 
 ```
 Minggu 1      M1 → M2 → M3 ✅                 (SELESAI — darurat sudah ditutup)
-Minggu 2-5    M4 → M5 → M6                    (fondasi: test, migrasi, observability)
-Minggu 6-8    M7 → M8 → M9 → M10              (hardening keamanan)
+Minggu 2-5    M4 → M5 → M6 → M7 → M8 ✅       (fondasi + hardening: test, migrasi, observability, rate limit, validasi/unggahan)
+Minggu 6-8    M9 → M10                        (hardening keamanan lanjutan)
 Minggu 9-11   M11 → M12                       (privasi & kepatuhan UU PDP)
 Minggu 12-19  M13 → M14 → M15 → M16 → M17     (produk & kemampuan operasi)
 ```

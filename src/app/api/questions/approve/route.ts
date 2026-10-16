@@ -8,13 +8,14 @@ import { requireModerator } from "@/lib/authz";
 import { checkAndGrantLevelRewards } from "@/lib/levelRewards";
 import { needsSeasonReset } from "@/lib/season";
 import { requestLogger } from "@/lib/logger";
+import { parseJsonBody } from "@/lib/validation";
 
 // `questionId` and `submitterId` are resolved from the submission row in the
 // database, never from the request body.
 const approveSchema = z.object({
   submissionId: z.string().uuid(),
   feedback: z.string().max(1000).optional(),
-});
+}).strict();
 
 // Points awarded to the question creator when their question is approved
 const QUESTION_APPROVAL_POINTS: Record<string, number> = {
@@ -31,8 +32,9 @@ export async function POST(req: Request) {
   const reviewer = authz.user;
 
   try {
-    const body = await req.json();
-    const { submissionId, feedback } = approveSchema.parse(body);
+    const parsed = await parseJsonBody(req, approveSchema);
+    if (!parsed.ok) return parsed.response;
+    const { submissionId, feedback } = parsed.data;
 
     // 2. Resolve the real target from the database.
     const submission = await db.query.submissions.findFirst({
@@ -122,9 +124,6 @@ export async function POST(req: Request) {
     }, { status: 200 });
 
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Validation failed", details: error.issues }, { status: 400 });
-    }
     log.error("Question approve error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
