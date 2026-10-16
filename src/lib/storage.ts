@@ -9,23 +9,29 @@
 // Now binary content goes to object storage and the database keeps a short https
 // URL.
 //
-// The Vercel Blob REST API is called directly with `fetch`, the same way
-// `rateLimit.ts` talks to Upstash, so this adds no dependency. The contract is
-// pinned to `x-api-version: 13` and mirrors `@vercel/blob`'s own client:
+// The transfer itself is the official `@vercel/blob` SDK (`put` / `del`). That
+// reverses the "no new dependency" call this module opened with. The REST
+// contract looked small enough to call with `fetch`, but it is not ours: the API
+// version, the header set, the retry policy, multipart and OIDC all move, and a
+// hand-rolled client breaks silently when they do.
 //
-//   PUT  {base}/?pathname=<encoded>     body = the bytes
-//   POST {base}/delete                  body = { urls: [...] }
+// What stays here is what the SDK cannot know:
 //
-// If that surface ever grows (multipart, client tokens, OIDC), swapping this
-// module for the official `@vercel/blob` package is the intended move.
+//   * what the bytes *are*   — `checkUpload`, magic-byte sniffing, size ceilings
+//   * where they may live    — `buildPathname`, `isOwnStorageUrl`
 import { randomUUID } from "node:crypto";
-
-/** Pinned to the version `@vercel/blob@2.8.2` sends. */
-const BLOB_API_VERSION = 13;
-const DEFAULT_BLOB_API_URL = "https://vercel.com/api/blob";
+import { BlobError, del, put } from "@vercel/blob";
 
 /** How long a stored object may be cached at the edge. Uploads are immutable. */
 const CACHE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
+
+/**
+ * The SDK retries a failed request up to ten times with exponential backoff, so
+ * a store that simply stops answering would hold a route handler open for
+ * minutes. These are the ceilings instead.
+ */
+const PUT_TIMEOUT_MS = 20_000;
+const DELETE_TIMEOUT_MS = 10_000;
 
 export const MAX_IMAGE_BYTES = 2 * 1024 * 1024; // 2 MB
 export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -195,14 +201,11 @@ export function storageConfigured(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 }
 
-function apiBaseUrl(): string {
-  const override = process.env.VERCEL_BLOB_API_URL || process.env.NEXT_PUBLIC_VERCEL_BLOB_API_URL;
-  return (override || DEFAULT_BLOB_API_URL).replace(/\/$/, "");
-}
-
 /**
- * A read-write token looks like `vercel_blob_rw_<storeId>_<secret>`. The API
- * wants the store id as its own header, exactly as `@vercel/blob` derives it.
+ * A read-write token is `vercel_blob_rw_<storeId>_<secret>`, and the store id is
+ * the fourth segment. The SDK parses this too, but it treats a token it cannot
+ * parse as an ordinary store error — and a malformed token is a configuration
+ * fault, which the caller has to be able to tell apart from an outage.
  */
 function storeIdFromToken(token: string): string {
   const [, , , storeId = ""] = token.split("_");
@@ -212,15 +215,50 @@ function storeIdFromToken(token: string): string {
   return storeId;
 }
 
-function authHeaders(): Record<string, string> {
+/**
+ * The token is handed to the SDK explicitly on every call.
+ *
+ * Left to itself the SDK resolves credentials as OIDC first, then
+ * `BLOB_READ_WRITE_TOKEN` — so on a deployment with OIDC enabled the store would
+ * be chosen by `BLOB_STORE_ID` and this token would be ignored. Passing it keeps
+ * exactly one credential in charge.
+ */
+function blobToken(): string {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   if (!token) throw new StorageError("BLOB_READ_WRITE_TOKEN is not set", "not_configured");
+  storeIdFromToken(token);
+  return token;
+}
 
-  return {
-    authorization: `Bearer ${token}`,
-    "x-api-version": String(BLOB_API_VERSION),
-    "x-vercel-blob-store-id": storeIdFromToken(token),
-  };
+/**
+ * Runs one SDK call under a hard deadline.
+ *
+ * Aborting through a plain `AbortController` is what the SDK reads as "give up
+ * now" — it only recognises the `AbortError` a controller produces, while
+ * `AbortSignal.timeout` reports a `TimeoutError` and gets retried like any other
+ * transient failure.
+ */
+async function withDeadline<T>(ms: number, attempt: (signal: AbortSignal) => Promise<T>): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await attempt(controller.signal);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * The SDK's failures — its `BlobError` subclasses, and the raw transport error
+ * once its retries are spent — carry no status code, and no caller can act
+ * differently on any of them: the store was unreachable either way.
+ */
+function storageFailure(action: string, error: unknown): StorageError {
+  if (error instanceof StorageError) return error;
+
+  const detail = error instanceof Error ? error.message : String(error);
+  const cause = error instanceof BlobError ? "rejected the request" : "was unreachable";
+  return new StorageError(`Blob store ${cause} on ${action}: ${detail}`, "unavailable");
 }
 
 export interface StoredObject {
@@ -238,41 +276,37 @@ export function buildPathname(userId: string, ext: string): string {
  *
  * `allowOverwrite` and `addRandomSuffix` are both off: the pathname already ends
  * in a uuid, and refusing to overwrite means a guessed pathname can never
- * replace somebody else's file.
+ * replace somebody else's file. `cacheControlMaxAge` is set because an uploaded
+ * object is immutable — it is addressed by uuid and never rewritten.
  */
 export async function putObject(params: {
   pathname: string;
   bytes: Uint8Array;
   contentType: string;
 }): Promise<StoredObject> {
-  const url = `${apiBaseUrl()}/?${new URLSearchParams({ pathname: params.pathname }).toString()}`;
+  const token = blobToken();
 
-  const response = await fetch(url, {
-    method: "PUT",
-    headers: {
-      ...authHeaders(),
-      "x-vercel-blob-access": "public",
-      "x-content-type": params.contentType,
-      "x-add-random-suffix": "0",
-      "x-allow-overwrite": "0",
-      "x-cache-control-max-age": String(CACHE_MAX_AGE_SECONDS),
-    },
-    // A copy: the caller may reuse the buffer, and the fetch spec wants a
-    // BodyInit rather than a view into a shared ArrayBuffer.
-    body: new Uint8Array(params.bytes),
-    signal: AbortSignal.timeout(20_000),
-  });
+  try {
+    const result = await withDeadline(PUT_TIMEOUT_MS, (abortSignal) =>
+      put(params.pathname, Buffer.from(params.bytes), {
+        access: "public",
+        token,
+        contentType: params.contentType,
+        addRandomSuffix: false,
+        allowOverwrite: false,
+        cacheControlMaxAge: CACHE_MAX_AGE_SECONDS,
+        abortSignal,
+      }),
+    );
 
-  if (!response.ok) {
-    throw new StorageError(`Blob store responded ${response.status}`, "unavailable");
+    if (!result.url) {
+      throw new StorageError("Blob store response had no url", "unavailable");
+    }
+
+    return { url: result.url, pathname: result.pathname || params.pathname };
+  } catch (error) {
+    throw storageFailure("upload", error);
   }
-
-  const payload = (await response.json()) as { url?: string; pathname?: string };
-  if (!payload.url) {
-    throw new StorageError("Blob store response had no url", "unavailable");
-  }
-
-  return { url: payload.url, pathname: payload.pathname ?? params.pathname };
 }
 
 /**
@@ -282,15 +316,12 @@ export async function putObject(params: {
 export async function deleteObject(url: string): Promise<void> {
   if (!storageConfigured() || !isOwnStorageUrl(url)) return;
 
-  const response = await fetch(`${apiBaseUrl()}/delete`, {
-    method: "POST",
-    headers: { ...authHeaders(), "content-type": "application/json" },
-    body: JSON.stringify({ urls: [url] }),
-    signal: AbortSignal.timeout(10_000),
-  });
+  const token = blobToken();
 
-  if (!response.ok) {
-    throw new StorageError(`Blob store responded ${response.status} on delete`, "unavailable");
+  try {
+    await withDeadline(DELETE_TIMEOUT_MS, (abortSignal) => del(url, { token, abortSignal }));
+  } catch (error) {
+    throw storageFailure("delete", error);
   }
 }
 

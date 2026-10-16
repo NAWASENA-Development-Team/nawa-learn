@@ -3,9 +3,21 @@
 //
 //   1. `checkUpload` is the only thing standing between a browser and our bucket.
 //      It must decide on the bytes, not on the name or the declared type.
-//   2. The hand-rolled Vercel Blob client must speak the exact REST contract the
-//      SDK does, so a mocked `fetch` asserts the URL and every header.
+//   2. The transfer is the official `@vercel/blob` SDK, so the seam under test is
+//      the call *we* make into it: the options, the deadline, and the typed error
+//      that comes back out. How the SDK turns those options into headers is the
+//      SDK's contract, not ours — mocking `undici` to assert on them would pin a
+//      dependency's internals and break on its next release.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const { putMock, delMock } = vi.hoisted(() => ({ putMock: vi.fn(), delMock: vi.fn() }));
+
+vi.mock("@vercel/blob", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@vercel/blob")>();
+  return { ...actual, put: putMock, del: delMock };
+});
+
+import { BlobError } from "@vercel/blob";
 import {
   ACCEPTED_MIME_TYPES,
   MAX_DOCUMENT_BYTES,
@@ -27,17 +39,33 @@ const png = (extra = 0) =>
 const jpeg = () => new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
 const webp = () =>
   new Uint8Array([0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50]);
-const pdf = (extra = 0) =>
-  new Uint8Array([...Buffer.from("%PDF-1.4"), ...new Array(extra).fill(0)]);
+const pdf = (extra = 0) => new Uint8Array([...Buffer.from("%PDF-1.4"), ...new Array(extra).fill(0)]);
 const text = () => new Uint8Array(Buffer.from("just some plain text, definitely not an image"));
 
+/** The options object our module hands to `put`. */
+type PutOptions = {
+  access: string;
+  token: string;
+  contentType: string;
+  addRandomSuffix: boolean;
+  allowOverwrite: boolean;
+  cacheControlMaxAge: number;
+  abortSignal: AbortSignal;
+};
+
+const STORED_URL = "https://store123.public.blob.vercel-storage.com/uploads/u1/a.pdf";
+
 beforeEach(() => {
+  putMock.mockReset();
+  delMock.mockReset();
+  putMock.mockResolvedValue({ url: STORED_URL, pathname: "uploads/u1/a.pdf" });
+  delMock.mockResolvedValue(undefined);
   vi.unstubAllEnvs();
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
-  vi.unstubAllGlobals();
   vi.unstubAllEnvs();
 });
 
@@ -61,9 +89,9 @@ describe("checkUpload", () => {
     });
   });
 
-  it("decides on the bytes, so a lying extension or content-type changes nothing", () => {
-    // `file.name` is never consulted at all; only the declared MIME is, and only
-    // to detect a disagreement.
+  it("decides on the bytes, so a lying content-type changes nothing", () => {
+    // The file name is never consulted at all; the declared MIME is, but only to
+    // detect a disagreement.
     const result = checkUpload(pdf(), { declaredType: "image/png", purpose: "module" });
 
     expect(result).toEqual({
@@ -76,9 +104,9 @@ describe("checkUpload", () => {
   });
 
   it("accepts the generic content-type a browser sends when it does not know", () => {
-    expect(checkUpload(png(), { declaredType: "application/octet-stream", purpose: "avatar" })).toMatchObject({
-      ok: true,
-    });
+    expect(checkUpload(png(), { declaredType: "application/octet-stream", purpose: "avatar" })).toMatchObject(
+      { ok: true },
+    );
     expect(checkUpload(png(), { declaredType: null, purpose: "avatar" })).toMatchObject({ ok: true });
   });
 
@@ -94,10 +122,11 @@ describe("checkUpload", () => {
       ok: false,
       reason: { code: "unsupported_type" },
     });
-    expect(checkUpload(new Uint8Array(Buffer.from("<svg xmlns=\"http://www.w3.org/2000/svg\"/>")), { purpose: "module" })).toMatchObject({
-      ok: false,
-      reason: { code: "unsupported_type" },
-    });
+    expect(
+      checkUpload(new Uint8Array(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>')), {
+        purpose: "module",
+      }),
+    ).toMatchObject({ ok: false, reason: { code: "unsupported_type" } });
   });
 
   it("refuses an empty file", () => {
@@ -168,116 +197,138 @@ describe("storageConfigured", () => {
 });
 
 describe("putObject", () => {
-  it("PUTs to the pinned endpoint with the headers the SDK sends", async () => {
+  const upload = (bytes = pdf()) =>
+    putObject({ pathname: "uploads/u1/a.pdf", bytes, contentType: "application/pdf" });
+
+  it("uploads through the SDK with the options that make an object immutable", async () => {
     vi.stubEnv("BLOB_READ_WRITE_TOKEN", TOKEN);
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ url: "https://s.public.blob.vercel-storage.com/a.pdf", pathname: "a.pdf" }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
 
-    const stored = await putObject({ pathname: "uploads/u1/a.pdf", bytes: pdf(), contentType: "application/pdf" });
+    const object = await upload();
 
-    expect(stored).toEqual({
-      url: "https://s.public.blob.vercel-storage.com/a.pdf",
-      pathname: "a.pdf",
+    expect(object).toEqual({ url: STORED_URL, pathname: "uploads/u1/a.pdf" });
+    expect(putMock).toHaveBeenCalledTimes(1);
+
+    const [pathname, body, options] = putMock.mock.calls[0] as [string, Buffer, PutOptions];
+    expect(pathname).toBe("uploads/u1/a.pdf");
+    expect(options).toMatchObject({
+      access: "public",
+      // Passed explicitly: the SDK would otherwise prefer OIDC over our token.
+      token: TOKEN,
+      contentType: "application/pdf",
+      // The pathname already ends in a uuid, so the store must neither rename it
+      // nor let a guessed pathname replace somebody else's file.
+      addRandomSuffix: false,
+      allowOverwrite: false,
+    });
+    expect(options.cacheControlMaxAge).toBeGreaterThan(0);
+    expect(options.abortSignal).toBeInstanceOf(AbortSignal);
+    // The bytes themselves, not a path and not a data URL.
+    expect(Buffer.isBuffer(body)).toBe(true);
+    expect(Array.from(body)).toEqual(Array.from(pdf()));
+  });
+
+  it("gives up on a store that never answers, rather than retrying for minutes", async () => {
+    vi.stubEnv("BLOB_READ_WRITE_TOKEN", TOKEN);
+    // Nothing settles until the deadline aborts the request. The SDK only reads
+    // an `AbortError` as "give up" — `AbortSignal.timeout` reports a
+    // `TimeoutError`, which it would retry ten times with backoff.
+    let signal: AbortSignal | undefined;
+    putMock.mockImplementation((_pathname: string, _body: Buffer, options: PutOptions) => {
+      signal = options.abortSignal;
+      return new Promise((_resolve, reject) => {
+        options.abortSignal.addEventListener("abort", () => reject(new Error("aborted")));
+      });
     });
 
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("https://vercel.com/api/blob/?pathname=uploads%2Fu1%2Fa.pdf");
-    expect(init.method).toBe("PUT");
-    const headers = init.headers as Record<string, string>;
-    expect(headers).toMatchObject({
-      authorization: `Bearer ${TOKEN}`,
-      "x-api-version": "13",
-      // The store id is the fourth underscore-separated segment of the token.
-      "x-vercel-blob-store-id": "store123",
-      "x-vercel-blob-access": "public",
-      "x-content-type": "application/pdf",
-      // Immutable objects: never overwrite, never rename.
-      "x-add-random-suffix": "0",
-      "x-allow-overwrite": "0",
-    });
-    expect(Number(headers["x-cache-control-max-age"])).toBeGreaterThan(0);
+    vi.useFakeTimers();
+    const pending = upload();
+    const rejected = expect(pending).rejects.toThrow(StorageError);
+    await vi.advanceTimersByTimeAsync(20_000);
+    await rejected;
+
+    expect(signal?.aborted).toBe(true);
+    expect(putMock).toHaveBeenCalledTimes(1);
   });
 
-  it("honours an API URL override", async () => {
+  it("turns an SDK failure into one typed error, without retrying it ourselves", async () => {
     vi.stubEnv("BLOB_READ_WRITE_TOKEN", TOKEN);
-    vi.stubEnv("VERCEL_BLOB_API_URL", "https://blob-proxy.internal/api/blob/");
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ url: "https://x/y.pdf" }), { status: 200 }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    putMock.mockRejectedValue(new BlobError("forbidden"));
 
-    await putObject({ pathname: "p.pdf", bytes: pdf(), contentType: "application/pdf" });
+    const error = await upload().catch((thrown: unknown) => thrown);
 
-    expect((fetchMock.mock.calls[0] as [string])[0]).toBe(
-      "https://blob-proxy.internal/api/blob/?pathname=p.pdf",
-    );
+    expect(error).toBeInstanceOf(StorageError);
+    expect((error as StorageError).code).toBe("unavailable");
+    expect(putMock).toHaveBeenCalledTimes(1);
   });
 
-  it("throws a typed error when the store refuses", async () => {
+  it("reports a transport failure the same way as a refusal", async () => {
     vi.stubEnv("BLOB_READ_WRITE_TOKEN", TOKEN);
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("nope", { status: 403 })));
+    putMock.mockRejectedValue(new TypeError("fetch failed"));
 
-    await expect(putObject({ pathname: "p.pdf", bytes: pdf(), contentType: "application/pdf" })).rejects.toThrow(
-      StorageError,
-    );
+    const error = await upload().catch((thrown: unknown) => thrown);
+
+    expect((error as StorageError).code).toBe("unavailable");
+    expect((error as StorageError).message).toContain("was unreachable");
   });
 
-  it("throws when the store answers 200 without a url", async () => {
+  it("throws when the store answers without a url", async () => {
     vi.stubEnv("BLOB_READ_WRITE_TOKEN", TOKEN);
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 200 })));
+    putMock.mockResolvedValue({ url: undefined, pathname: "uploads/u1/a.pdf" });
 
-    await expect(putObject({ pathname: "p.pdf", bytes: pdf(), contentType: "application/pdf" })).rejects.toThrow(
-      /no url/,
-    );
+    await expect(upload()).rejects.toThrow(/no url/);
   });
 
   it("refuses to guess a store id from a malformed token", async () => {
     vi.stubEnv("BLOB_READ_WRITE_TOKEN", "not-a-blob-token");
-    vi.stubGlobal("fetch", vi.fn());
 
-    await expect(putObject({ pathname: "p.pdf", bytes: pdf(), contentType: "application/pdf" })).rejects.toThrow(
-      /malformed/,
-    );
+    await expect(upload()).rejects.toThrow(/malformed/);
+    expect(putMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses to upload with no token at all", async () => {
+    vi.stubEnv("BLOB_READ_WRITE_TOKEN", "");
+
+    const error = await upload().catch((thrown: unknown) => thrown);
+
+    expect((error as StorageError).code).toBe("not_configured");
+    expect(putMock).not.toHaveBeenCalled();
   });
 });
 
 describe("deleteObject", () => {
-  it("posts the url to /delete", async () => {
-    vi.stubEnv("BLOB_READ_WRITE_TOKEN", TOKEN);
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
+  const url = "https://store123.public.blob.vercel-storage.com/uploads/u1/old.png";
 
-    const url = "https://s.public.blob.vercel-storage.com/uploads/u1/old.png";
+  it("asks the SDK to delete the object", async () => {
+    vi.stubEnv("BLOB_READ_WRITE_TOKEN", TOKEN);
+
     await deleteObject(url);
 
-    const [target, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(target).toBe("https://vercel.com/api/blob/delete");
-    expect(init.method).toBe("POST");
-    expect(JSON.parse(String(init.body))).toEqual({ urls: [url] });
+    expect(delMock).toHaveBeenCalledWith(
+      url,
+      expect.objectContaining({ token: TOKEN, abortSignal: expect.any(AbortSignal) }),
+    );
   });
 
   it("does nothing for a URL that is not ours", async () => {
     vi.stubEnv("BLOB_READ_WRITE_TOKEN", TOKEN);
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
 
     await deleteObject("https://evil.test/tracker.gif");
 
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(delMock).not.toHaveBeenCalled();
   });
 
   it("does nothing when storage is not configured", async () => {
     vi.stubEnv("BLOB_READ_WRITE_TOKEN", "");
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
 
-    await deleteObject("https://s.public.blob.vercel-storage.com/uploads/u1/old.png");
+    await deleteObject(url);
 
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(delMock).not.toHaveBeenCalled();
+  });
+
+  it("surfaces a failed delete as a typed error", async () => {
+    vi.stubEnv("BLOB_READ_WRITE_TOKEN", TOKEN);
+    delMock.mockRejectedValue(new BlobError("forbidden"));
+
+    await expect(deleteObject(url)).rejects.toThrow(StorageError);
   });
 });

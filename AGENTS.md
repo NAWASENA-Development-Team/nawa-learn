@@ -167,7 +167,10 @@ To add new badges, edit `src/lib/badges.ts`:
 - Schemas are `.strict()`, so a typo'd key is a 400 rather than a silent no-op. Reusable field helpers: `shortText`, `optionalText`, `httpUrl` (`httpUrl` refuses `data:` and `javascript:`).
 
 ### Uploads go to object storage, never into a column
-- `src/lib/storage.ts` — Vercel Blob driver over raw `fetch` (no `@vercel/blob` dependency), plus the magic-byte sniffer and `isOwnStorageUrl()`. It reads `BLOB_READ_WRITE_TOKEN` (and optional `VERCEL_BLOB_API_URL`).
+- `src/lib/storage.ts` — the official `@vercel/blob` SDK (`put` / `del`) plus the parts the SDK cannot know: the magic-byte sniffer, the size ceilings, `buildPathname()` and `isOwnStorageUrl()`. It reads `BLOB_READ_WRITE_TOKEN`.
+  - The token is passed **explicitly** on every call. Left alone the SDK resolves credentials OIDC-first, so a deployment with `VERCEL_OIDC_TOKEN` set would pick the store from `BLOB_STORE_ID` and silently ignore our token.
+  - Every call runs under an `AbortController` deadline (`withDeadline`). The SDK retries up to ten times with backoff, and it only reads an `AbortError` as "give up" — `AbortSignal.timeout` reports a `TimeoutError` and would be retried like any other failure.
+  - Every failure surfaces as a typed `StorageError` (`not_configured` / `unavailable`); the caller never sees an SDK error class.
 - `src/lib/uploadClient.ts` — the browser half. `uploadFile(file, "avatar" | "module")` posts multipart to `/api/uploads` and returns `{ ok, url?, error? }`. Its `MAX_*`/`ACCEPTED_*` constants are **mirrors** of `storage.ts` (which imports `node:crypto` and cannot be bundled client-side); a unit test asserts they stay in sync.
 - `POST /api/uploads` — `requireUser()` + `rateLimit(req, "uploads/create", user.id)`, then a `content-length` pre-check, then multipart parsing, then **magic-byte** detection.
   - Accepted: avatar → png/jpeg/webp (≤2 MB); module → the same plus PDF (≤10 MB). SVG is deliberately excluded (it can carry script and is served inline).

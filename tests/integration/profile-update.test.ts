@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 import { createTestDb, seedUser, uniqueId, type TestDb } from "../helpers/harness";
 
 const holder = vi.hoisted(() => ({ db: undefined as unknown }));
+const storage = vi.hoisted(() => ({ deleteObject: vi.fn() }));
 
 vi.mock("@/db", () => ({
   get db() {
@@ -14,6 +15,12 @@ vi.mock("@/db", () => ({
   },
 }));
 vi.mock("@clerk/nextjs/server", () => ({ auth: vi.fn() }));
+// Only the network call is faked; `isOwnStorageUrl` stays real, because the
+// route's URL validation is one of the things under test.
+vi.mock("@/lib/storage", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/storage")>();
+  return { ...actual, deleteObject: storage.deleteObject };
+});
 
 import { auth } from "@clerk/nextjs/server";
 import { POST as updateProfile } from "@/app/api/profile/update/route";
@@ -35,6 +42,8 @@ beforeAll(async () => {
 beforeEach(() => {
   authMock.mockReset();
   vi.unstubAllEnvs();
+  storage.deleteObject.mockReset();
+  storage.deleteObject.mockResolvedValue(undefined);
   vi.spyOn(console, "error").mockImplementation(() => {});
   vi.spyOn(console, "warn").mockImplementation(() => {});
 });
@@ -185,36 +194,30 @@ describe("POST /api/profile/update — writes", () => {
     const user = await signIn();
     await db.update(schema.users).set({ photoUrl: OLD_PHOTO }).where(eq(schema.users.id, user.id));
     vi.stubEnv("BLOB_READ_WRITE_TOKEN", TOKEN);
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
 
     const response = await updateProfile(post({ photoUrl: NEW_PHOTO }));
 
     expect(response.status).toBe(200);
     expect((await readUser(user.id))?.photoUrl).toBe(NEW_PHOTO);
-    const [target, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(target).toContain("/delete");
-    expect(JSON.parse(String(init.body))).toEqual({ urls: [OLD_PHOTO] });
+    expect(storage.deleteObject).toHaveBeenCalledWith(OLD_PHOTO);
   });
 
   it("does not delete anything when the photo is unchanged", async () => {
     const user = await signIn();
     await db.update(schema.users).set({ photoUrl: OLD_PHOTO }).where(eq(schema.users.id, user.id));
     vi.stubEnv("BLOB_READ_WRITE_TOKEN", TOKEN);
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
 
     const response = await updateProfile(post({ photoUrl: OLD_PHOTO }));
 
     expect(response.status).toBe(200);
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(storage.deleteObject).not.toHaveBeenCalled();
   });
 
   it("still succeeds when deleting the old object fails", async () => {
     const user = await signIn();
     await db.update(schema.users).set({ photoUrl: OLD_PHOTO }).where(eq(schema.users.id, user.id));
     vi.stubEnv("BLOB_READ_WRITE_TOKEN", TOKEN);
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("nope", { status: 500 })));
+    storage.deleteObject.mockRejectedValue(new Error("store is down"));
 
     const response = await updateProfile(post({ photoUrl: NEW_PHOTO }));
 

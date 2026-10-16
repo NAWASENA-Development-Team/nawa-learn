@@ -1,12 +1,13 @@
 // tests/integration/uploads.test.ts
 // The upload endpoint is the only way binary content enters the system, so its
 // refusals matter as much as its success path. Everything here runs against a
-// real database and a mocked `fetch` standing in for Vercel Blob — the point is
-// to prove the *route's* decisions, not to reach the network.
+// real database, and only the network call to Vercel Blob is replaced — the
+// point is to prove the *route's* decisions, not to reach the store.
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTestDb, seedUser, uniqueId, type TestDb } from "../helpers/harness";
 
 const holder = vi.hoisted(() => ({ db: undefined as unknown }));
+const storage = vi.hoisted(() => ({ putObject: vi.fn() }));
 
 vi.mock("@/db", () => ({
   get db() {
@@ -14,6 +15,12 @@ vi.mock("@/db", () => ({
   },
 }));
 vi.mock("@clerk/nextjs/server", () => ({ auth: vi.fn() }));
+// Only the transport is faked. `checkUpload`, the size ceilings and
+// `buildPathname` stay real, so every refusal below is the route's own.
+vi.mock("@/lib/storage", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/storage")>();
+  return { ...actual, putObject: storage.putObject };
+});
 
 import { auth } from "@clerk/nextjs/server";
 import { POST as upload } from "@/app/api/uploads/route";
@@ -33,6 +40,8 @@ beforeAll(async () => {
 beforeEach(() => {
   authMock.mockReset();
   vi.unstubAllEnvs();
+  storage.putObject.mockReset();
+  storage.putObject.mockResolvedValue({ url: STORED_URL, pathname: "uploads/u1/abc.pdf" });
   vi.spyOn(console, "error").mockImplementation(() => {});
   vi.spyOn(console, "log").mockImplementation(() => {});
   vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -90,15 +99,13 @@ describe("POST /api/uploads — configuration", () => {
   it("refuses with 503 rather than falling back to base64 when storage is unset", async () => {
     await signIn();
     vi.stubEnv("BLOB_READ_WRITE_TOKEN", "");
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
 
     const response = await upload(moduleUpload(pdf()));
 
     expect(response.status).toBe(503);
     expect(response.headers.get("cache-control")).toBe("no-store");
     // Nothing was stored and, crucially, no data URL was invented.
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(storage.putObject).not.toHaveBeenCalled();
     await expect(response.json()).resolves.toEqual({ error: "Object storage is not configured" });
   });
 });
@@ -106,9 +113,6 @@ describe("POST /api/uploads — configuration", () => {
 describe("POST /api/uploads — request shape", () => {
   beforeEach(() => {
     vi.stubEnv("BLOB_READ_WRITE_TOKEN", TOKEN);
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ url: STORED_URL }), { status: 200 }),
-    ));
   });
 
   it("rejects a non-multipart body", async () => {
@@ -158,32 +162,24 @@ describe("POST /api/uploads — content screening", () => {
   });
 
   it("refuses a type that is not on the list, and never calls storage", async () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
-
     const response = await upload(moduleUpload(new Uint8Array(Buffer.from("plain text")), "text/plain", "notes.txt"));
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({ code: "unsupported_type" });
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(storage.putObject).not.toHaveBeenCalled();
   });
 
   it("refuses a file whose declared type disagrees with its bytes", async () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
-
     // A PDF wearing a PNG content-type: the bytes win, and the disagreement is
     // treated as a rejection rather than a silent rewrite.
     const response = await upload(moduleUpload(pdf(), "image/png", "modul.png"));
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({ code: "type_mismatch" });
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(storage.putObject).not.toHaveBeenCalled();
   });
 
   it("refuses a PDF uploaded as an avatar", async () => {
-    vi.stubGlobal("fetch", vi.fn());
-
     const form = new FormData();
     form.set("purpose", "avatar");
     form.set("file", new File([pdf() as BlobPart], "modul.pdf", { type: "application/pdf" }));
@@ -195,9 +191,6 @@ describe("POST /api/uploads — content screening", () => {
   });
 
   it("refuses a body whose declared length is over the ceiling, before parsing it", async () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
-
     const response = await upload(
       new Request("https://nawa.test/api/uploads", {
         method: "POST",
@@ -211,12 +204,10 @@ describe("POST /api/uploads — content screening", () => {
 
     expect(response.status).toBe(413);
     expect(response.headers.get("cache-control")).toBe("no-store");
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(storage.putObject).not.toHaveBeenCalled();
   });
 
   it("refuses a real oversized file", async () => {
-    vi.stubGlobal("fetch", vi.fn());
-
     const response = await upload(moduleUpload(pdf(MAX_DOCUMENT_BYTES + 1024 * 1024)));
 
     // Either the content-length hint or the measured check catches it; both are
@@ -229,10 +220,6 @@ describe("POST /api/uploads — success", () => {
   it("stores the sniffed type and returns the URL, not a data URL", async () => {
     const user = await signIn();
     vi.stubEnv("BLOB_READ_WRITE_TOKEN", TOKEN);
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ url: STORED_URL, pathname: "uploads/u1/abc.pdf" }), { status: 200 }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
 
     const bytes = pdf();
     const response = await upload(moduleUpload(bytes));
@@ -245,17 +232,21 @@ describe("POST /api/uploads — success", () => {
       size: bytes.length,
     });
 
-    const [target, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     // The pathname is namespaced by the database user id, and the content type
-    // sent to storage is the sniffed one.
-    expect(target).toContain(encodeURIComponent(`uploads/${user.id}/`));
-    expect((init.headers as Record<string, string>)["x-content-type"]).toBe("application/pdf");
+    // handed to storage is the sniffed one, never the declared one.
+    expect(storage.putObject).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pathname: expect.stringMatching(new RegExp(`^uploads/${user.id}/[0-9a-f-]{36}\\.pdf$`)),
+        contentType: "application/pdf",
+        bytes: expect.any(Uint8Array),
+      }),
+    );
   });
 
   it("answers 502 and stores nothing when the object store fails", async () => {
     await signIn();
     vi.stubEnv("BLOB_READ_WRITE_TOKEN", TOKEN);
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("nope", { status: 500 })));
+    storage.putObject.mockRejectedValue(new Error("store is down"));
 
     const response = await upload(moduleUpload(pdf()));
 
@@ -267,11 +258,10 @@ describe("POST /api/uploads — success", () => {
   it("accepts a PNG for an avatar", async () => {
     await signIn();
     vi.stubEnv("BLOB_READ_WRITE_TOKEN", TOKEN);
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ url: "https://s.public.blob.vercel-storage.com/uploads/u1/a.png" }), {
-        status: 200,
-      }),
-    ));
+    storage.putObject.mockResolvedValue({
+      url: "https://s.public.blob.vercel-storage.com/uploads/u1/a.png",
+      pathname: "uploads/u1/a.png",
+    });
 
     const form = new FormData();
     form.set("purpose", "avatar");
