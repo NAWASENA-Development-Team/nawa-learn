@@ -89,6 +89,22 @@ describe("CI workflow", () => {
     // build would pass the step and the grep below would then fail confusingly.
     expect(ciBody).toMatch(/set -o pipefail/);
   });
+
+  it("holds no repository secret, so an unset one cannot redden every run", () => {
+    // This is the M10 lesson, and it is the opposite of the usual one. The
+    // workflow handed the Build step and the runtime proxy probe
+    // `secrets.DATABASE_URL` and the two `secrets.CLERK_*`. Those secrets were
+    // never configured on the repository, so *every* run from M5 — when the
+    // workflow landed — to M10 died at the Build step, and the two proxy gates
+    // above never executed once. CI has never been green here.
+    //
+    // Nothing in the job needs a credential: the build only *evaluates* modules
+    // (`neon()` throws on an absent or unparseable URL, but nothing connects), and
+    // the runtime probe is refused with 401 before any route, query or Clerk call
+    // runs. So the job is hermetic on purpose, and a missing secret can never be
+    // the reason it fails again.
+    expect(ciBody).not.toMatch(/secrets\./);
+  });
 });
 
 describe("the scripts those steps call", () => {
@@ -135,6 +151,22 @@ describe("the scripts those steps call", () => {
     });
     expect(indexEntry).toMatch(/^100755 /);
     expect(read(".gitattributes")).toMatch(/^\.githooks\/\*\s+text\s+eol=lf\s*$/m);
+  });
+});
+
+describe("the secret-scan wrapper", () => {
+  it("refuses to report a clean scan when it could not run in CI", () => {
+    // On a developer machine a missing scanner warns and exits 0 — correct,
+    // because a contributor without gitleaks must not be blocked. In CI that same
+    // branch makes "the scan never ran" indistinguishable from "the scan found
+    // nothing": the job goes green either way. That is the shape of C8 — the
+    // `Secret scan` job was green on every run while the `verify` job was red,
+    // and nothing from outside could tell a skip from a pass.
+    const wrapper = read("scripts/secret-scan.mjs");
+    expect(wrapper).toMatch(/process\.env\.CI\b/);
+    // Both skip branches — no binary, and a binary too old to trust — must be
+    // gated on `inCi` before they may exit 0.
+    expect(wrapper.match(/if \(inCi\) \{/g) ?? []).toHaveLength(2);
   });
 });
 

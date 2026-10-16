@@ -7,8 +7,12 @@
 //
 //   1. It finds gitleaks wherever it happens to live (PATH, or the usual Windows
 //      install locations) and, if it is genuinely absent, says so clearly and
-//      exits 0 — a missing scanner must not block a commit. CI installs it, so CI
-//      never takes that branch.
+//      exits 0 — a missing scanner must not block a commit. That grace period is
+//      for *developer machines only*: in CI a missing scanner is a hard failure,
+//      because "the scan did not run" and "the scan found nothing" are otherwise
+//      indistinguishable from the outside, and a secret-scan job that quietly
+//      does nothing is worse than no job at all. CI installs gitleaks, so CI
+//      never legitimately takes that branch.
 //   2. It picks the subcommand syntax from the scanner's *version*, not from its
 //      exit code. v8.19 renamed `protect`/`detect` to `git`/`dir`, and the two
 //      are indistinguishable by exit status: gitleaks reports "leaks found" and
@@ -30,9 +34,10 @@
 // are exactly the ones that must not be committed. History is the thing to scan.
 //
 // Exit codes:
-//   0  clean (or the scanner is missing / too old to be trusted)
+//   0  clean (or, on a developer machine only, the scanner is missing / too old)
 //   1  a secret was found
-//   2  the scanner is installed but could not be run
+//   2  the scanner is installed but could not be run, or it is missing or too old
+//      while running in CI
 
 import { spawnSync } from "node:child_process";
 import path from "node:path";
@@ -45,6 +50,12 @@ const MIN_MINOR = 19;
 
 const staged = process.argv.includes("--staged");
 const root = path.resolve(import.meta.dirname, "..");
+
+// GitHub Actions sets `CI=true` for every step. That single signal is enough:
+// nobody is watching a terminal, and a skip would look exactly like a pass.
+// (Deliberately not also `GITHUB_ACTIONS`: it would be a second platform-injected
+// name in the `env-example` sweep for no extra information.)
+const inCi = Boolean(process.env.CI);
 
 /**
  * Where a gitleaks binary might be. PATH first, then the places Windows
@@ -86,15 +97,34 @@ for (const candidate of candidates()) {
 }
 
 if (!found) {
+  if (inCi) {
+    console.error(
+      "[secret-scan] gitleaks is not installed, and this is CI — refusing to report a clean scan.\n" +
+        "              The workflow installs gitleaks itself, so this means the install step broke.\n" +
+        "              Fix the install: a scanner that silently does not run looks exactly like a\n" +
+        "              repository with no secrets in it.",
+    );
+    process.exit(2);
+  }
+
   console.warn(
     "[secret-scan] gitleaks is not installed — skipping.\n" +
       "              install it to scan locally: https://github.com/gitleaks/gitleaks#installing\n" +
-      "              (CI runs it on every push and pull request regardless.)",
+      "              (CI runs it on every push and pull request regardless, and will not skip.)",
   );
   process.exit(0);
 }
 
 if (!isSupported(found.version)) {
+  if (inCi) {
+    console.error(
+      `[secret-scan] gitleaks ${found.version.raw} is older than ${MIN_MAJOR}.${MIN_MINOR}, and this is CI.\n` +
+        "              Bump GITLEAKS_VERSION in .github/workflows/ci.yml — but run the new version\n" +
+        "              against this repository's history first, so the change is deliberate.",
+    );
+    process.exit(2);
+  }
+
   console.warn(
     `[secret-scan] gitleaks ${found.version.raw} is older than ${MIN_MAJOR}.${MIN_MINOR} — skipping.\n` +
       `              ${found.version.raw} has no \`git\` subcommand, and its exit codes cannot be told\n` +

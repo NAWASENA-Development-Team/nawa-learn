@@ -71,6 +71,27 @@ jobs:
   verify:
     name: Typecheck, lint, test, build
     runs-on: ubuntu-latest
+    # ── Hermetic on purpose: this job reads no repository secret ─────────────────
+    # It used to. The `Build` step and the runtime proxy probe were handed
+    # `secrets.DATABASE_URL` and the two `secrets.CLERK_*`. Those secrets were
+    # never configured on the repository, so from M5 — when this workflow landed —
+    # to M10 *every* CI run died at the Build step, and the two proxy gates below
+    # never executed once. A gate that cannot go green is not a gate.
+    #
+    # Nothing in this job needs a real credential:
+    #   * the build only *evaluates* modules. `src/db/index.ts` calls `neon()` at
+    #     module scope, and `neon()` throws on an absent **or unparseable** URL, so
+    #     the URL must be syntactically valid — never reachable. Collecting page
+    #     data imports the route modules; it does not query.
+    #   * the runtime probe is refused by the proxy with 401 before any route, query
+    #     or Clerk call runs — but `clerkMiddleware` still throws without a
+    #     *parseable* publishable key, so one is supplied.
+    #
+    # The placeholders are derived in the two steps that need them rather than
+    # written down: a `pk_` key is public by design (it ships in the client
+    # bundle), but a literal `pk_test_<base64>` in a public repository trips
+    # gitleaks' `generic-api-key` rule on entropy alone — and allowlisting that
+    # rule is the one exception that could hide a *real* key.
     steps:
       - uses: actions/checkout@v4
 
@@ -121,19 +142,19 @@ jobs:
         run: npm run test
 
       - name: Build
-        # `next build` imports the route modules, and src/db/index.ts throws
-        # without DATABASE_URL, so the three secrets below must exist on the repo.
+        # See the job comment above: the URL only has to parse, and the publishable
+        # key only has to be a well-formed `pk_test_<base64>`.
         #
         # The log is kept because the next step needs it. `set -o pipefail` is
         # load-bearing: without it the pipeline reports `tee`'s exit status and a
         # failed build would sail through as a success.
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+          CLERK_SECRET_KEY: sk_test_ci_placeholder
         run: |
           set -o pipefail
+          export NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_$(printf '%s' 'example.clerk.accounts.dev$' | base64 -w0)"
           npm run build 2>&1 | tee build.log
-        env:
-          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
-          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Build registered the proxy
         # Next resolves its file conventions (`proxy.ts`, `instrumentation.ts`, …)
@@ -161,8 +182,9 @@ jobs:
         # an unauthenticated request to an /api path no route claims must be
         # refused with 401 (a 404 would mean the request reached the router
         # untouched), and the response must carry a nonce-bearing CSP.
-        run: npm run verify:proxy
         env:
-          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
-          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+          CLERK_SECRET_KEY: sk_test_ci_placeholder
+        run: |
+          export NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_$(printf '%s' 'example.clerk.accounts.dev$' | base64 -w0)"
+          npm run verify:proxy
