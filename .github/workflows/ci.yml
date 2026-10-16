@@ -40,7 +40,7 @@ jobs:
       # thing that must not go unverified.
       GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # The scan needs the history, not just the tip.
           fetch-depth: 0
@@ -93,7 +93,7 @@ jobs:
     # gitleaks' `generic-api-key` rule on entropy alone — and allowlisting that
     # rule is the one exception that could hide a *real* key.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v4
         with:
