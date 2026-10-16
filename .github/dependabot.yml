@@ -1,0 +1,67 @@
+# .github/dependabot.yml
+# ─── Automated dependency updates ─────────────────────────────────────────────
+# Added in M10. Before this file existed the project had 37 direct dependencies
+# and nothing watching them: `next` sat on 16.2.6 through 17 advisories, three of
+# them *critical* (including an unauthenticated RCE in the image optimiser, which
+# this app does expose through `next/image`). A dependency you never look at is a
+# dependency you never patch.
+#
+# Two ecosystems matter here:
+#   • npm            — the app's own dependencies
+#   • github-actions — the `actions/*` pins in .github/workflows/*.yml, which are
+#                      themselves executable code with a supply chain
+#
+# Updates are grouped so that a routine bump lands as one reviewable PR instead
+# of fifteen. Security updates are deliberately *not* grouped (GitHub raises those
+# separately and immediately, regardless of the schedule below).
+
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "20:00"
+      timezone: Asia/Jakarta
+    open-pull-requests-limit: 5
+    versioning-strategy: increase
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(devdeps)"
+    groups:
+      # Order matters: when a dependency matches more than one group, Dependabot
+      # assigns it to the *first* match. So `next-react` is listed first on
+      # purpose — otherwise a `next` minor bump would be swept into
+      # `minor-and-patch` on its own, and a half-applied Next/React bump does not
+      # build.
+      next-react:
+        applies-to: version-updates
+        patterns:
+          - next
+          - react
+          - react-dom
+          - eslint-config-next
+          - "@types/react"
+          - "@types/react-dom"
+      # Everything else, patch/minor only — low-risk bumps land together.
+      minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch
+    labels:
+      - dependencies
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "20:00"
+      timezone: Asia/Jakarta
+    commit-message:
+      prefix: "chore(ci)"
+    labels:
+      - dependencies
+      - ci

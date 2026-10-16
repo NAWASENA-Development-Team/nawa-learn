@@ -229,4 +229,41 @@ To add new badges, edit `src/lib/badges.ts`:
 - Every route must authorize in the handler. `src/proxy.ts` is defence in depth, **not** the only defence — it was dead code from M1 to M9 (see C6) and three routes silently lost their only gate. `api/exams/list`, `api/modules/count` and `api/modules/download` are now guarded locally.
 - Never hand `requireSession()`'s Clerk id to `rateLimit` or to an ownership check. Pass the **database** user id, or `null` when the identity is unknown — the IP bucket still applies.
 
+## Secrets & supply chain
+
+### The repository is public
+- A credential that reaches a commit is **published**, and deleting the file afterwards does not unpublish it: the value stays in the history and in every fork. `.env.local` (live Clerk, Neon and Vercel Blob credentials) has stayed untracked so far — that was luck, not a control.
+- Never copy a value out of `.env.local` into `.env.example`, a test, a doc, or a commit message. `.env.example` holds placeholders only.
+- If a secret ever does leak, **rotate it first** and clean the history second. Rotation is the only step that actually revokes anything.
+
+### `.env.example` is the contract
+- Every variable the app reads is documented there, split into required / optional / platform-injected. `tests/unit/env-example.test.ts` scans `src/**` for `process.env.X` and fails when the template falls behind, so adding a variable without documenting it breaks the build rather than someone's first `npm run dev`.
+- `.gitignore` has `.env*`, which swallows the template too. The `!.env.example` negation below it is load-bearing and is asserted by the same test.
+
+### gitleaks
+- `.gitleaks.toml` uses the default rule set as-is and carries **one** allowlist entry — the fake Stripe key in the log-redaction fixture in `tests/unit/logger.test.ts` — and **no `paths` exemption**. The first version carried ten regexes and two path exemptions; running the real binary against the real history showed nine of the regexes suppressed nothing and both path entries were redundant. A dead allowlist entry is an unreviewed blind spot, so do not add one "just in case": add an entry only for a value that genuinely trips a rule, and say which rule and which file.
+- CI **installs gitleaks itself** (`.github/workflows/ci.yml`, version pinned and its sha256 checked against the release's `checksums.txt`) rather than using `gitleaks/gitleaks-action`. The action gates on the **repository owner's type**, not on visibility: for an Organization owner it exits 1 without a `GITLEAKS_LICENSE` secret, and this repo's owner is an organization. It also defaults to gitleaks 8.24.3 and scans only the pushed range.
+- `.githooks/pre-commit` runs `scripts/secret-scan.mjs --staged`; `scripts/setup-git-hooks.mjs` installs it by setting `core.hooksPath`, and npm runs that automatically through the `prepare` script. `npm run hooks:install` does it by hand. CI runs the same wrapper over the full history, so the two cannot drift.
+- The hook is committed as **mode 100755 with LF endings**, and `.gitattributes` forces `eol=lf` for `.githooks/*`. Both matter, and neither is visible in a diff: POSIX git silently skips a hook that lacks the execute bit (it warns once and lets the commit through), and a CRLF shebang is not a shebang — `core.autocrlf=true` is the Windows default and git for Windows runs hooks through its bundled `sh`. `tests/unit/ci-gates.test.ts` asserts both, because a scanner that quietly stops running looks exactly like a scanner that finds nothing.
+- The wrapper picks the subcommand spelling from the scanner's **version**, never from its exit code: `gitleaks` exits 1 for "leaks found" *and* for "unknown command", so an exit-code fallback reads a syntax error as a finding and blocks a commit while accusing the author of a leak they do not have. Below 8.19 it skips, loudly.
+- A missing `gitleaks` binary makes the hook **warn and exit 0**. A local scanner that is not installed must never block a commit — CI is the real gate, and CI always has the binary.
+- Never scan the working tree (`gitleaks dir`): it does not honour `.gitignore`, so it reads `.env.local` and `.next/` and reports the **live** credentials as findings. Those files are precisely the ones that must not be committed, so the alarm is useless and trains people to bypass the hook. History is the thing to scan.
+
+### Dependency advisories
+- `npm run audit:gate` (`scripts/audit-gate.mjs`) blocks HIGH/CRITICAL advisories that are not on a reviewed allowlist, and **also blocks when an allowlist entry stops matching anything**, so exceptions cannot rot into permanent exemptions. LOW/MODERATE are printed but do not block.
+- Do not add an allowlist entry to make CI green. Add one only after confirming the vulnerable path is unreachable from this app, and write that reason down.
+- The allowlist is currently **empty**, and that is the target state, not an oversight. The two entries M10 shipped (`js-cookie`, `source-map-js`) were deleted the same day, once a non-force `npm audit fix` was shown to clear them — the gate itself refused to pass while they were stale. Before allowlisting anything, check whether `npm audit fix` already resolves it. The `js-cookie` entry looked unfixable because `@clerk/shared` pins it exactly, but `@clerk/nextjs` declares `@clerk/shared: ^4.12.0`, and the newer shared pins the fixed version.
+- Never `npm audit fix --force`. It installs versions outside the ranges the parents declared, which is a hidden version conflict rather than a reviewed exception. The `katex` nested under `react-katex` (`^0.16.0`, fix in 0.18.2) is exactly that case and is deliberately left as a printed LOW.
+- Never re-introduce `npm install` in CI; `npm ci` is what makes the lockfile binding.
+- M10 exists because `next` sat on 16.2.6 through 17 advisories — three of them CRITICAL, including an unauthenticated RCE in the Image Optimization API that this app genuinely exposed through `next/image` (see C7). Nothing was watching. Dependabot and the audit gate are the fix; the version bump was only the symptom.
+
+## Proving a file convention is live
+
+Next resolves `proxy.ts`, `instrumentation.ts` and friends **relative to the directory holding `app`**, and it does so **silently** — a misplaced file builds cleanly, typechecks cleanly and never runs. This project is a `src/` project, so they live in `src/`.
+
+- **Never** use `middleware-manifest.json` as evidence. On Next 16 + Turbopack both copies stay `{"middleware":{}}` whether the proxy runs or not.
+- The two signals that genuinely differ: `next build` prints `ƒ Proxy (Middleware)`, and a real `next start` answers an unauthenticated `/api/*` request with **401** plus a nonce-bearing `content-security-policy`.
+- `npm run verify:proxy` performs the runtime half. `tests/unit/ci-gates.test.ts` keeps CI performing both.
+
+
 

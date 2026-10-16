@@ -17,7 +17,14 @@ export default defineConfig({
     // Integration tests boot a real Postgres (PGlite) for each file, which is
     // slower than a unit test on a cold CI runner.
     testTimeout: 30_000,
-    hookTimeout: 60_000,
+    // `createTestDb()` starts a whole Postgres compiled to WASM, once per
+    // integration file. Measured on a 2-core machine *with* v8 coverage
+    // instrumentation, that single `beforeAll` costs around 50 seconds — so the
+    // old 60s ceiling sat within the noise and failed intermittently, on a
+    // different file each run. A hook timeout is there to catch a hang, not to
+    // enforce a performance budget, and a gate that fails at random is a gate
+    // people learn to re-run instead of read.
+    hookTimeout: 120_000,
     coverage: {
       provider: "v8",
       // The rules live in src/lib; the routes are covered by the integration

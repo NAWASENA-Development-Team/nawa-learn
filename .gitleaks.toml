@@ -1,0 +1,47 @@
+# .gitleaks.toml
+# ─── Secret-scanning configuration ────────────────────────────────────────────
+# Added in M10. The repository is public, so a committed credential is not a
+# private embarrassment — it is published, and it stays published in the history
+# even after the file is deleted.
+#
+# The project has so far been lucky: `.env.local` holds live Clerk, Neon and Vercel
+# Blob credentials and was never committed (`.gitignore` has `.env*`). "Lucky" is
+# not a control, so `gitleaks` now runs in CI and in a pre-commit hook.
+#
+# The default rule set is used as-is (`useDefault = true`). There is deliberately
+# no path exemption anywhere in this file.
+#
+# ── Why there is exactly one entry below, and not ten ────────────────────────
+# The first version of this file carried ten regexes and two `paths` exemptions.
+# Running the real binary against the real history showed that was mostly theatre:
+#
+#   * the whole 67-commit history contains exactly ONE default-ruleset finding,
+#     so nine of the ten regexes suppressed nothing at all;
+#   * both `paths` exemptions were provably redundant — deleting them changes
+#     nothing about the scan result.
+#
+# A dead entry in an allowlist is not harmless. It is an unreviewed blind spot
+# that outlives the reason it was added, and it makes the list unreadable: a
+# reader cannot tell which line is doing work. So the exemptions are gone, and
+# what remains is the one value that genuinely trips a rule.
+#
+# `tests/unit/logger.test.ts` asserts that the logger redacts an `authorization`
+# header, and uses a fake Stripe key to do it. The key is not real — but it is
+# *shaped* like a real one, which is the point of the fixture, and the default
+# `stripe-access-token` rule is right to flag it. It appears in commit 9543af0,
+# so annotating the current file with an inline `gitleaks:allow` would silence
+# the tip while leaving history dirty: `git`-mode scans every commit, not just
+# the checkout. The entry below is therefore the mechanism, not a convenience.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Deliberate fakes that the default rule set is correct to flag. Keep this list at the size it needs to be and no larger."
+
+regexes = [
+  # tests/unit/logger.test.ts — fake Stripe key in the log-redaction fixture.
+  # Matched against the secret itself, and it is a 20-character literal that no
+  # real credential will ever equal.
+  '''sk_live_supersecret''',
+]

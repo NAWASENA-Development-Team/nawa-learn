@@ -1,0 +1,32 @@
+#!/bin/sh
+# .githooks/pre-commit
+# ─── Stop a secret before it enters the history ───────────────────────────────
+# Installed by `scripts/setup-git-hooks.mjs`, which npm runs automatically via the
+# `prepare` lifecycle script. If it is not active on your clone:
+#
+#   npm run hooks:install
+#
+# This repository is public. A credential that reaches a commit is a credential
+# that is published, and it stays published in the history and in every fork even
+# after the file is deleted — so the only cheap moment to catch one is right here.
+#
+# The scan itself lives in scripts/secret-scan.mjs, for three reasons: the same
+# logic runs in CI, it works identically on Windows (where a shell hook is
+# awkward), and a missing gitleaks binary can degrade to a warning instead of
+# blocking every commit on every machine that has not installed a Go tool.
+#
+# To bypass this for one commit — do not make a habit of it:
+#
+#   git commit --no-verify
+
+# If Node is not on PATH there is nothing useful to do; let the commit through
+# rather than trapping the developer.
+if ! command -v node >/dev/null 2>&1; then
+  echo "pre-commit: node not found on PATH — skipping secret scan" >&2
+  exit 0
+fi
+
+root="$(git rev-parse --show-toplevel)" || exit 0
+
+# `exec` so the scanner's exit status is the hook's, and no shell stays resident.
+exec node "$root/scripts/secret-scan.mjs" --staged

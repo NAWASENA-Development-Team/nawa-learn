@@ -10,6 +10,64 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ─── Secrets ─────────────────────────────────────────────────────────────────
+  # This repository is public. A credential that reaches a commit is a credential
+  # that is *published*, and deleting the file afterwards does not unpublish it —
+  # the value stays in the history and in every fork. `.env.local` (live Clerk,
+  # Neon and Blob credentials) has so far stayed untracked by luck rather than by
+  # control. This job is the control.
+  #
+  # Deliberately NOT `gitleaks/gitleaks-action`. That action gates on the
+  # *repository owner's* type, not on the repository's visibility: for an
+  # Organization owner it exits 1 unless a `GITLEAKS_LICENSE` secret is present,
+  # and this repository's owner is `NAWASENA-Development-Team`. It also defaults
+  # to gitleaks 8.24.3 and scans only the pushed range. Installing the binary
+  # here instead keeps the scan full-history, keeps the version pinned to one
+  # this project has actually run, and keeps the pre-commit hook and CI on the
+  # same code path (`scripts/secret-scan.mjs`).
+  secret-scan:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      # Pinned on purpose: a scanner that changes underneath the build makes a
+      # red build ambiguous. Bump deliberately, after running the new version
+      # against this history locally.
+      GITLEAKS_VERSION: 8.30.1
+      # From the release's own `checksums.txt`. This job downloads a binary from
+      # the internet and then trusts its verdict, so the download is the one
+      # thing that must not go unverified.
+      GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The scan needs the history, not just the tip.
+          fetch-depth: 0
+
+      # The wrapper reads `import.meta.dirname`, which needs Node 20.11+, so the
+      # version is pinned rather than inherited from whatever the image ships.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install gitleaks
+        run: |
+          set -euo pipefail
+          url="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -fsSL -o /tmp/gitleaks.tar.gz "$url"
+          echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tar.gz" | sha256sum -c -
+          mkdir -p /tmp/gitleaks-bin
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp/gitleaks-bin
+          echo "/tmp/gitleaks-bin" >> "$GITHUB_PATH"
+
+      - name: Scan the full history
+        # `.gitleaks.toml` is passed explicitly by the wrapper, which also picks
+        # the subcommand spelling from the installed version and exits 1 on a
+        # finding. That file carries exactly one allowlist entry — the fake
+        # Stripe key in the log-redaction fixture — and no path exemptions.
+        run: node scripts/secret-scan.mjs
+
   verify:
     name: Typecheck, lint, test, build
     runs-on: ubuntu-latest
@@ -22,7 +80,21 @@ jobs:
           cache: npm
 
       - name: Install dependencies
+        # `npm ci`, not `npm install`: it installs exactly what the lockfile pins
+        # and fails outright when package.json and package-lock.json disagree.
+        # That failure is the whole point — it is what makes "the lockfile is
+        # committed" a property of the build rather than a habit.
         run: npm ci
+
+      - name: Dependency advisories
+        # HIGH/CRITICAL block unless they carry a reviewed exception in
+        # scripts/audit-gate.mjs, and an exception that stops matching anything
+        # fails the build too, so the list cannot rot into a blanket exemption.
+        #
+        # Added in M10, after `next` was found to have sat on a version carrying
+        # three *critical* advisories — one of them an unauthenticated RCE in the
+        # image optimiser, which this app exposes through `next/image`.
+        run: npm run audit:gate
 
       - name: Type check
         run: npx tsc --noEmit
@@ -37,7 +109,7 @@ jobs:
           git diff --cached --exit-code -- src/db/migrations
 
       - name: Lint
-        # TODO(M14): the repository still carries ~46 pre-existing eslint errors
+        # TODO(M14): the repository still carries ~45 pre-existing eslint errors
         # (mostly react-hooks/set-state-in-effect), so this step reports without
         # blocking yet. Remove `continue-on-error` once that backlog is paid down.
         continue-on-error: true
@@ -51,7 +123,45 @@ jobs:
       - name: Build
         # `next build` imports the route modules, and src/db/index.ts throws
         # without DATABASE_URL, so the three secrets below must exist on the repo.
-        run: npm run build
+        #
+        # The log is kept because the next step needs it. `set -o pipefail` is
+        # load-bearing: without it the pipeline reports `tee`'s exit status and a
+        # failed build would sail through as a success.
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee build.log
+        env:
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Build registered the proxy
+        # Next resolves its file conventions (`proxy.ts`, `instrumentation.ts`, …)
+        # **relative to the directory that holds `app/`**, and it does so silently:
+        # a misplaced file builds cleanly, typechecks cleanly, and simply never
+        # runs. That is precisely what happened here — `proxy.ts` sat at the
+        # repository root from M1 to M9, taking the deny-by-default auth gate, the
+        # CSRF guard and the CSP with it, while eight milestones of documentation
+        # and every green check said otherwise (see C6 in docs/AUDIT-AND-ROADMAP.md).
+        #
+        # `next build` prints this line only when it actually registered a proxy.
+        # Deliberately NOT checked: `middleware-manifest.json`. On Next 16 +
+        # Turbopack it stays `{"middleware":{}}` whether or not the proxy is live,
+        # so an empty manifest proves nothing at all.
+        run: |
+          if ! grep -Fq 'Proxy (Middleware)' build.log; then
+            echo "::error::next build did not register the proxy — check that src/proxy.ts exists (Next looks for it beside app/, not at the repo root)."
+            exit 1
+          fi
+          grep -F 'Proxy (Middleware)' build.log
+
+      - name: Proxy answers at runtime
+        # The line above proves Next *registered* a proxy. This proves the
+        # registered proxy is the one in src/proxy.ts and that it actually runs:
+        # an unauthenticated request to an /api path no route claims must be
+        # refused with 401 (a 404 would mean the request reached the router
+        # untouched), and the response must carry a nonce-bearing CSP.
+        run: npm run verify:proxy
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}

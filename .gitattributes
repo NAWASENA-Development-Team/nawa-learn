@@ -1,0 +1,11 @@
+# ─── Line endings for committed shell scripts ─────────────────────────────────
+# A CRLF shebang ("#!/usr/bin/env sh\r") is not a shebang: the kernel looks for
+# an interpreter literally named `sh\r`, finds nothing, and the hook dies on
+# line 1. git for Windows runs hooks through its bundled `sh`, and
+# `core.autocrlf=true` is the default on Windows, so without this the committed
+# pre-commit hook would stop working for Windows contributors — silently, which
+# is the failure mode M10 exists to eliminate (see C6 in docs/AUDIT-AND-ROADMAP.md).
+#
+# Scoped deliberately: only the hooks directory is forced to LF. The rest of the
+# tree keeps the platform default, so this file does not rewrite the repository.
+.githooks/* text eol=lf
