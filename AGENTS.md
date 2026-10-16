@@ -2,6 +2,10 @@
 # This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+
+**This is a `src/` project.** The app lives at `src/app`, so every Next.js *file convention* must also live under `src/` — `src/proxy.ts` (not `proxy.ts`), and likewise for `instrumentation.ts` and friends. Next resolves these files **relative to the directory that holds `app`/`pages`**, and it does so **silently**: a mislocated `proxy.ts` builds cleanly and simply never runs. Nothing warns you. This actually happened — root `proxy.ts` was dead from M1 to M9, taking the auth gate, the CSRF guard, and the CSP with it (see C6 in `docs/AUDIT-AND-ROADMAP.md`).
+
+After touching a file convention, prove it is live — and do **not** reach for `middleware-manifest.json`. On Next 16 + Turbopack both `server/middleware-manifest.json` and `server/middleware/middleware-manifest.json` stay `{"middleware":{}}` **even when the proxy is running**, so an empty manifest proves nothing at all. The two signals that genuinely differ are: (1) `next build` prints a `ƒ Proxy (Middleware)` line, and (2) a real `next start` answers `GET /` with a `content-security-policy` header carrying a nonce.
 <!-- END:nextjs-agent-rules -->
 
 ## Avatar System
@@ -50,7 +54,7 @@ The profile page now features 22+ custom SVG avatars with fantasy and sci-fi the
 - All reviewer API routes are guarded by `requireModerator()` from `src/lib/authz.ts`.
 - To grant access, promote a user's role:
   `npm run db:promote -- someone@example.com moderator` (see `src/db/promote.ts`).
-- Authentication itself (deny-by-default for every route) is enforced in `proxy.ts`.
+- Authentication itself (deny-by-default for every route) is enforced in `src/proxy.ts`.
 
 ## Badge System (80+ Achievements)
 
@@ -138,7 +142,7 @@ To add new badges, edit `src/lib/badges.ts`:
 - Verbosity follows `LOG_LEVEL` (default: `info` in production, `debug` otherwise).
 
 ### Health check
-- `GET /api/health` is deliberately public (see `PUBLIC_ROUTES` in `proxy.ts`) so an uptime monitor can reach it without a session. It returns only coarse status — `{ status, checks: { database, auth }, timestamp }` — with `200` healthy / `503` degraded, and `cache-control: no-store`.
+- `GET /api/health` is deliberately public (see `PUBLIC_ROUTES` in `src/proxy.ts`) so an uptime monitor can reach it without a session. It returns only coarse status — `{ status, checks: { database, auth }, timestamp }` — with `200` healthy / `503` degraded, and `cache-control: no-store`.
 - Do not add data to it. The real failure reason goes to the logs, never to the anonymous caller.
 - `tests/unit/health.test.ts` asserts that no database error detail leaks into the response body.
 
@@ -175,4 +179,35 @@ To add new badges, edit `src/lib/badges.ts`:
   - `modules.content_url` (via `modules/submit`) must be `http(s)`; `data:` is refused. Google Drive links remain valid.
 - `next.config.ts` — `images.remotePatterns` is a single explicit entry, `*.public.blob.vercel-storage.com`. Never widen it back to `**`: that makes the image optimizer an open proxy (SSRF).
 - The module reader (`ModulesLibraryClient`) renders own-blob PDFs/images directly and still supports the legacy `data:` PDF rows. Replacing a just-uploaded file before submitting leaves an orphaned blob; there is no garbage collector yet (tracked as future work).
+
+## Security headers, CSP & CSRF
+
+### One module owns the header set
+- `src/lib/securityHeaders.ts` has **zero imports** on purpose: `next.config.ts` is loaded outside the app's module graph and `src/proxy.ts` runs on the Edge, so anything Node- or Clerk-specific in here would break one of them. It exports `CSP_DIRECTIVES` (a plain `Record<string, string[]>`), `SECURITY_HEADERS`, `HSTS_HEADER`, `CSP_REPORT_PATH` and `staticSecurityHeaders(isProduction)`.
+- `next.config.ts` `headers()` sends the request-independent set to `/(.*)`: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: DENY`, `Permissions-Policy` (deny-all except `camera=(self)`, which `SubmitClient` needs for note capture), and `Cross-Origin-Opener-Policy: same-origin-allow-popups` (the popup-safe value for Clerk's OAuth — `same-origin` would sever `window.opener` and break "Masuk dengan Google").
+- HSTS is only sent when `NODE_ENV === "production"`, with `includeSubDomains` and **without** `preload` (a one-way door that needs a separate, deliberate decision).
+
+### The CSP is nonce-based and lives in `src/proxy.ts`
+- `clerkMiddleware`'s `contentSecurityPolicy` option is given a **callback** `(req) => ({ … })` because `reportTo` needs an absolute URL built from the request (`x-forwarded-proto` + `x-forwarded-host`/`Host`); `Reporting-Endpoints` rejects relative values. A legacy `report-uri` directive carries the same URL.
+- `strict: true` strips `http:`/`https:` from `script-src` and adds `'strict-dynamic'` + a fresh nonce per request. Clerk's helper **unions** our directives with its own defaults, so our map only ever adds: `object-src 'none'`, `base-uri 'self'`, `frame-ancestors 'none'`, `img-src` extras (`data:` for legacy base64 rows, `blob:` for the camera preview, `https://*.blob.vercel-storage.com`), `frame-src 'self'` + `https:` (the module reader's iframe), and `connect-src 'self'`. Clerk keeps `'unsafe-inline'` in `script-src`, but browsers ignore it whenever a nonce is present.
+- **Never hand-roll the CSP header.** Clerk's defaults carry the hosts it needs (frontend API, telemetry, `img.clerk.com`, Stripe, Google Maps, `challenges.cloudflare.com`) and they change between releases.
+
+### A nonce forces every route to render dynamically
+- `src/app/layout.tsx` reads `headers().get("x-nonce")` and passes it to `<ClerkProvider nonce={nonce}>` and `<ThemeProvider nonce={nonce}>`. Both render a `<script>`; under `'strict-dynamic'` a document script tag is only trusted if it carries the nonce, so omitting either one costs sign-in or the theme.
+- Reading `headers()` in the root layout opts **every** route into dynamic rendering. That is a requirement of nonce CSP, not a regression: a nonce cannot be baked into HTML prerendered at build time. It incidentally fixes `/moderator` and `/questions/practice`, which used to be statically prerendered.
+- `@vercel/analytics` needs nothing special: it injects its script via `document.createElement("script")` in `useEffect`, which `'strict-dynamic'` trusts.
+
+### CSRF guard runs before authentication
+- `src/lib/csrf.ts` — `isCrossSiteRequest(req)` and `requestOrigin(req)`, deliberately free of Clerk imports so it is unit-testable with a plain object.
+- Rule: only `POST`/`PUT`/`PATCH`/`DELETE`. If `Origin` is present, its **host** must equal `x-forwarded-host` ?? `Host` ?? `nextUrl.host`; an unparseable or `null` origin **fails closed**. Otherwise fall back to `Sec-Fetch-Site` and refuse anything that is not `same-origin`/`none`. Neither header present → allowed (Svix webhooks, cron, curl — their authenticity is proven elsewhere).
+- Hosts, not full origins: behind TLS termination the request can arrive as `http` while the browser saw `https`, so comparing schemes would reject every production mutation. A browser cannot forge `Host`, and a port is part of the host string.
+- It runs at the top of `src/proxy.ts`, **before** `auth()`. Test-visible consequence: a cross-site request to a protected route answers **403**, never 401.
+- `SameSite=Lax` cookies are not a substitute — "the browser will not send the cookie" is a property of the browser, not of our code.
+
+### CSP violation sink
+- `POST /api/csp-report` is public (`PUBLIC_ROUTES`) and anonymous: browsers send these without credentials. It stores nothing and answers **204**; the value is entirely in the log drain.
+- Accepts `application/csp-report` (legacy `report-uri` shape), `application/reports+json` (Reporting API batch) and `application/json`; normalises both into `{ directive, blockedUri, documentUri, sourceFile, lineNumber, disposition, sample }`. Unsupported type → **415**, malformed JSON → **400**, over 16 KB → **413**, `GET` → **405**.
+- Emits the alertable event `csp_violation` (plus `csp_violation_truncated` when a report is clipped). `original-policy` is deliberately never logged, every string field is cut at 200 chars (a blocked `data:` URI can be megabytes), and one request writes at most 10 lines.
+- Budget: `csp/report` — 120/min per IP in `RATE_LIMITS`. A single broken page can emit a burst, and a school shares one NAT address.
+
 

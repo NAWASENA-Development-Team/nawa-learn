@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import path from "node:path";
+import { staticSecurityHeaders } from "./src/lib/securityHeaders";
 
 const nextConfig: NextConfig = {
   // Pin the Turbopack root to this project. Without it Next walks up the tree
@@ -23,6 +24,18 @@ const nextConfig: NextConfig = {
         hostname: "*.public.blob.vercel-storage.com",
       },
     ],
+  },
+  // The header set that does not depend on the request. `Content-Security-Policy`
+  // is deliberately *not* here: it carries a per-request nonce and is therefore
+  // emitted by the proxy (see src/proxy.ts). HSTS is only sent from a production
+  // build — see the note on `HSTS_HEADER` in src/lib/securityHeaders.ts.
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: staticSecurityHeaders(process.env.NODE_ENV === "production"),
+      },
+    ];
   },
 };
 

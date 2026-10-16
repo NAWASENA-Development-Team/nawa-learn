@@ -65,6 +65,9 @@ export const RATE_LIMITS = {
   // money per call. A module submission uploads one file; 15 a minute is far
   // more than a person needs and far less than a script wants.
   "uploads/create": { perUser: { limit: 15, windowMs: MINUTE }, perIp: { limit: 45, windowMs: MINUTE } },
+  // Public and anonymous, so only the IP budget can ever apply. A single broken
+  // page can emit a burst of reports; a whole school shares one NAT address.
+  "csp/report": { perUser: { limit: 120, windowMs: MINUTE }, perIp: { limit: 120, windowMs: MINUTE } },
 } as const satisfies Record<string, Policy>;
 
 export type RateLimitPolicyName = keyof typeof RATE_LIMITS;

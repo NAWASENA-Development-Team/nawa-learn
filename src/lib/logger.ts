@@ -128,8 +128,11 @@ export const logger: Logger = makeLogger({});
  * under a single `requestId`, which is what makes a stack trace in a log drain
  * usable at all.
  *
- * `proxy.ts` mints the id and forwards it as `x-request-id`, so the same value
- * also appears in any upstream/proxy logs.
+ * The id is minted on first use and honoured from `x-request-id` when something
+ * upstream (a CDN or an edge proxy) already set one, so a request keeps a single
+ * id across our logs and theirs. Nothing mints it in `src/proxy.ts`: overwriting
+ * request headers inside `clerkMiddleware` risks colliding with Clerk's own
+ * internal headers, so the id is created lazily by the handler instead.
  */
 export function requestLogger(request: Request, context: Record<string, unknown> = {}): Logger {
   const requestId = request.headers.get("x-request-id") ?? newRequestId();
@@ -138,7 +141,8 @@ export function requestLogger(request: Request, context: Record<string, unknown>
 
 /** Exported for tests and for callers that need an id before a Request exists. */
 export function newRequestId(): string {
-  // Web Crypto, not node:crypto: this module is also imported by proxy.ts, which
-  // runs in the Edge runtime where Node built-ins are not available.
+  // Web Crypto rather than node:crypto: this module is imported by every API
+  // route, and staying off Node built-ins keeps it usable from any runtime the
+  // routes are ever moved to (including Edge), without changing the call sites.
   return globalThis.crypto.randomUUID();
 }

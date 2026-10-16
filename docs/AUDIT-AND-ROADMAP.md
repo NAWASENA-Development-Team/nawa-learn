@@ -3,7 +3,7 @@
 > Tanggal audit: 2026-10-15
 > Commit: `0d88b45` — feat: enhance moderator and user role checks in submission routes
 > Stack: Next.js 16.2.6 (App Router) · React 19 · TypeScript 5 (strict) · Tailwind 4 · Clerk 7 · Drizzle 0.45 + Neon HTTP · Zod 4
-> Catatan: audit awal bersifat statis (`node_modules` belum ter-install saat itu). Pada 2026-10-16 dependensi sudah terpasang, `.env.local` tersedia, sehingga `tsc --noEmit`, `eslint`, `npm test`, dan **`next build`** semuanya sudah bisa dijalankan dan dipakai untuk memverifikasi M1–M4.
+> Catatan: audit awal bersifat statis (`node_modules` belum ter-install saat itu). Pada 2026-10-16 dependensi sudah terpasang, `.env.local` tersedia, sehingga `tsc --noEmit`, `eslint`, `npm test`, dan **`next build`** semuanya sudah bisa dijalankan; M9 juga diverifikasi di **`next start` sungguhan** (CSP, CSRF, dan redirect auth benar-benar aktif).
 
 ---
 
@@ -21,17 +21,17 @@ Kesimpulan singkat dalam satu kalimat:
 |---|---|---|
 | UI / UX visual | 7.5 / 10 | Konsisten, animatif, responsif. Tapi ada mojibake & aksesibilitas minim. |
 | Arsitektur | 4 / 10 | Duplikasi folder API, middleware ganda, logika bisnis di komponen klien 1500+ baris. |
-| Keamanan (authz) | 7.5 / 10 | RBAC terpusat + deny-by-default, 8 endpoint review dijaga, matriks 401/403 teruji, rate limiting per user+IP di 8 endpoint mutasi (429 + `Retry-After`). Kurang: security header, bot protection sign-up (toggle dashboard Clerk), validasi input di beberapa route. |
-| Integritas data | 8 / 10 | Poin & skor dinilai server, idempotensi ditegakkan constraint DB, kunci jawaban tidak bocor, index + CHECK + partial-unique ditambahkan, `updatedAt` dijaga trigger. Kurang: soft delete (belum ada fitur hapus) & rollback teruji. |
+| Keamanan (authz) | 8.5 / 10 | RBAC terpusat + deny-by-default, 8 endpoint review dijaga, matriks 401/403 teruji, rate limiting per user+IP di 8 endpoint mutasi (429 + `Retry-After`), CSP ketat berbasis nonce + `frame-ancestors 'none'` + HSTS/`nosniff`/`Permissions-Policy`, penjaga CSRF di depan setiap mutasi, unggahan lewat storage dengan validasi magic-byte. **Catatan penting:** sebelum M9, `proxy.ts` ada di root sehingga Next tidak pernah memuatnya — deny-by-default yang diklaim M2 baru benar-benar aktif setelah file dipindah ke `src/proxy.ts` dan diverifikasi di server produksi. Skor 8.5 adalah kondisi **setelah** perbaikan itu. Kurang: bot protection sign-up (toggle dashboard Clerk), beberapa route masih `auth()` mentah alih-alih `requireUser()`, dan tiga route (`exams/list`, `modules/count`, `modules/download`) **sama sekali tidak punya penjaga di handler** — hanya mengandalkan proxy (H13). |
+| Integritas data | 8 / 10 | Poin & skor dinilai server, idempotensi ditegakkan constraint DB, kunci jawaban **kuis** tidak bocor, index + CHECK + partial-unique ditambahkan, `updatedAt` dijaga trigger. Kurang: `customExams.questions` masih dikirim utuh ke klien lewat `api/exams/list` (H13), soft delete (belum ada fitur hapus) & rollback teruji. |
 | Database & migrasi | 8 / 10 | Migrasi berversi, CI menolak drift skema, `db:push` dihapus, seed berpengaman, adopsi database lama terbukti nol kehilangan data. Kurang: rollback/down-migration belum diuji. |
 | Privasi & kepatuhan | 2 / 10 | Tidak ada consent, retensi, export/delete, atau kebijakan privasi (UU PDP). |
 | Observability | 5 / 10 | Logger terstruktur (redaksi PII teruji) + `requestId` + `/api/health` publik, seluruh route API sudah memakainya. Kurang: error tracking (Sentry), dashboard, dan log komponen klien. |
-| Testing & CI | 8 / 10 | 156 test di 15 file, coverage **68.09%** (branch 77.96%, fungsi 93.08%) — unit + integrasi PGlite + migrasi + logger/health + rate limiting & alarm, CI workflow, `next build` terverifikasi. Kurang: E2E, dan ~10 route masih 0% coverage. |
-| Dokumentasi | 5 / 10 | README rapi, tapi `AGENTS.md` sudah drift dari kode. |
+| Testing & CI | 8 / 10 | 295 test di 25 file, coverage **74.93%** baris (branch 85.97%, fungsi 95.07%) pada cakupan `src/lib/**` + `src/app/api/**` — unit + integrasi PGlite + migrasi + logger/health + rate limiting & alarm + CSP/CSRF + penjaga lokasi file konvensi, CI workflow, `next build` terverifikasi. Kurang: E2E, dan ~10 route masih 0% coverage. |
+| Dokumentasi | 5 / 10 | README rapi; `AGENTS.md` sempat drift dari kode (lokasi `proxy.ts`, klaim `x-request-id` yang tidak pernah benar) dan sebagian sudah dikoreksi di M9 — tetapi penyelarasan menyeluruh baru dijadwalkan di M17. |
 
 **Estimasi jarak ke "premium":** 3 fase kerja, ~16 milestone. Fase 0 (M1–M3) bersifat darurat dan **harus selesai sebelum platform dipakai lebih luas lagi**, karena saat ini satu akun siswa terautentikasi bisa mengangkat dirinya ke puncak leaderboard dan menyetujui kontennya sendiri.
 
-> **Status per 2026-10-16:** Fase 0 **selesai** — M1 (`52bba95`), M2 (`1f5a6c7`), H12 (`836107f`), M3 (`dcb9b84`), M4 (`7c5ee5f`), M5 (`eafd76b`), M6 (`9543af0`), M7 (`8d03153`). Fase 1 berjalan: **M5 (migrasi database terkelola) selesai** — database produksi diadopsi ke sistem migrasi dengan nol kehilangan data. **M6 (observability) sebagian selesai**: logger terstruktur dengan redaksi PII teruji + `/api/health`, dipakai seluruh route API. **M7 (rate limiting & anti-abuse) sebagian selesai**: 8 endpoint mutasi dibatasi per user + per IP dengan 429, plus alarm lonjakan poin; bot protection sign-up tinggal toggle dashboard Clerk. **M8 (validasi & penanganan unggahan) selesai** (menunggu commit): setiap route POST punya schema Zod, base64 tidak lagi masuk DB (unggahan ke Vercel Blob + validasi magic-byte), dan `remotePatterns` dipersempit. Otorisasi approval, kebocoran kunci jawaban, integritas poin/ranking, workflow skema, penyalahgunaan endpoint, dan jalur unggahan sudah ditutup. Sisa jujur: rate limiting **efektif penuh hanya dengan Upstash** (env), unggahan **belum diverifikasi live** tanpa `BLOB_READ_WRITE_TOKEN`, error tracking (Sentry) butuh DSN, E2E, rollback migration, dan M9 ke atas.
+> **Status per 2026-10-16:** Fase 0 **selesai** — M1 (`52bba95`), M2 (`1f5a6c7`), H12 (`836107f`), M3 (`dcb9b84`), M4 (`7c5ee5f`), M5 (`eafd76b`), M6 (`9543af0`), M7 (`8d03153`), M8 (`54c8e49`). **M6 (observability) sebagian selesai**: logger terstruktur dengan redaksi PII teruji + `/api/health`, dipakai seluruh route API. **M7 (rate limiting & anti-abuse) sebagian selesai**: 8 endpoint mutasi dibatasi per user + per IP dengan 429, plus alarm lonjakan poin; bot protection sign-up tinggal toggle dashboard Clerk. **M8 (validasi & penanganan unggahan) selesai**: setiap route POST punya schema Zod, base64 tidak lagi masuk DB (unggahan ke Vercel Blob + validasi magic-byte), dan `remotePatterns` dipersempit. **M9 (header keamanan, CSRF, sesi) selesai**: CSP ketat berbasis nonce dengan `'strict-dynamic'` + `frame-ancestors 'none'`, HSTS/`nosniff`/`Permissions-Policy`/COOP, penjaga CSRF di depan setiap mutasi (403 sebelum auth), dan penampung laporan pelanggaran CSP. **M9 juga menutup C6 yang ternyata belum benar-benar tertutup:** `proxy.ts` berada di root sedangkan aplikasi ada di `src/app`, sehingga Next **tidak pernah memuatnya** — gate autentikasi deny-by-default, penjaga CSRF, dan CSP sama-sama kode mati sejak M1. File kini di `src/proxy.ts` dan dibuktikan hidup di server produksi sungguhan (`next build` memunculkan baris `ƒ Proxy (Middleware)`; POST lintas situs dijawab 403; CSP + `Reporting-Endpoints` ada di respons `/`). Otorisasi approval, kebocoran kunci jawaban, integritas poin/ranking, workflow skema, penyalahgunaan endpoint, jalur unggahan, dan header keamanan sudah ditutup. Sisa jujur: rate limiting **efektif penuh hanya dengan Upstash** (env), unggahan ke Blob **belum diverifikasi live** (token sudah ada di `.env.local`, verifikasi manual belum dijalankan), error tracking (Sentry) butuh DSN, E2E, rollback migration, **H13** (tiga route hanya bergantung pada proxy; `api/exams/list` masih mengirim kunci jawaban ke semua user yang login), dan M10 ke atas.
 
 ### Yang sudah bagus (jangan dirusak)
 
@@ -130,7 +130,7 @@ Setelah lolos, "autentikasi" hanya disimpan di `sessionStorage` sebagai `"true"`
 
 ---
 
-### C6. Middleware proteksi route tidak berfungsi — ✅ SELESAI di M2
+### C6. Middleware proteksi route tidak berfungsi — ✅ SELESAI di M2, tapi **regresi senyap** baru ketahuan dan ditutup di M9
 
 **Lokasi:** `proxy.ts:5-10` dan `src/middleware.ts:5-10` (dua file identik)
 
@@ -150,7 +150,21 @@ const isProtectedRoute = createRouteMatcher([
 
 Selain itu ada **dua file middleware** (`/proxy.ts` dan `/src/middleware.ts`) dengan isi identik. Di Next.js 16 `middleware.ts` digantikan `proxy.ts`; menyimpan keduanya menimbulkan ambiguitas mana yang aktif dan berisiko middleware dijalankan dobel.
 
-**Perbaikan:** satu file saja (`proxy.ts`), daftar route diperbaiki, dan terapkan *deny-by-default*: lindungi semua route API kecuali daftar yang memang publik.
+**Perbaikan M2 (tidak lengkap):** satu file saja, daftar route diperbaiki, dan *deny-by-default* diterapkan: semua route API dilindungi kecuali `PUBLIC_ROUTES`. Tapi file yang dipertahankan **salah tempat** — lihat regresi di bawah.
+
+**Regresi senyap: file-nya tidak pernah dimuat.** M2 menghapus `src/middleware.ts` dan menyisakan **`proxy.ts` di root**. Itu keliru. Aplikasi ini memakai `src/app` (sejak commit awal), dan Next.js hanya mencari `proxy.ts`/`middleware.ts` di **root proyek atau di dalam `src/`**, sejajar dengan `app`. Karena `src/` ada, Next mencari `src/proxy.ts` — dan root `proxy.ts` **tidak pernah dimuat sama sekali**.
+
+Akibatnya, dari M1 sampai M9 seluruh isi `proxy.ts` **mati**: tidak ada deny-by-default, tidak ada `auth.protect()` untuk halaman, dan tidak ada 401 JSON untuk API. Setiap route sepenuhnya bergantung pada pemeriksaan `auth()` di dalam handler-nya sendiri — tepat kondisi yang C6 keluhkan di awal, dan alasan mengapa utang `auth()` mentah yang tercatat di M9 jauh lebih berbahaya daripada yang terlihat.
+
+Kenapa luput selama delapan milestone? Karena **tidak ada satu pun test atau langkah build yang gagal**: unit test memanggil handler route secara langsung (melewati proxy), dan `next build` selesai tanpa error. Satu-satunya jejak yang bisa dilihat adalah baris `ƒ Proxy (Middleware)` pada keluaran build — dan baris itu memang **tidak ada** sebelum perbaikan, tapi tidak ada yang mencarinya.
+
+Penting untuk tidak salah menyimpulkan: **`middleware-manifest.json` bukan petunjuk yang sah di sini.** Pada build Next 16 + Turbopack, kedua manifest (`server/middleware-manifest.json` dan `server/middleware/middleware-manifest.json`) tetap berisi `"middleware": {}` **baik sebelum maupun sesudah perbaikan** — jadi mengosongnya file itu tidak membuktikan apa pun. Yang benar-benar membedakan keadaan rusak dari keadaan sehat hanya dua hal: (a) keluaran `next build` memuat baris `ƒ Proxy (Middleware)`, dan (b) perilaku runtime — CSP muncul di respons, dan POST lintas situs dijawab 403.
+
+**Ini bukan artefak lokal.** Vercel menjalankan `next build` yang sama, jadi situs yang ter-deploy pun tidak pernah punya middleware sejak M1. Konsekuensi nyata di produksi: `/modules`, `/leaderboard`, `/profile/[id]`, `/submit`, `/questions/*`, dan `/moderator` **bisa diakses tanpa sesi**, dan setiap route API hanya bergantung pada pemeriksaan `auth()` di handler-nya masing-masing. Setiap asumsi yang dibangun di atas "endpoint ini ada di belakang proxy" perlu diperiksa ulang; utang `auth()` mentah di M14 jadi jauh lebih mendesak daripada yang terlihat saat dicatat.
+
+**Perbaikan M9 (terverifikasi di server produksi sungguhan):** file dipindah ke `src/proxy.ts` (import disesuaikan ke `./lib/...`), lalu dibuktikan pada `next start` sungguhan: `next build` kini memunculkan baris `ƒ Proxy (Middleware)` (sebelumnya tidak ada), `GET /` membawa CSP berbasis nonce + `Reporting-Endpoints`, seluruh 21 tag `<script>` SSR membawa nonce, `x-nonce` mengalir ke layout, halaman terproteksi menjawab **307 → sign-in**, API anonim menjawab **401 JSON**, dan POST lintas situs ke `/api/csp-report` dijawab **403** (sebelumnya 204 karena guard-nya tidak pernah jalan).
+
+**Pelajaran (masuk `AGENTS.md`):** lokasi file konvensi Next tidak boleh ditebak. Proyek ini adalah proyek `src/`, jadi setiap file konvensi (`proxy.ts`, `instrumentation.ts`, dst.) harus berada di dalam `src/`, sejajar dengan `app/`.
 
 ---
 
@@ -181,7 +195,7 @@ Tidak ada `auth()` sama sekali. Mengembalikan `id`, `name`, `points`, `createdAt
 
 Menambah counter untuk UUID apa pun, tanpa autentikasi, tanpa rate limit. Angka unduhan menentukan badge ("Hundred Downloads") dan omzet sinyal sosial → mudah dimanipulasi. UUID invalid → error 500 alih-alih 400.
 
-**Status:** (a) M2 — `proxy.ts` menolak request tanpa sesi untuk seluruh route API di luar `PUBLIC_ROUTES`, jadi endpoint ini tidak lagi anonim; (b) M7 — dibatasi `modules/download` 60/menit per IP; (c) M8 — `moduleId` divalidasi `z.uuid()` sehingga id ngawur jadi **400**, bukan 500 dari cast Postgres. Sisa utang: counter tetap dapat dinaikkan oleh user yang login berulang kali; itu batas desain (counter unduhan memang publik bagi user), bukan bug.
+**Status:** (a) M2 — `src/proxy.ts` menolak request tanpa sesi untuk seluruh route API di luar `PUBLIC_ROUTES`, jadi endpoint ini tidak lagi anonim (baru benar-benar berlaku sejak M9 — lihat C6); (b) M7 — dibatasi `modules/download` 60/menit per IP; (c) M8 — `moduleId` divalidasi `z.uuid()` sehingga id ngawur jadi **400**, bukan 500 dari cast Postgres. Sisa utang: counter tetap dapat dinaikkan oleh user yang login berulang kali; itu batas desain (counter unduhan memang publik bagi user), bukan bug.
 
 ### H5. Webhook Clerk tidak lengkap & tidak idempoten
 **Lokasi:** `src/app/api/webhooks/clerk/route.ts:69-117`
@@ -206,8 +220,10 @@ Semua endpoint bisa dipanggil ribuan kali per detik: submit modul/soal, kirim la
 
 **Status:** 8 endpoint mutasi sekarang dibatasi per user + per IP (`RATE_LIMITS` di `src/lib/rateLimit.ts`), dengan 429 + `Retry-After`. **Catatan penting:** proteksi penuh hanya aktif bila `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` diset; tanpa itu limiter memakai store in-memory yang tidak efektif di serverless. Bot protection sign-up tetap toggle dashboard Clerk (lihat checklist M7).
 
-### H8. Tidak ada security header
+### H8. Tidak ada security header — ✅ SELESAI di M9
 Tidak ada CSP, HSTS, `X-Frame-Options`/`frame-ancestors`, `Referrer-Policy`, atau `Permissions-Policy`. Situs bisa di-iframe (clickjacking), dan tanpa CSP setiap celah XSS jadi jauh lebih berbahaya.
+
+**Status (M9):** CSP ketat berbasis nonce (dengan `'strict-dynamic'`) sekarang dipasang per request di `src/proxy.ts`, plus `object-src 'none'`, `base-uri 'self'`, `frame-ancestors 'none'`, dan `report-uri`/`report-to` ke `/api/csp-report`. Header yang tidak bergantung request (HSTS, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options`, COOP) dikirim dari `next.config.ts`. Lihat M9 untuk detail, termasuk mengapa CSP memakai helper Clerk dan mengapa nonce membuat seluruh aplikasi dirender dinamis.
 
 ### H9. Skema database tanpa migration, langsung `push` ke produksi — ✅ SELESAI (M5: migrasi berversi + adopsi database asli terverifikasi)
 **Lokasi dulu:** `package.json:10`, `drizzle.config.ts:10-11`
@@ -216,7 +232,7 @@ Tidak ada CSP, HSTS, `X-Frame-Options`/`frame-ancestors`, `Referrer-Policy`, ata
 
 **Selesai:** `src/db/migrations/` di-commit dan database produksi sudah diadopsi ke sistem migrasi (baseline 0000 + `migrate` 0001) dengan **nol kehilangan data**. `db:push` dihapus dari `package.json`, CI menolak drift antara `schema.ts` dan migrasi, dan seed diberi pengaman. Sisa jujur: rollback/down-migration belum teruji (lihat M5).
 
-### H10. Nol test, nol CI — ✅ SELESAI (M4: 108 test, CI workflow; M5: +9 test migrasi; M6: +18 test logger & health; M7: +21 test rate limiting & alarm; M8: +76 test validasi & unggahan → 232 test / 21 file)
+### H10. Nol test, nol CI — ✅ SELESAI (M4: 108 test, CI workflow; M5: +9 test migrasi; M6: +18 test logger & health; M7: +21 test rate limiting & alarm; M8: +76 test validasi & unggahan; M9: +63 test CSP, CSRF, laporan pelanggaran & lokasi proxy → 295 test / 25 file)
 Tidak ada `*.test.ts`, tidak ada `.github/workflows`. Tidak ada yang mencegah regresi seperti bug otorisasi di atas. `npm run lint` pun tidak pernah dijalankan otomatis.
 
 ### H11. Performa: N+1 query dan query tak terbatas
@@ -242,6 +258,32 @@ Ditemukan saat M2. Pada commit terakhir (`0d88b45`) file `src/app/(dashboard)/su
 - Navbar "Upload" → `/submit` berfungsi lagi; tidak ada lagi self-import/rekursi.
 - Catatan: `/api/modules/submit` dan `/api/questions/submit` **sudah** menolak siswa dengan 403, jadi gate di halaman murni UX (pesan ramah, bukan pengamanan).
 
+### H13. `/api/exams/list` tanpa otorisasi apa pun, dan mengirim kunci jawaban — **lubang anonim ditutup di M9, akar masalahnya belum** (temuan baru 2026-10-16)
+**Lokasi:** `src/app/api/exams/list/route.ts:8-26`
+
+Handler ini **tidak punya satu pun pemeriksaan otorisasi** — tidak `requireUser()`, tidak `requireModerator()`, tidak `auth()`. Satu-satunya yang melindunginya adalah proxy deny-by-default. Karena proxy itu ternyata mati dari M1 sampai M9 (lihat C6), route ini **terbuka untuk siapa saja selama sembilan milestone**. M9 menutup lubang anonim itu, tapi handler-nya masih belum memeriksa apa pun sendiri.
+
+Yang membuatnya lebih dari sekadar soal disiplin:
+
+- **Kunci jawaban ikut terkirim.** Query-nya memilih `customExams.questions` **utuh** — seluruh payload soal, termasuk jawaban benar. C2 sudah menutup kebocoran kunci jawaban pada jalur kuis, tapi jalur `customExams` ini tidak pernah masuk cakupan perbaikan itu.
+- **Tanpa batas.** Tidak ada `limit`/paginasi; seluruh riwayat ujian dikembalikan sekaligus (M13 sudah mencatat sisi performanya, bukan sisi otorisasinya).
+- **Tanpa rate limit** — tidak terdaftar di `RATE_LIMITS`.
+- `authorName` juga ikut, jadi ini menyentuh PII ringan.
+
+**Kenapa dampaknya lebih rendah daripada C2:** M3 memutuskan ujian buatan siswa tidak menghasilkan poin, jadi insentif menyontek rendah. Tapi ini tetap membuka karya siswa lain ke semua siswa yang login. Konsumennya `src/app/(dashboard)/questions/practice/page.tsx:305`.
+
+**Perbaikan yang disarankan:** tambahkan `requireUser()`; bila penilaian latihan memang dilakukan di klien sehingga kunci jawaban harus ada di klien, minimal jangan kembalikan ujian milik semua orang sekaligus — dan pertimbangkan memindahkan penilaian ke server seperti yang sudah dilakukan untuk kuis (M3).
+
+**Peta route yang bergantung sepenuhnya pada proxy** (tidak ada pemeriksaan di handler, dan bukan route publik yang disengaja) — ini argumen terkuat untuk pemeriksaan CI di M10:
+
+| Route | Isi yang dikembalikan | Catatan |
+|---|---|---|
+| `api/exams/list` | seluruh ujian + kunci jawaban + `authorName` | temuan di atas |
+| `api/modules/download` | hanya menaikkan counter | komentarnya sendiri menyatakan ia mengandalkan `src/proxy.ts` |
+| `api/modules/count` | satu bilangan bulat | tidak sensitif, tapi tetap tanpa penjaga & tanpa rate limit |
+
+Sisanya (`api/health`, `api/csp-report`, `api/webhooks/clerk`) memang publik secara sengaja dan sudah didokumentasikan; `webhooks/clerk` membuktikan keasliannya lewat tanda tangan Svix (`wh.verify`, baris 34).
+
 ---
 
 ## 3. Privasi & Kepatuhan (UU PDP No. 27/2022)
@@ -256,7 +298,7 @@ Ini platform sekolah dengan **data anak/siswa**. Kategori data ini menuntut perl
 | Hak penghapusan data | ❌ Tidak ada | Tidak ada `user.deleted`, tidak ada delete account. |
 | Pembatasan retensi | ❌ Tidak ada | `reports`, `pointsLog`, `submissions` tumbuh selamanya. |
 | Minimisasi data | ❌ Lemah | Email, foto base64, dan seluruh aktivitas poin tersimpan tanpa limit. |
-| Kontrol akses ke PII | ❌ Buruk | C2, C4, H2 membocorkan nama/email/poin. |
+| Kontrol akses ke PII | ⚠️ Sedang | C2 (kunci jawaban) ditutup di M3 dan H2 (`hidden-badges`) benar-benar dijaga `requireModerator()` di handler; sejak M9 deny-by-default juga menutup akses **anonim** ke `/leaderboard` & `/profile/[id]`. Sisa: H13 masih mengirim ujian + `authorName` seluruh siswa ke setiap user yang login, dan M12 belum dikerjakan. |
 | Audit trail akses data | ❌ Tidak ada | Tidak ada log siapa membaca/mengubah data siapa. |
 | Notifikasi insiden | ⚠️ Hanya janji | `SECURITY.md` menjanjikan respons 48 jam, tanpa proses internal. |
 
@@ -325,7 +367,7 @@ Tambahan: `AGENTS.md` mendokumentasikan password moderator default di repo publi
 - [x] Terapkan di **semua** route approval/review/daily-create + seluruh queue moderasi.
 - [x] Ambil `submitterId` (dan `moduleId`/`questionId`) **hanya** dari baris `submissions` di DB; field itu dibuang dari body.
 - [x] Hapus `MODERATOR_PASSWORD` & flag `sessionStorage`; `isModerator` murni dari `users.role`.
-- [x] Perbaiki matcher `proxy.ts` → **deny-by-default** terhadap path nyata.
+- [x] Perbaiki matcher `src/proxy.ts` → **deny-by-default** terhadap path nyata.
 - [x] Middleware menutup `moderator` dan seluruh `/api/**` non-publik (401 JSON untuk API, redirect untuk halaman).
 
 **Definition of Done:** user `student` → 403 di endpoint review; tanpa login → 401; hanya `moderator`/`admin` sukses.
@@ -336,7 +378,7 @@ Tambahan: `AGENTS.md` mendokumentasikan password moderator default di repo publi
 **Catatan keputusan**
 - `requireOwner(resourceId)` **tidak dibuat**: di semua route yang ada, kepemilikan diturunkan dari sesi (`clerkId`) atau dari baris `submissions`, jadi abstraksi itu akan jadi dead code. Akan ditambahkan saat ada resource yang benar-benar butuh.
 - Bonus keamanan (overlap M3): approval kini **idempoten** — klaim `submissions` lewat `UPDATE ... WHERE status='pending'` sehingga submit yang sama tidak bisa di-approve dua kali (sebelumnya tiap klik menambah +50 poin lagi).
-- Perubahan perilaku produk: karena deny-by-default, `/modules`, `/leaderboard`, `/profile/[id]` kini butuh login. Ubah allowlist `isPublicRoute` di `proxy.ts` bila ada yang memang harus publik.
+- Perubahan perilaku produk: karena deny-by-default, `/modules`, `/leaderboard`, `/profile/[id]` kini butuh login. Ubah allowlist `isPublicRoute` di `src/proxy.ts` bila ada yang memang harus publik.
 - Peran harus di-set eksplisit (level-100 & top-3 tidak lagi otomatis jadi moderator). Gunakan `npm run db:promote -- <email> moderator`.
 
 ---
@@ -413,7 +455,7 @@ Tambahan: `AGENTS.md` mendokumentasikan password moderator default di repo publi
 - Tabel tidak di-truncate antar test; setiap test memakai user/soal baru dengan id unik, jadi isolasi tidak bergantung pada urutan.
 - Coverage `60.87%` sudah melewati target 60%, tapi tidak merata: route yang belum punya test (`exams/*`, `profile/*`, `modules/download`, `webhooks/clerk`) masih 0%. Angka ini yang harus naik di milestone berikutnya.
 - **Catatan build (sudah diperbaiki):** `next build` sempat memperingatkan "multiple lockfiles" karena ada `bun.lock` di direktori home pengguna, sehingga Turbopack memilih home directory sebagai workspace root. Diperbaiki dengan `turbopack.root` (absolute path ke direktori proyek) di `next.config.ts`.
-- **Temuan baru yang tercatat (belum dikerjakan):** `requireUser()`/`requireModerator()` baru dipakai di 8 route review + 2 route kuis. Route user-facing lain masih memakai `await auth()` mentah (`modules/submit`, `questions/submit`, `profile/status`, `profile/report`, `exams/create`, `questions/approved`, `moderator/auth-check`; `profile/update` **sudah** dipindah ke `requireUser()` di M8). Konsekuensinya: route itu (a) tidak memverifikasi bahwa user benar-benar ada di tabel `users`, dan (b) memulangkan bentuk error yang berbeda-beda. Eksposur saat ini terbatas karena `proxy.ts` tetap menolak request tanpa sesi, tapi ini utang yang harus dibayar - kandidat kuat untuk M9.
+- **Temuan baru yang tercatat (belum dikerjakan):** `requireUser()`/`requireModerator()` baru dipakai di 8 route review + 2 route kuis. Route user-facing lain masih memakai `await auth()` mentah (`modules/submit`, `questions/submit`, `profile/status`, `profile/report`, `exams/create`, `questions/approved`, `moderator/auth-check`; `profile/update` **sudah** dipindah ke `requireUser()` di M8). Konsekuensinya: route itu (a) tidak memverifikasi bahwa user benar-benar ada di tabel `users`, dan (b) memulangkan bentuk error yang berbeda-beda. Eksposur saat ini terbatas karena `src/proxy.ts` tetap menolak request tanpa sesi, tapi ini utang yang harus dibayar — sekarang lebih mendesak, karena sebelum M9 proxy itu ternyata tidak pernah jalan sama sekali (lihat C6).
 
 ---
 
@@ -463,10 +505,10 @@ Tambahan: `AGENTS.md` mendokumentasikan password moderator default di repo publi
 **Definition of Done:** Error yang sengaja ditanam muncul di Sentry dengan stack + requestId dalam < 1 menit. — **belum terpenuhi** (menunggu Sentry).
 
 **Catatan keputusan**
-- **Kenapa bukan `pino`:** logger ini juga diimpor `proxy.ts`, yang berjalan di Edge runtime tempat modul Node tidak tersedia. Bentuk keluarannya tetap kompatibel pino, jadi menambahkan drain nanti tidak perlu menyentuh call site. `requestId` dibuat dengan Web Crypto (`globalThis.crypto.randomUUID()`), bukan `node:crypto`, justru karena alasan ini.
+- **Kenapa bukan `pino`:** logger ini dipakai hampir setiap route API, dan sengaja tidak menyentuh modul Node apa pun (`requestId` memakai Web Crypto, `globalThis.crypto.randomUUID()`, bukan `node:crypto`) supaya tetap bisa hidup di runtime apa pun — termasuk Edge — tanpa mengubah satu pun call site. Bentuk keluarannya tetap kompatibel pino, jadi menambahkan drain nanti tidak perlu menyentuh call site.
 - **Redaksi PII diuji, bukan diklaim.** `tests/unit/logger.test.ts` (13 test) membuktikan email, nama, `clerkId`, `bio`, `motto`, `photoUrl`, `authorization`, `cookie`, dan `token` tidak pernah keluar ke log — termasuk di dalam array dan objek bertingkat. Ada juga regression test untuk dua jebakan regex: pola `ip` yang keliru ikut meredaksi `description`, dan `\bname\b` yang gagal menangkap `userName`.
 - **Nama key yang penting:** call site yang mengirim nilai mentah (`clerkId`, `moduleId`) diperbaiki agar memakai key bernama — kalau tidak, nilainya masuk sebagai `detail` dan lolos dari redaksi.
-- **`requestId` tanpa menyentuh header request di `proxy.ts`:** menimpa header request di dalam `clerkMiddleware` berisiko menabrak header internal Clerk. Logger menghormati `x-request-id` bila ada yang memasangnya (CDN/proxy) dan membuat sendiri bila tidak, sehingga korelasi tetap utuh per request.
+- **`requestId` tanpa menyentuh header request di `src/proxy.ts`:** menimpa header request di dalam `clerkMiddleware` berisiko menabrak header internal Clerk. Logger menghormati `x-request-id` bila ada yang memasangnya (CDN/proxy) dan membuat sendiri bila tidak, sehingga korelasi tetap utuh per request.
 - **`/api/health` publik tapi tidak bocor:** route ditambahkan ke `PUBLIC_ROUTES` karena monitor tidak punya sesi. Ia hanya mengembalikan `ok`/`down` per komponen; pesan error asli hanya masuk log. Ada test yang memastikan `ECONNREFUSED`, nama host internal, dan nomor port tidak muncul di respons.
 - **`console.*` di komponen klien sengaja belum diubah:** log browser tidak punya tempat tujuan terstruktur sebelum ada Sentry. Menggantinya sekarang hanya akan menukar `console.log` dengan JSON di konsol pengguna.
 
@@ -539,7 +581,7 @@ Sumber: `src/lib/rateLimit.ts`, `src/lib/abuse.ts`.
 - **Keterbatasan yang dicatat, belum dikerjakan:** blob yang diunggah lalu *diganti sebelum disubmit* (pilih file A → ganti ke file B) meninggalkan objek yatim. Membersihkannya butuh sapuan berkala berbasis referensi (`contentUrl`/`photoUrl` yang tidak lagi dirujuk baris mana pun) — kandidat untuk M13/M14, bukan penambahan yang aman dilakukan diam-diam di sini.
 - **Data produksi yang perlu dibersihkan (bukan bug kode):** 3 modul punya `contentUrl` menunjuk host palsu `https://nawa-learn.storage/uploads/local-...` dan 1 menunjuk `https://drive.google.com/test` — tautan mati. 3 modul lain menyimpan PDF `data:` base64 yang **tetap harus** didukung pembaca (baris lama belum dimigrasikan). Lihat catatan migrasi data di akhir bagian ini.
 
-**Diblokir sampai kredensial ada:** verifikasi unggahan sungguhan ke Vercel Blob butuh `BLOB_READ_WRITE_TOKEN`. Tanpa itu, unit test memakai `fetch` yang di-mock dan route menjawab 503. Buat store di dashboard Vercel, salin token ke `.env.local`, lalu jalankan alur unggah avatar dan modul sekali secara manual.
+**Verifikasi live yang masih tertunda:** unggahan sungguhan ke Vercel Blob. `BLOB_READ_WRITE_TOKEN` sekarang sudah ada di `.env.local`, jadi langkah ini tinggal dijalankan manual: buka halaman profil dan unggah avatar, lalu submit satu modul, dan pastikan URL yang tersimpan menunjuk `*.public.blob.vercel-storage.com`. Tanpa langkah itu, unit test tetap memakai `fetch` yang di-mock dan endpoint menjawab 503 bila token hilang.
 
 **Migrasi data yang disarankan (dijalankan manual, bukan bagian dari kode M8)**
 1. **Tautan mati:** perbarui/arsipkan 3 modul ber-`contentUrl` `https://nawa-learn.storage/...` dan 1 modul ber-`https://drive.google.com/test`. Keduanya tidak akan pernah bisa dibuka siswa.
@@ -548,17 +590,52 @@ Sumber: `src/lib/rateLimit.ts`, `src/lib/abuse.ts`.
 
 Sumber: `src/lib/validation.ts`, `src/lib/storage.ts`, `src/lib/uploadClient.ts`, `src/app/api/uploads/route.ts`, `src/app/api/profile/update/route.ts`, `src/components/submit/SubmitClient.tsx`, `src/components/modules/ModulesLibraryClient.tsx`, `next.config.ts`.
 
-#### M9 — Header keamanan, CSRF, dan sesi
-- [ ] CSP ketat (nonce-based) + `report-uri`.
-- [ ] HSTS, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `frame-ancestors 'none'`.
-- [ ] Verifikasi proteksi CSRF pada semua route mutasi berbasis cookie.
-- [ ] Rotasi `CLERK_SECRET_KEY` bila pernah terekspos di file lokal/log.
+#### M9 — Header keamanan, CSRF, dan sesi ✅ SELESAI (2026-10-16)
+**Deliverables**
+- [x] CSP ketat berbasis **nonce** + `report-uri`/`report-to`, dipasang per request di `src/proxy.ts` lewat opsi `contentSecurityPolicy` milik Clerk (`strict: true`).
+- [x] HSTS, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options`, `Cross-Origin-Opener-Policy` lewat `headers()` di `next.config.ts`.
+- [x] Penjaga CSRF di depan semua route mutasi berbasis cookie, dijalankan **sebelum** pemeriksaan sesi.
+- [x] `CLERK_SECRET_KEY`: diperiksa, **tidak pernah terekspos** — tidak ada file `.env*` yang pernah di-commit (`git log --all --diff-filter=A` tidak menemukan satu pun), dan `.env*` ada di `.gitignore`. Rotasi tidak diperlukan.
+- [x] `POST /api/csp-report` sebagai penampung laporan pelanggaran CSP (publik, tanpa kredensial, tidak menyimpan apa pun).
+- [x] **Perbaikan kritis C6:** `proxy.ts` dipindah ke `src/proxy.ts`. File di root tidak pernah dimuat Next (lihat C6), sehingga gate autentikasi, penjaga CSRF, dan CSP **sama-sama tidak pernah jalan** sampai M9.
+
+**Definition of Done:** respons dari origin ini membawa CSP nonce yang berlaku, laman tidak bisa di-iframe, dan request lintas situs ke endpoint mutasi dijawab **403** tanpa pernah menyentuh handler.
+
+**Verifikasi:** 295 test lulus (dari 232), 25 file — **63 test baru**. `tsc --noEmit` bersih; `eslint .` **45 error / 34 warning** (tidak berubah dari M8, semuanya `react-hooks/*` yang sudah ada sebelumnya); `next build` sukses (36 route, semuanya dinamis) dan kini memunculkan baris **`ƒ Proxy (Middleware)`** yang sebelumnya tidak ada.
+
+**Verifikasi live (server produksi sungguhan, `next start`):** setelah pemindahan ke `src/proxy.ts`, `next build` memunculkan baris `ƒ Proxy (Middleware)` yang sebelumnya tidak ada; `GET /` membawa `Content-Security-Policy` berbasis nonce, `Reporting-Endpoints`, dan seluruh header statis; **21 dari 21** tag `<script>` SSR membawa nonce; API anonim menjawab **401 JSON**; halaman terproteksi menjawab **307 → sign-in**; POST lintas situs (`Origin: https://evil.example`) ke `/api/csp-report` dijawab **403** (dan 403 itu tetap membawa header statis), sedangkan same-origin dijawab **204**. Sebelum pemindahan, seluruh pemeriksaan ini gagal — CSP tidak ada dan POST lintas situs lolos dengan **204**. Catatan: `middleware-manifest.json` **bukan** bukti apa pun di sini — pada Next 16 + Turbopack file itu tetap `{}` bahkan saat proxy berjalan; sinyal yang sah adalah baris build dan perilaku runtime di atas.
+
+**Test baru**
+- `tests/unit/csrf.test.ts` (20) — same-origin lolos (termasuk di belakang proxy TLS-terminating, tempat skema request `http` tapi browser melihat `https`), host kembar/sibling subdomain/port berbeda ditolak, `Origin: null` ditolak, `Origin` tak terurai **gagal tertutup**, `Sec-Fetch-Site: cross-site`/`same-site` ditolak, `same-origin`/`none` lolos, metode baca diabaikan, rantai `x-forwarded-*` diambil hop pertama.
+- `tests/unit/securityHeaders.test.ts` (19) — daftar header statis (nosniff, referrer, framing, `camera=(self)`, COOP, HSTS hanya di produksi, tanpa `preload`) **plus** CSP yang benar-benar diterima browser, diuji dengan **memanggil `src/proxy.ts` asli** memakai `NextRequest` sungguhan: `'strict-dynamic'` + nonce ada, direktif Clerk tetap hidup setelah merge (`frame-src` Cloudflare Turnstile, `style-src 'unsafe-inline'`, `default-src 'self'`), `Reporting-Endpoints` absolut, `x-nonce` diteruskan ke request lewat `x-middleware-override-headers`, nonce **berbeda tiap request**, dan CSRF 403 sebelum auth (bukan 401).
+- `tests/integration/csp-report.test.ts` (20) — format `report-uri` lama dan `reports+json` baru dinormalkan ke satu bentuk log, `original-policy` **tidak pernah** ikut tercatat, `effective-directive` diutamakan, entri non-`csp-violation` diabaikan, 415/400/413/405, field panjang (`data:` URI) dipotong, satu request maksimal 10 baris log, IP mentah tidak pernah masuk log, dan 429 setelah budget per IP habis.
+- `tests/unit/proxy-location.test.ts` (4) — penjaga lokasi file konvensi. Memastikan aplikasi tetap di `src/app`, `src/proxy.ts` ada, dan **tidak ada** `proxy.ts` di root maupun `middleware.ts` yang tertinggal. Tes ini sengaja berupa asersi filesystem — bentuk yang tidak lazim — karena kegagalan yang dijaganya **tidak terlihat oleh apa pun**: build hijau, `tsc` hijau, manifest tetap kosong entah proxy hidup atau mati, dan seluruh gate keamanan mati tanpa satu pun peringatan (persis C6).
+
+**Catatan keputusan**
+- **CSP memakai helper Clerk, bukan header buatan sendiri.** `clerkMiddleware` sudah punya opsi `contentSecurityPolicy` yang menaruh nonce di **header request dan respons** sekaligus mengekspor `x-nonce`. Menulis ini manual berarti mengulang daftar host milik Clerk (frontend API, telemetry, `img.clerk.com`, Stripe, Google Maps, `challenges.cloudflare.com`) dan daftar itu akan basi setiap Clerk rilis. Helper-nya juga **menggabungkan** direktif kita dengan default-nya (union), jadi yang kita kontribusikan hanya penambahan.
+- **`strict: true`.** Ini yang menghapus `http:`/`https:` dari `script-src` dan menambahkan `'strict-dynamic'`. `'unsafe-inline'` tetap tertulis di header karena Clerk memang menambahkannya, tapi browser **mengabaikannya** begitu ada nonce — jadi CSP-nya efektif seketat nonce, tanpa mematahkan inline style. `'unsafe-eval'` hanya muncul di build non-produksi.
+- **Nonce memaksa seluruh aplikasi jadi dinamis, dan itu memang konsekuensinya.** `src/app/layout.tsx` membaca `headers()` untuk mengambil `x-nonce`. Efek sampingnya bagus: `/moderator` dan `/questions/practice` yang dulu **di-prerender statis** (dan karenanya akan mustahil diberi nonce) sekarang dirender per request. Ini bukan regresi yang tidak disadari — ini syarat teknis dari CSP nonce.
+- **Nonce harus diteruskan ke dua komponen, bukan hanya Clerk.** `ClerkProvider nonce={…}` untuk tag pemuat clerk-js, dan `ThemeProvider nonce={…}` untuk skrip pra-hidrasi next-themes (0.4.6 menerima prop `nonce`). Di bawah `'strict-dynamic'` tag skrip di dokumen hanya dipercaya bila membawa nonce, jadi melewatkan salah satunya berarti kehilangan sign-in atau tema. `@vercel/analytics` tidak butuh perlakuan khusus: ia menyuntik skrip lewat `document.createElement` di `useEffect`, dan itu dipercaya oleh `'strict-dynamic'`.
+- **CSP di `src/proxy.ts`, header statis di `next.config.ts`.** CSP tidak bisa ikut ke `next.config.ts` karena nonce harus segar per request, sedangkan `next.config.ts` dievaluasi sekali saat build. Header yang tidak bergantung request justru lebih murah di sana. Keduanya membaca **satu modul** (`src/lib/securityHeaders.ts`) supaya tidak bisa menyimpang satu sama lain; modul itu sengaja **tanpa import** karena `next.config.ts` dimuat di luar graf modul aplikasi.
+- **`src/proxy.ts`, bukan `proxy.ts`.** Ini temuan paling penting di M9, dan bukan temuan tentang CSP. Proyek ini memakai `src/app`, jadi Next mencari file konvensi di dalam `src/`. Root `proxy.ts` — satu-satunya file yang tersisa setelah M2 — **tidak pernah dimuat**: build selesai tanpa error dan tanpa baris `ƒ Proxy (Middleware)` yang seharusnya muncul, jadi tidak ada satu pun peringatan. Artinya deny-by-default yang diklaim M2, penjaga CSRF, dan CSP M9 semuanya adalah kode mati. Pemindahan file adalah perbaikannya; ini juga alasan setiap klaim "middleware jalan" sebelum M9 tidak pernah benar-benar terbukti. Aturan umumnya masuk `AGENTS.md`, termasuk peringatan bahwa `middleware-manifest.json` **bukan** bukti apa pun di Next 16 + Turbopack.
+- **`reportTo` wajib URL absolut.** Header `Reporting-Endpoints` menolak nilai relatif, jadi URL-nya dibangun dari request (`x-forwarded-proto` + `x-forwarded-host`/`Host`). Direktif `report-uri` lama tetap dikirim dengan URL yang sama untuk browser yang tidak pernah mengirim Reporting API.
+- **CSRF membandingkan host, bukan origin penuh.** Skema tidak bisa dipercaya di belakang TLS termination (request bisa datang sebagai `http` sementara browser melihat `https`); membandingkan origin penuh akan menolak **setiap** mutasi produksi. Sebaliknya `Host` tidak bisa dipalsukan browser, dan port ikut terbaca di dalam string host. Origin yang tidak terurai (`null` dari iframe sandbox) **gagal tertutup**.
+- **Penjaga CSRF jalan sebelum `auth()`.** Konsekuensi yang bisa diuji: request lintas situs ke endpoint terproteksi dijawab **403**, bukan 401 — pembuktian bahwa ia tidak pernah sampai ke cabang autentikasi.
+- **Cookie `SameSite=Lax` bukan pengganti penjaga ini.** "Browser tidak akan mengirim cookie" adalah sifat browser, bukan sifat kode kita. Endpoint webhook (Svix) dan cron sengaja tidak punya `Origin`/`Sec-Fetch-Site` dan karena itu lolos — keasliannya dibuktikan tanda tangan, bukan origin.
+- **`/api/csp-report` sengaja publik dan tidak menyimpan apa pun.** Tanpa penampung, CSP ketat menjadi tidak bisa dibuktikan salah: kita tidak bisa membedakan "tidak ada yang diblokir" dari "laporannya tidak pergi ke mana-mana". Ia hanya menulis satu baris log (`csp_violation`) per pelanggaran — field `original-policy` (seluruh header) sengaja dibuang, setiap string dipotong 200 karakter, dan satu request maksimal 10 baris. `data:` URI raksasa adalah alasan pemotongan itu.
+- **`Cross-Origin-Opener-Policy: same-origin-allow-popups`.** Nilai `same-origin` akan memutus `window.opener` dan merusak alur OAuth berbasis popup milik Clerk ("Masuk dengan Google"). Ini nilai paling ketat yang masih kompatibel.
+- **HSTS tanpa `preload`, dan hanya di produksi.** `preload` adalah pintu satu arah yang butuh pendaftaran ke daftar browser vendor; itu keputusan terpisah. Di build dev, HSTS tidak dikirim supaya `localhost` tidak terkunci ke https.
+- **Utang yang masih terbuka:** beberapa route masih memakai `auth()` mentah alih-alih `requireUser()`/`requireModerator()` (`modules/submit`, `questions/submit`, `profile/status`, `profile/report`, `exams/create`, `questions/approved`, `moderator/auth-check`). Ini tidak membatalkan M9 (setiap route tetap punya pemeriksaan sesi), tapi menyeragamkannya adalah pekerjaan M14. `frame-src https:` masih membolehkan iframe ke host https mana pun — itu memang kebutuhan pembaca modul (Google Drive, Canva), dan dibatasi oleh fakta bahwa hanya moderator yang bisa menyetujui modul.
+- **Efek samping deny-by-default yang perlu dicatat:** `Navbar` (`src/components/layout/Navbar.tsx:124`) memanggil `/api/moderator/auth-check` di setiap halaman, termasuk halaman publik. Sebelum M9 route itu dijalankan handler-nya; sekarang proxy menjawab **401** lebih dulu untuk pengunjung anonim. Tidak ada yang rusak — komponennya menangani respons non-OK dengan `res.ok ? res.json() : { isModerator: false }` — tetapi ini berarti satu request yang dijamin gagal di setiap page load anonim. Perbaikan yang benar (M14/M15): lewati fetch bila tidak ada sesi, atau pindahkan pemeriksaan role ke server component.
+
+Sumber: `src/lib/securityHeaders.ts`, `src/lib/csrf.ts`, `src/app/api/csp-report/route.ts`, `src/proxy.ts`, `next.config.ts`, `src/app/layout.tsx`, `src/components/providers/ThemeProvider.tsx`, `src/lib/rateLimit.ts`.
 
 #### M10 — Manajemen rahasia & supply chain
 - [ ] `.env.example` lengkap dengan penjelasan tiap variabel.
 - [ ] `gitleaks`/`trufflehog` di pre-commit + CI.
 - [ ] Dependabot/Renovate + `npm audit --production` di CI.
 - [ ] `npm ci` (bukan `npm install`) di pipeline; commit lockfile konsisten.
+- [ ] **CI membuktikan proxy benar-benar terdaftar**, bukan sekadar ada filenya: `next build` harus memunculkan baris `ƒ Proxy (Middleware)`, dan idealnya ada satu smoke test runtime (`next start`, lalu pastikan `GET /` membawa `content-security-policy` bernonce). **Jangan** memakai `middleware-manifest.json` sebagai bukti — pada Next 16 + Turbopack file itu tetap `{}` bahkan ketika proxy berjalan. Tanpa langkah ini, C6 bisa terulang dan tetap hijau di CI (lihat `tests/unit/proxy-location.test.ts`, yang menutup sisi filesystem saja).
 - [ ] Lindungi branch `main` (required review + required status checks).
 
 ---
@@ -601,6 +678,8 @@ Sumber: `src/lib/validation.ts`, `src/lib/storage.ts`, `src/lib/uploadClient.ts`
 - [ ] Standarkan struktur: `src/server/{services,repositories,authz}`, `src/features/*`.
 - [ ] Hilangkan `any` tersisa; aktifkan aturan ESLint `no-explicit-any`, `no-console` (kecuali logger).
 - [ ] Tambahkan `loading.tsx` + `error.tsx` + `not-found.tsx` di setiap segmen.
+- [ ] Lengkapi file konvensi tingkat aplikasi yang saat ini **tidak ada sama sekali**: `src/app/robots.ts`, `src/app/sitemap.ts`, `src/app/manifest.ts`, dan `icon`/`favicon.ico`. `public/` hanya berisi `icon-nawa.svg`, jadi tab browser memakai favicon default. Konsekuensi deny-by-default (M9): setiap route terproteksi menjawab 307 ke sign-in Clerk di origin lain, sehingga crawler tidak mengindeks apa pun kecuali landing page — tetapi tetap perlu `robots.ts` eksplisit agar `/api/**` tidak diprobe dan sign-in tidak dipromosikan ke mesin pencari.
+- [ ] Tutup **H13**: beri `api/exams/list` penjaga `requireUser()` sendiri dan berhenti mengirim `customExams.questions` (kunci jawaban) utuh ke klien; tambahkan pula penjaga eksplisit di `api/modules/count` dan `api/modules/download`. Ketiga route itu saat ini **hanya** bergantung pada proxy — sebelum M9 ketiganya terbuka untuk anonim.
 
 #### M15 — UX, aksesibilitas, dan bahasa
 - [ ] Audit aksesibilitas (axe/Lighthouse): kontras, fokus, `aria`, navigasi keyboard, `prefers-reduced-motion`.
@@ -634,7 +713,7 @@ Pilih berdasarkan bukti penggunaan, bukan asumsi:
 ```
 Minggu 1      M1 → M2 → M3 ✅                 (SELESAI — darurat sudah ditutup)
 Minggu 2-5    M4 → M5 → M6 → M7 → M8 ✅       (fondasi + hardening: test, migrasi, observability, rate limit, validasi/unggahan)
-Minggu 6-8    M9 → M10                        (hardening keamanan lanjutan)
+Minggu 6-8    M9 ✅ → M10                      (hardening keamanan lanjutan: header/CSP/CSRF selesai, lanjut rahasia & supply chain)
 Minggu 9-11   M11 → M12                       (privasi & kepatuhan UU PDP)
 Minggu 12-19  M13 → M14 → M15 → M16 → M17     (produk & kemampuan operasi)
 ```

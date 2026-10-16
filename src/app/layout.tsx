@@ -1,5 +1,6 @@
 // app/layout.tsx
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
@@ -15,17 +16,33 @@ export const metadata: Metadata = {
   description: "Platform belajar kolaboratif OSIS NAWASENA SMAN 2 Jonggol",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // The CSP nonce the proxy minted for this request. Two components need it
+  // because both render a <script> into the HTML:
+  //
+  //   • ClerkProvider  → the clerk-js loader tag
+  //   • ThemeProvider  → next-themes' pre-hydration theme script
+  //
+  // Under `strict-dynamic` a script tag in the document is only trusted if it
+  // carries the nonce, so without this both are blocked and the app loses
+  // sign-in and its theme.
+  //
+  // Reading `headers()` here also opts every route into dynamic rendering, which
+  // is exactly what a nonce requires: a nonce cannot be baked into HTML that was
+  // rendered at build time. That is why this is the root layout and not a
+  // per-page concern.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
-    <ClerkProvider>
+    <ClerkProvider nonce={nonce}>
       {/* suppressHydrationWarning is required for next-themes to add the class without mismatch */}
       <html lang="id" suppressHydrationWarning>
         <body className={`${inter.className} min-h-screen flex flex-col`}>
-          <ThemeProvider>
+          <ThemeProvider nonce={nonce}>
             <ToastProvider>
               <Navbar />
               <main className="flex-1 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50">

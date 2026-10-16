@@ -14,7 +14,7 @@ const downloadSchema = z.object({ moduleId: z.uuid() }).strict();
 
 export async function POST(req: Request) {
   const log = requestLogger(req);
-  // IP-scoped: the route requires a session (proxy.ts) but never resolves a user,
+  // IP-scoped: the route requires a session (src/proxy.ts) but never resolves a user,
   // and a download counter is not worth an extra query on the hot path.
   const limit = await rateLimit(req, "modules/download", null);
   if (!limit.ok) return limit.response;

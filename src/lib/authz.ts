@@ -4,7 +4,7 @@
 //
 // Every API route that touches protected data goes through these helpers instead
 // of calling `auth()` ad-hoc, so a role check can never be silently forgotten.
-// This is deliberately *separate* from proxy.ts: the proxy only answers
+// This is deliberately *separate* from src/proxy.ts: the proxy only answers
 // "is there a session?"; fine-grained roles/ownership are decided here, close to
 // the data.
 //

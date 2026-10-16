@@ -1,7 +1,7 @@
 // src/app/api/health/route.ts
 // ─── Liveness / readiness probe ───────────────────────────────────────────────
 // For an uptime monitor. It is deliberately public (see PUBLIC_ROUTES in
-// proxy.ts) and therefore reports only *coarse status*, never data: an outage
+// src/proxy.ts) and therefore reports only *coarse status*, never data: an outage
 // page that leaks table names and error messages is a gift to an attacker.
 //
 //  200  everything the app cannot work without is reachable
