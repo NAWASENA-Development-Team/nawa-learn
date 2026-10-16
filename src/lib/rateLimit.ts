@@ -61,6 +61,10 @@ export const RATE_LIMITS = {
   "quiz/submit": { perUser: { limit: 30, windowMs: MINUTE }, perIp: { limit: 90, windowMs: MINUTE } },
   "quiz/daily-claim": { perUser: { limit: 3, windowMs: MINUTE }, perIp: { limit: 10, windowMs: MINUTE } },
   "exams/create": { perUser: { limit: 5, windowMs: MINUTE }, perIp: { limit: 15, windowMs: MINUTE } },
+  // The list is a read, but an expensive one: it returns every exam's questions.
+  // The cap is generous enough that a person refreshing never notices it.
+  "exams/list": { perUser: { limit: 60, windowMs: MINUTE }, perIp: { limit: 120, windowMs: MINUTE } },
+  "exams/submit": { perUser: { limit: 30, windowMs: MINUTE }, perIp: { limit: 90, windowMs: MINUTE } },
   // The only route that writes to object storage, so it is the one that costs
   // money per call. A module submission uploads one file; 15 a minute is far
   // more than a person needs and far less than a script wants.

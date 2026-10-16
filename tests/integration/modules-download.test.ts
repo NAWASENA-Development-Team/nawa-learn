@@ -2,9 +2,13 @@
 // The download counter used to take whatever `moduleId` it was given and hand it
 // straight to Postgres, so a malformed id surfaced as a 500 from a failed uuid
 // cast. It is a 400 now, and that is the behaviour worth pinning.
+//
+// The route also carries its own session guard now instead of leaning on
+// src/proxy.ts, so every case here signs in first — the validation paths are only
+// reachable behind that guard.
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
-import { createTestDb, seedUser, type TestDb } from "../helpers/harness";
+import { createTestDb, seedUser, uniqueId, type TestDb } from "../helpers/harness";
 
 const holder = vi.hoisted(() => ({ db: undefined as unknown }));
 
@@ -13,9 +17,13 @@ vi.mock("@/db", () => ({
     return holder.db;
   },
 }));
+vi.mock("@clerk/nextjs/server", () => ({ auth: vi.fn() }));
 
+import { auth } from "@clerk/nextjs/server";
 import { POST as download } from "@/app/api/modules/download/route";
 import * as schema from "@/db/schema";
+
+const authMock = vi.mocked(auth);
 
 let db: TestDb;
 
@@ -24,7 +32,10 @@ beforeAll(async () => {
   holder.db = db;
 }, 60_000);
 
-beforeEach(() => {
+beforeEach(async () => {
+  authMock.mockReset();
+  const user = await seedUser(db, { clerkId: uniqueId("clerk") });
+  authMock.mockResolvedValue({ userId: user.clerkId } as never);
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 

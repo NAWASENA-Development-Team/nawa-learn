@@ -37,11 +37,35 @@ export type AuthzOk = { ok: true; user: SessionUser };
 export type AuthzFail = { ok: false; response: NextResponse };
 export type AuthzResult = AuthzOk | AuthzFail;
 
+export type SessionOk = { ok: true; clerkId: string };
+export type SessionResult = SessionOk | AuthzFail;
+
 /**
  * Pure predicate, exported so it can be unit-tested without Clerk or a database.
  */
 export function hasReviewerRole(role: string): boolean {
   return (REVIEWER_ROLES as readonly string[]).includes(role);
+}
+
+/**
+ * Requires a signed-in session and nothing more — no database query.
+ *
+ * `requireUser` is the default, and most routes want the row. This one exists for
+ * the handful that need *a* session but have no use for the user: a download
+ * counter, a public count. Those routes used to lean on src/proxy.ts alone, which
+ * is a single point of failure — when the proxy file sat at the repo root it was
+ * never loaded, and they were open to anonymous callers. Guarding them in-handler
+ * costs nothing here because no row is fetched.
+ *
+ * Returns the Clerk id, never a database id: it is not safe to feed into a
+ * points or ownership check, and the rate limiter buckets on hashed values anyway.
+ */
+export async function requireSession(): Promise<SessionResult> {
+  const { userId } = await auth();
+  if (!userId) {
+    return { ok: false, response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
+  }
+  return { ok: true, clerkId: userId };
 }
 
 /**
@@ -51,13 +75,11 @@ export function hasReviewerRole(role: string): boolean {
  * - Session, no DB row → 403 (signed in but the Clerk webhook has not synced yet)
  */
 export async function requireUser(): Promise<AuthzResult> {
-  const { userId: clerkId } = await auth();
-  if (!clerkId) {
-    return { ok: false, response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
-  }
+  const session = await requireSession();
+  if (!session.ok) return session;
 
   const user = await db.query.users.findFirst({
-    where: eq(users.clerkId, clerkId),
+    where: eq(users.clerkId, session.clerkId),
     columns: { id: true, clerkId: true, name: true, role: true, points: true },
   });
 

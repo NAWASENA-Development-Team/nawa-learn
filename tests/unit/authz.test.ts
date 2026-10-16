@@ -6,7 +6,10 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@/db", () => ({ db: {} }));
 vi.mock("@clerk/nextjs/server", () => ({ auth: vi.fn() }));
 
-import { hasReviewerRole, REVIEWER_ROLES } from "@/lib/authz";
+import { auth } from "@clerk/nextjs/server";
+import { hasReviewerRole, requireSession, REVIEWER_ROLES } from "@/lib/authz";
+
+const authMock = vi.mocked(auth);
 
 // The M2 decision: reviewer access is decided purely by `users.role`. The old
 // hardcoded password and the "top 3 by season points" shortcut are gone, and
@@ -31,5 +34,26 @@ describe("hasReviewerRole", () => {
 
   it("keeps the allowlist tight", () => {
     expect([...REVIEWER_ROLES].sort()).toEqual(["admin", "moderator"]);
+  });
+});
+
+// The cheap guard. Routes that need *a* session but not the user row (a download
+// counter, a public count) used to trust src/proxy.ts alone — which failed open
+// the moment the proxy file was misplaced. This one refuses an anonymous caller
+// without paying for a query, so there is no longer a reason to skip it.
+describe("requireSession", () => {
+  it("answers 401 when there is no session", async () => {
+    authMock.mockResolvedValue({ userId: null } as never);
+
+    const result = await requireSession();
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.response.status).toBe(401);
+  });
+
+  it("returns the Clerk id, never a database id", async () => {
+    authMock.mockResolvedValue({ userId: "clerk_abc" } as never);
+
+    await expect(requireSession()).resolves.toEqual({ ok: true, clerkId: "clerk_abc" });
   });
 });

@@ -310,7 +310,11 @@ export default function PracticeMode() {
             id: q.id,
             text: q.text,
             options: q.options,
-            answerKey: q.answerKey,
+            // /api/exams/list strips the key server-side. A blank key here is not
+            // a fallback — it is the promise that grading happens in
+            // /api/exams/submit, where the browser cannot see the answers.
+            answerKey: "",
+            explanation: q.explanation ?? null,
             subject: exam.subject,
             category: exam.category,
           }));
@@ -398,15 +402,20 @@ export default function PracticeMode() {
 
   // ── Grade the quiz on the server when it is finished ──────────────────────
   // The browser sends only the answers it collected. The score, the reward and
-  // the anti-replay key are all decided by /api/quiz/submit from the database.
+  // the anti-replay key are all decided by the server from the stored keys.
+  //
+  // Custom exams are a jsonb blob rather than rows in `questions`, so they have
+  // their own grader. Both endpoints answer with the same shape, so everything
+  // below is shared — and neither trusts a score from the client.
   useEffect(() => {
     if (!isFinished || !selectedQuiz) return;
 
     setTimeout(() => setPointsLoading(true), 0);
-    fetch("/api/quiz/submit", {
+    const isCustom = selectedQuiz.isCustom === true;
+    fetch(isCustom ? "/api/exams/submit" : "/api/quiz/submit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ answers }),
+      body: JSON.stringify(isCustom ? { examId: selectedQuiz.id, answers } : { answers }),
     })
       .then((res) => res.json())
       .then((data) => {
@@ -1294,7 +1303,7 @@ export default function PracticeMode() {
                 <div className="text-left">
                   <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Latihan Tanpa V-Point</p>
                   <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mt-0.5">
-                    Kuis ini tidak tersimpan sebagai soal terverifikasi di basis data, jadi tidak bisa dinilai server dan tidak memberi V-Point. Kuis hasil kontribusi siswa dan Kuis Harian tetap memberi poin.
+                    Kuis ini tetap dinilai, tetapi tidak memberi V-Point — kuis contoh dan ujian buatan siswa tidak dapat diverifikasi, jadi tidak ada poin yang ditambahkan. Kuis hasil kontribusi siswa dan Kuis Harian tetap memberi poin.
                   </p>
                 </div>
               </div>

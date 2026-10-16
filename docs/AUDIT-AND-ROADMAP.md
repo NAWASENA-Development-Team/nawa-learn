@@ -21,17 +21,17 @@ Kesimpulan singkat dalam satu kalimat:
 |---|---|---|
 | UI / UX visual | 7.5 / 10 | Konsisten, animatif, responsif. Tapi ada mojibake & aksesibilitas minim. |
 | Arsitektur | 4 / 10 | Duplikasi folder API, middleware ganda, logika bisnis di komponen klien 1500+ baris. |
-| Keamanan (authz) | 8.5 / 10 | RBAC terpusat + deny-by-default, 8 endpoint review dijaga, matriks 401/403 teruji, rate limiting per user+IP di 8 endpoint mutasi (429 + `Retry-After`), CSP ketat berbasis nonce + `frame-ancestors 'none'` + HSTS/`nosniff`/`Permissions-Policy`, penjaga CSRF di depan setiap mutasi, unggahan lewat storage dengan validasi magic-byte. **Catatan penting:** sebelum M9, `proxy.ts` ada di root sehingga Next tidak pernah memuatnya — deny-by-default yang diklaim M2 baru benar-benar aktif setelah file dipindah ke `src/proxy.ts` dan diverifikasi di server produksi. Skor 8.5 adalah kondisi **setelah** perbaikan itu. Kurang: bot protection sign-up (toggle dashboard Clerk), beberapa route masih `auth()` mentah alih-alih `requireUser()`, dan tiga route (`exams/list`, `modules/count`, `modules/download`) **sama sekali tidak punya penjaga di handler** — hanya mengandalkan proxy (H13). |
-| Integritas data | 8 / 10 | Poin & skor dinilai server, idempotensi ditegakkan constraint DB, kunci jawaban **kuis** tidak bocor, index + CHECK + partial-unique ditambahkan, `updatedAt` dijaga trigger. Kurang: `customExams.questions` masih dikirim utuh ke klien lewat `api/exams/list` (H13), soft delete (belum ada fitur hapus) & rollback teruji. |
+| Keamanan (authz) | 9 / 10 | RBAC terpusat + deny-by-default, 8 endpoint review dijaga, matriks 401/403 teruji, rate limiting per user+IP di 12 route (`RATE_LIMITS`) dengan 429 + `Retry-After`, CSP ketat berbasis nonce + `frame-ancestors 'none'` + HSTS/`nosniff`/`Permissions-Policy`, penjaga CSRF di depan setiap mutasi, unggahan lewat storage dengan validasi magic-byte. **Catatan penting:** sebelum M9, `proxy.ts` ada di root sehingga Next tidak pernah memuatnya — deny-by-default yang diklaim M2 baru benar-benar aktif setelah file dipindah ke `src/proxy.ts` dan diverifikasi di server produksi. Skor 9 adalah kondisi **setelah** perbaikan itu **dan** setelah H13 (ketiga route yang dulu hanya mengandalkan proxy kini punya penjaga di handler). Kurang: bot protection sign-up (toggle dashboard Clerk), dan beberapa route masih `auth()` mentah alih-alih `requireUser()` (M14). |
+| Integritas data | 9 / 10 | Poin & skor dinilai server, idempotensi ditegakkan constraint DB, kunci jawaban **kuis maupun ujian buatan siswa** tidak lagi bocor (H13 menutup jalur `customExams` dengan memindahkan penilaiannya ke `POST /api/exams/submit`), index + CHECK + partial-unique ditambahkan, `updatedAt` dijaga trigger. Kurang: soft delete (belum ada fitur hapus) & rollback teruji. |
 | Database & migrasi | 8 / 10 | Migrasi berversi, CI menolak drift skema, `db:push` dihapus, seed berpengaman, adopsi database lama terbukti nol kehilangan data. Kurang: rollback/down-migration belum diuji. |
 | Privasi & kepatuhan | 2 / 10 | Tidak ada consent, retensi, export/delete, atau kebijakan privasi (UU PDP). |
 | Observability | 5 / 10 | Logger terstruktur (redaksi PII teruji) + `requestId` + `/api/health` publik, seluruh route API sudah memakainya. Kurang: error tracking (Sentry), dashboard, dan log komponen klien. |
-| Testing & CI | 8 / 10 | 295 test di 25 file, coverage **74.93%** baris (branch 85.97%, fungsi 95.07%) pada cakupan `src/lib/**` + `src/app/api/**` — unit + integrasi PGlite + migrasi + logger/health + rate limiting & alarm + CSP/CSRF + penjaga lokasi file konvensi, CI workflow, `next build` terverifikasi. Kurang: E2E, dan ~10 route masih 0% coverage. |
+| Testing & CI | 8.5 / 10 | 328 test di 27 file, coverage **76.99%** baris (branch 86.49%, fungsi 96.19%) pada cakupan `src/lib/**` + `src/app/api/**` — unit + integrasi PGlite + migrasi + logger/health + rate limiting & alarm + CSP/CSRF + penilaian ujian sisi server + penjaga lokasi file konvensi, CI workflow, `next build` terverifikasi. Kurang: E2E, dan ~8 route masih 0% coverage. |
 | Dokumentasi | 5 / 10 | README rapi; `AGENTS.md` sempat drift dari kode (lokasi `proxy.ts`, klaim `x-request-id` yang tidak pernah benar) dan sebagian sudah dikoreksi di M9 — tetapi penyelarasan menyeluruh baru dijadwalkan di M17. |
 
 **Estimasi jarak ke "premium":** 3 fase kerja, ~16 milestone. Fase 0 (M1–M3) bersifat darurat dan **harus selesai sebelum platform dipakai lebih luas lagi**, karena saat ini satu akun siswa terautentikasi bisa mengangkat dirinya ke puncak leaderboard dan menyetujui kontennya sendiri.
 
-> **Status per 2026-10-16:** Fase 0 **selesai** — M1 (`52bba95`), M2 (`1f5a6c7`), H12 (`836107f`), M3 (`dcb9b84`), M4 (`7c5ee5f`), M5 (`eafd76b`), M6 (`9543af0`), M7 (`8d03153`), M8 (`54c8e49`). **M6 (observability) sebagian selesai**: logger terstruktur dengan redaksi PII teruji + `/api/health`, dipakai seluruh route API. **M7 (rate limiting & anti-abuse) sebagian selesai**: 8 endpoint mutasi dibatasi per user + per IP dengan 429, plus alarm lonjakan poin; bot protection sign-up tinggal toggle dashboard Clerk. **M8 (validasi & penanganan unggahan) selesai**: setiap route POST punya schema Zod, base64 tidak lagi masuk DB (unggahan ke Vercel Blob + validasi magic-byte), dan `remotePatterns` dipersempit. **M9 (header keamanan, CSRF, sesi) selesai**: CSP ketat berbasis nonce dengan `'strict-dynamic'` + `frame-ancestors 'none'`, HSTS/`nosniff`/`Permissions-Policy`/COOP, penjaga CSRF di depan setiap mutasi (403 sebelum auth), dan penampung laporan pelanggaran CSP. **M9 juga menutup C6 yang ternyata belum benar-benar tertutup:** `proxy.ts` berada di root sedangkan aplikasi ada di `src/app`, sehingga Next **tidak pernah memuatnya** — gate autentikasi deny-by-default, penjaga CSRF, dan CSP sama-sama kode mati sejak M1. File kini di `src/proxy.ts` dan dibuktikan hidup di server produksi sungguhan (`next build` memunculkan baris `ƒ Proxy (Middleware)`; POST lintas situs dijawab 403; CSP + `Reporting-Endpoints` ada di respons `/`). Otorisasi approval, kebocoran kunci jawaban, integritas poin/ranking, workflow skema, penyalahgunaan endpoint, jalur unggahan, dan header keamanan sudah ditutup. Sisa jujur: rate limiting **efektif penuh hanya dengan Upstash** (env), unggahan ke Blob **belum diverifikasi live** (token sudah ada di `.env.local`, verifikasi manual belum dijalankan), error tracking (Sentry) butuh DSN, E2E, rollback migration, **H13** (tiga route hanya bergantung pada proxy; `api/exams/list` masih mengirim kunci jawaban ke semua user yang login), dan M10 ke atas.
+> **Status per 2026-10-16:** Fase 0 **selesai** — M1 (`52bba95`), M2 (`1f5a6c7`), H12 (`836107f`), M3 (`dcb9b84`), M4 (`7c5ee5f`), M5 (`eafd76b`), M6 (`9543af0`), M7 (`8d03153`), M8 (`54c8e49`), M9 (`c656380`), H13 (M14). **M6 (observability) sebagian selesai**: logger terstruktur dengan redaksi PII teruji + `/api/health`, dipakai seluruh route API. **M7 (rate limiting & anti-abuse) sebagian selesai**: 10 endpoint dibatasi per user + per IP dengan 429, plus alarm lonjakan poin; bot protection sign-up tinggal toggle dashboard Clerk. **M8 (validasi & penanganan unggahan) selesai**: setiap route POST punya schema Zod, base64 tidak lagi masuk DB (unggahan ke Vercel Blob + validasi magic-byte), dan `remotePatterns` dipersempit. **M9 (header keamanan, CSRF, sesi) selesai**: CSP ketat berbasis nonce dengan `'strict-dynamic'` + `frame-ancestors 'none'`, HSTS/`nosniff`/`Permissions-Policy`/COOP, penjaga CSRF di depan setiap mutasi (403 sebelum auth), dan penampung laporan pelanggaran CSP. **M9 juga menutup C6 yang ternyata belum benar-benar tertutup:** `proxy.ts` berada di root sedangkan aplikasi ada di `src/app`, sehingga Next **tidak pernah memuatnya** — gate autentikasi deny-by-default, penjaga CSRF, dan CSP sama-sama kode mati sejak M1. File kini di `src/proxy.ts` dan dibuktikan hidup di server produksi sungguhan (`next build` memunculkan baris `ƒ Proxy (Middleware)`; POST lintas situs dijawab 403; CSP + `Reporting-Endpoints` ada di respons `/`). **H13 selesai**: penilaian ujian buatan siswa pindah ke server (`POST /api/exams/submit`), `api/exams/list` berhenti mengirim kunci jawaban dan kini dijaga + dibatasi, dan `api/modules/count` + `api/modules/download` mendapat penjaga sesi eksplisit — tidak ada lagi route yang hanya mengandalkan proxy. Otorisasi approval, kebocoran kunci jawaban (kuis **dan** ujian siswa), integritas poin/ranking, workflow skema, penyalahgunaan endpoint, jalur unggahan, dan header keamanan sudah ditutup. Sisa jujur: rate limiting **efektif penuh hanya dengan Upstash** (env), unggahan ke Blob **belum diverifikasi live** (token sudah ada di `.env.local`, verifikasi manual belum dijalankan), error tracking (Sentry) butuh DSN, E2E, rollback migration, dan M10 ke atas.
 
 ### Yang sudah bagus (jangan dirusak)
 
@@ -218,7 +218,7 @@ Next.js image optimizer akan mem-fetch URL apa pun yang diminta → **SSRF / ope
 ### H7. Tidak ada rate limiting di mana pun — ✅ SELESAI di M7
 Semua endpoint bisa dipanggil ribuan kali per detik: submit modul/soal, kirim laporan, klaim poin, increment download, dan login. Wajib ada pembatasan per IP + per user (Upstash Ratelimit / @vercel/firewall).
 
-**Status:** 8 endpoint mutasi sekarang dibatasi per user + per IP (`RATE_LIMITS` di `src/lib/rateLimit.ts`), dengan 429 + `Retry-After`. **Catatan penting:** proteksi penuh hanya aktif bila `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` diset; tanpa itu limiter memakai store in-memory yang tidak efektif di serverless. Bot protection sign-up tetap toggle dashboard Clerk (lihat checklist M7).
+**Status:** 12 route dibatasi per user + per IP (`RATE_LIMITS` di `src/lib/rateLimit.ts`), dengan 429 + `Retry-After` — 8 di antaranya sejak M7, lalu `uploads/create` (M8), `csp/report` (M9), dan `exams/list` + `exams/submit` (H13/M14). **Catatan penting:** proteksi penuh hanya aktif bila `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` diset; tanpa itu limiter memakai store in-memory yang tidak efektif di serverless. Bot protection sign-up tetap toggle dashboard Clerk (lihat checklist M7).
 
 ### H8. Tidak ada security header — ✅ SELESAI di M9
 Tidak ada CSP, HSTS, `X-Frame-Options`/`frame-ancestors`, `Referrer-Policy`, atau `Permissions-Policy`. Situs bisa di-iframe (clickjacking), dan tanpa CSP setiap celah XSS jadi jauh lebih berbahaya.
@@ -232,7 +232,7 @@ Tidak ada CSP, HSTS, `X-Frame-Options`/`frame-ancestors`, `Referrer-Policy`, ata
 
 **Selesai:** `src/db/migrations/` di-commit dan database produksi sudah diadopsi ke sistem migrasi (baseline 0000 + `migrate` 0001) dengan **nol kehilangan data**. `db:push` dihapus dari `package.json`, CI menolak drift antara `schema.ts` dan migrasi, dan seed diberi pengaman. Sisa jujur: rollback/down-migration belum teruji (lihat M5).
 
-### H10. Nol test, nol CI — ✅ SELESAI (M4: 108 test, CI workflow; M5: +9 test migrasi; M6: +18 test logger & health; M7: +21 test rate limiting & alarm; M8: +76 test validasi & unggahan; M9: +63 test CSP, CSRF, laporan pelanggaran & lokasi proxy → 295 test / 25 file)
+### H10. Nol test, nol CI — ✅ SELESAI (M4: 108 test, CI workflow; M5: +9 test migrasi; M6: +18 test logger & health; M7: +21 test rate limiting & alarm; M8: +76 test validasi & unggahan; M9: +63 test CSP, CSRF, laporan pelanggaran & lokasi proxy; H13/M14: +33 test penilaian ujian sisi server & penjaga sesi → 328 test / 27 file)
 Tidak ada `*.test.ts`, tidak ada `.github/workflows`. Tidak ada yang mencegah regresi seperti bug otorisasi di atas. `npm run lint` pun tidak pernah dijalankan otomatis.
 
 ### H11. Performa: N+1 query dan query tak terbatas
@@ -258,8 +258,8 @@ Ditemukan saat M2. Pada commit terakhir (`0d88b45`) file `src/app/(dashboard)/su
 - Navbar "Upload" → `/submit` berfungsi lagi; tidak ada lagi self-import/rekursi.
 - Catatan: `/api/modules/submit` dan `/api/questions/submit` **sudah** menolak siswa dengan 403, jadi gate di halaman murni UX (pesan ramah, bukan pengamanan).
 
-### H13. `/api/exams/list` tanpa otorisasi apa pun, dan mengirim kunci jawaban — **lubang anonim ditutup di M9, akar masalahnya belum** (temuan baru 2026-10-16)
-**Lokasi:** `src/app/api/exams/list/route.ts:8-26`
+### H13. `/api/exams/list` tanpa otorisasi apa pun, dan mengirim kunci jawaban — **SELESAI (2026-10-16)** (temuan baru 2026-10-16)
+**Lokasi:** `src/app/api/exams/list/route.ts`
 
 Handler ini **tidak punya satu pun pemeriksaan otorisasi** — tidak `requireUser()`, tidak `requireModerator()`, tidak `auth()`. Satu-satunya yang melindunginya adalah proxy deny-by-default. Karena proxy itu ternyata mati dari M1 sampai M9 (lihat C6), route ini **terbuka untuk siapa saja selama sembilan milestone**. M9 menutup lubang anonim itu, tapi handler-nya masih belum memeriksa apa pun sendiri.
 
@@ -270,19 +270,33 @@ Yang membuatnya lebih dari sekadar soal disiplin:
 - **Tanpa rate limit** — tidak terdaftar di `RATE_LIMITS`.
 - `authorName` juga ikut, jadi ini menyentuh PII ringan.
 
-**Kenapa dampaknya lebih rendah daripada C2:** M3 memutuskan ujian buatan siswa tidak menghasilkan poin, jadi insentif menyontek rendah. Tapi ini tetap membuka karya siswa lain ke semua siswa yang login. Konsumennya `src/app/(dashboard)/questions/practice/page.tsx:305`.
+**Kenapa dampaknya lebih rendah daripada C2:** M3 memutuskan ujian buatan siswa tidak menghasilkan poin, jadi insentif menyontek rendah. Tapi ini tetap membuka karya siswa lain ke semua siswa yang login. Konsumennya `src/app/(dashboard)/questions/practice/page.tsx`.
 
-**Perbaikan yang disarankan:** tambahkan `requireUser()`; bila penilaian latihan memang dilakukan di klien sehingga kunci jawaban harus ada di klien, minimal jangan kembalikan ujian milik semua orang sekaligus — dan pertimbangkan memindahkan penilaian ke server seperti yang sudah dilakukan untuk kuis (M3).
+#### Perbaikan yang dikirim (M14, irisan H13)
 
-**Peta route yang bergantung sepenuhnya pada proxy** (tidak ada pemeriksaan di handler, dan bukan route publik yang disengaja) — ini argumen terkuat untuk pemeriksaan CI di M10:
+Akar masalahnya bukan satu `if` yang lupa ditulis, melainkan **arsitektur penilaian**: kunci jawaban harus ada di browser karena browser yang menilai. Jadi perbaikannya dua lapis.
 
-| Route | Isi yang dikembalikan | Catatan |
+1. **Penilaian pindah ke server — `POST /api/exams/submit` (baru).** Meniru pola M3 untuk kuis: klien hanya mengirim `{ examId, answers }`, server memuat blob `custom_exams.questions`, menilai sendiri, lalu mengembalikan bentuk yang sama dengan `/api/quiz/submit` (`results: [{ questionId, correct, correctKey }]`). `correctCount` tidak pernah diterima dari klien — `examSubmitSchema` `.strict()` menolak body yang mencoba menyetel skornya sendiri. Ujian buatan siswa tetap **tidak memberi poin** (keputusan M3 dipertahankan): route ini tidak menulis `pointsLog`, tidak menyentuh `users.points`, dan selalu menjawab `rewardable: false, pointsAwarded: 0`.
+2. **`GET /api/exams/list` berhenti mengirim kunci.** `requireUser()` di handler, `rateLimit("exams/list")`, dan `limit` (default 50, maks 100). Setiap soal dilewatkan `toPublicExamQuestions()` yang **membangun ulang** objeknya dari daftar field yang diizinkan, bukan menghapus satu field dari objek tersimpan — jadi tidak ada jalur spread yang bisa memunculkan kembali kunci. Redaksi terjadi di server, sebelum serialisasi.
+3. **Tiga route proxy-only kini punya penjaga sendiri.** `api/modules/count` dan `api/modules/download` memakai `requireSession()` baru di `src/lib/authz.ts` — pemeriksaan sesi tanpa query DB, supaya alasan lama ("tidak sepadan satu query di jalur panas") tidak lagi menjadi alasan melewatkan penjaga. `api/exams/list` memakai `requireUser()`.
+
+Kode: `src/lib/examScoring.ts` (modul murni tanpa DB/Next: redaksi + penilaian), `src/app/api/exams/submit/route.ts`, `src/app/api/exams/list/route.ts`, `src/lib/authz.ts`. Tes: `tests/unit/examScoring.test.ts` (13) + `tests/integration/exams.test.ts` (17), termasuk asersi bahwa string `answerKey` **tidak muncul sama sekali** di JSON respons dan bahwa `pointsLog` tetap kosong setelah skor sempurna.
+
+Perbaikan sampingan: `explanation` kini ikut terkirim ke klien (dulu terbuang oleh pemetaan lama), sehingga layar pembahasan ujian buatan siswa akhirnya berfungsi. `explanation` bukan rahasia — ia hanya ditampilkan setelah penilaian.
+
+#### Peta route yang dulu bergantung sepenuhnya pada proxy (tidak ada pemeriksaan di handler, dan bukan route publik yang disengaja)
+
+Ini argumen terkuat untuk pemeriksaan CI di M10 — sekarang ketiganya sudah punya penjaga di handler, dan pemeriksaan CI itu tetap diperlukan agar tidak ada route keempat.
+
+| Route | Isi yang dikembalikan | Status setelah H13 |
 |---|---|---|
-| `api/exams/list` | seluruh ujian + kunci jawaban + `authorName` | temuan di atas |
-| `api/modules/download` | hanya menaikkan counter | komentarnya sendiri menyatakan ia mengandalkan `src/proxy.ts` |
-| `api/modules/count` | satu bilangan bulat | tidak sensitif, tapi tetap tanpa penjaga & tanpa rate limit |
+| `api/exams/list` | seluruh ujian + `authorName` (kunci jawaban **dihapus**) | `requireUser()` + `rateLimit` + `limit` |
+| `api/modules/download` | hanya menaikkan counter | `requireSession()` (tetap tanpa query user; bucket rate limit tetap per IP) |
+| `api/modules/count` | satu bilangan bulat | `requireSession()` |
 
 Sisanya (`api/health`, `api/csp-report`, `api/webhooks/clerk`) memang publik secara sengaja dan sudah didokumentasikan; `webhooks/clerk` membuktikan keasliannya lewat tanda tangan Svix (`wh.verify`, baris 34).
+
+**Sisa yang belum:** `authorName` masih terkirim ke setiap user yang login (karya siswa terbuka bagi semua siswa lain — keputusan produk, bukan bug), dan belum ada paginasi sungguhan (M13).
 
 ---
 
@@ -298,7 +312,7 @@ Ini platform sekolah dengan **data anak/siswa**. Kategori data ini menuntut perl
 | Hak penghapusan data | ❌ Tidak ada | Tidak ada `user.deleted`, tidak ada delete account. |
 | Pembatasan retensi | ❌ Tidak ada | `reports`, `pointsLog`, `submissions` tumbuh selamanya. |
 | Minimisasi data | ❌ Lemah | Email, foto base64, dan seluruh aktivitas poin tersimpan tanpa limit. |
-| Kontrol akses ke PII | ⚠️ Sedang | C2 (kunci jawaban) ditutup di M3 dan H2 (`hidden-badges`) benar-benar dijaga `requireModerator()` di handler; sejak M9 deny-by-default juga menutup akses **anonim** ke `/leaderboard` & `/profile/[id]`. Sisa: H13 masih mengirim ujian + `authorName` seluruh siswa ke setiap user yang login, dan M12 belum dikerjakan. |
+| Kontrol akses ke PII | ⚠️ Sedang | C2 (kunci jawaban) ditutup di M3, H13 menutup jalur `customExams` yang setara, dan H2 (`hidden-badges`) benar-benar dijaga `requireModerator()` di handler; sejak M9 deny-by-default juga menutup akses **anonim** ke `/leaderboard` & `/profile/[id]`. Sisa: daftar ujian masih mengirim `authorName` seluruh siswa ke setiap user yang login (keputusan produk), dan M12 belum dikerjakan. |
 | Audit trail akses data | ❌ Tidak ada | Tidak ada log siapa membaca/mengubah data siapa. |
 | Notifikasi insiden | ⚠️ Hanya janji | `SECURITY.md` menjanjikan respons 48 jam, tanpa proses internal. |
 
@@ -363,7 +377,7 @@ Tambahan: `AGENTS.md` mendokumentasikan password moderator default di repo publi
 #### M2 — Otorisasi terpusat (RBAC) ✅ SELESAI (2026-10-16)
 **Tujuan:** Satu tempat yang menentukan siapa boleh apa.
 **Deliverables**
-- [x] Buat `src/lib/authz.ts`: `requireUser()`, `requireRole(roles)`, `requireModerator()` + predikat murni `hasReviewerRole(role)` — mengembalikan union `{ok:true,user} | {ok:false,response}` (401 bila belum login, 403 bila peran tidak cukup / user belum tersinkron).
+- [x] Buat `src/lib/authz.ts`: `requireUser()`, `requireRole(roles)`, `requireModerator()` + predikat murni `hasReviewerRole(role)` — mengembalikan union `{ok:true,user} | {ok:false,response}` (401 bila belum login, 403 bila peran tidak cukup / user belum tersinkron). **Ditambah di H13/M14:** `requireSession()` — penjaga sesi yang tidak menyentuh DB, untuk route yang butuh *ada* sesi tetapi tidak butuh baris user.
 - [x] Terapkan di **semua** route approval/review/daily-create + seluruh queue moderasi.
 - [x] Ambil `submitterId` (dan `moduleId`/`questionId`) **hanya** dari baris `submissions` di DB; field itu dibuang dari body.
 - [x] Hapus `MODERATOR_PASSWORD` & flag `sessionStorage`; `isModerator` murni dari `users.role`.
@@ -533,7 +547,7 @@ Tambahan: `AGENTS.md` mendokumentasikan password moderator default di repo publi
 - **Fail-open, dengan suara.** Kalau store error, request dilewatkan dan error-nya di-log. Menutup (fail-closed) berarti gangguan Redis berubah menjadi outage seluruh platform — hasil yang lebih buruk untuk sekolah. Trade-off ini disengaja dan terdokumentasi.
 - **Identitas di-hash.** Key bucket = `sha256(ip)` / `sha256(userId)`, dipotong 32 hex. Upstash adalah pihak ketiga, dan IP adalah data pribadi di bawah UU PDP; hash menjaga key tetap tidak terbaca sambil tetap bisa dihitung. Ada test yang memastikan **IP mentah dan user id mentah tidak pernah terkirim** ke Upstash.
 - **Guard jalan sebelum body dibaca.** Ada test yang membuktikan client yang sudah kehabisan kuota langsung dapat 429 walaupun mengirim body yang bukan JSON — jadi payload besar tidak sempat diparse.
-- **`profile/update`, `modules/download`, dan `exams/create` hanya dibatasi per IP.** `profile/update` hanya mengubah baris milik pemanggil sendiri (abuse = merusak diri sendiri) dan `modules/download` tidak pernah me-resolve user; menambah query ke hot path untuk keduanya tidak sepadan. `exams/create` masih boleh anonim (lihat H3), jadi `authorId` bisa null.
+- **`profile/update`, `modules/download`, dan `csp/report` hanya dibatasi per IP** (bucket per-user-nya tetap ada di `RATE_LIMITS` tetapi route memanggil `rateLimit(..., null)`). `profile/update` hanya mengubah baris milik pemanggil sendiri (abuse = merusak diri sendiri), `modules/download` tidak pernah me-resolve user, dan `csp/report` publik sehingga tidak ada identitas. Menambah query ke hot path untuk ketiganya tidak sepadan. `exams/create` masih boleh anonim (lihat H3), jadi bucket per-user-nya hanya berlaku bila `authorId` ada.
 - **Alarm lonjakan poin itu tripwire, bukan detektor presisi.** M3 sudah membuat farming satu soal mustahil (unique index). Yang tersisa adalah manusia yang menjawab banyak soal *baru* dengan cepat — dan tidak ada baseline untuk membedakannya dari murid rajin. Ambangnya karena itu sengaja tinggi (500 poin / 10 menit) supaya tidak jadi alarm yang di-mute. Ia hanya menulis log `point_spike_detected`; alert sungguhan butuh log drain yang mengawasi event itu.
 - **Reset store antar test.** Hitungan limiter adalah state module; `tests/setup.ts` meresetnya di `beforeEach`, jadi tiap test mulai dari dunia yang bersih seperti instance server yang baru.
 
@@ -679,7 +693,7 @@ Sumber: `src/lib/securityHeaders.ts`, `src/lib/csrf.ts`, `src/app/api/csp-report
 - [ ] Hilangkan `any` tersisa; aktifkan aturan ESLint `no-explicit-any`, `no-console` (kecuali logger).
 - [ ] Tambahkan `loading.tsx` + `error.tsx` + `not-found.tsx` di setiap segmen.
 - [ ] Lengkapi file konvensi tingkat aplikasi yang saat ini **tidak ada sama sekali**: `src/app/robots.ts`, `src/app/sitemap.ts`, `src/app/manifest.ts`, dan `icon`/`favicon.ico`. `public/` hanya berisi `icon-nawa.svg`, jadi tab browser memakai favicon default. Konsekuensi deny-by-default (M9): setiap route terproteksi menjawab 307 ke sign-in Clerk di origin lain, sehingga crawler tidak mengindeks apa pun kecuali landing page — tetapi tetap perlu `robots.ts` eksplisit agar `/api/**` tidak diprobe dan sign-in tidak dipromosikan ke mesin pencari.
-- [ ] Tutup **H13**: beri `api/exams/list` penjaga `requireUser()` sendiri dan berhenti mengirim `customExams.questions` (kunci jawaban) utuh ke klien; tambahkan pula penjaga eksplisit di `api/modules/count` dan `api/modules/download`. Ketiga route itu saat ini **hanya** bergantung pada proxy — sebelum M9 ketiganya terbuka untuk anonim.
+- [x] Tutup **H13**: `api/exams/list` kini dijaga `requireUser()` + `rateLimit` + `limit` dan **tidak lagi mengirim kunci jawaban** — penilaian ujian buatan siswa pindah ke `POST /api/exams/submit` (baru) mengikuti pola M3, dan `api/modules/count` + `api/modules/download` mendapat penjaga `requireSession()` eksplisit. Ketiga route itu dulu **hanya** bergantung pada proxy; sebelum M9 ketiganya terbuka untuk anonim.
 
 #### M15 — UX, aksesibilitas, dan bahasa
 - [ ] Audit aksesibilitas (axe/Lighthouse): kontras, fokus, `aria`, navigasi keyboard, `prefers-reduced-motion`.

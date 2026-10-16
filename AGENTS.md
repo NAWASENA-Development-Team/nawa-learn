@@ -210,4 +210,20 @@ To add new badges, edit `src/lib/badges.ts`:
 - Emits the alertable event `csp_violation` (plus `csp_violation_truncated` when a report is clipped). `original-policy` is deliberately never logged, every string field is cut at 200 chars (a blocked `data:` URI can be megabytes), and one request writes at most 10 lines.
 - Budget: `csp/report` — 120/min per IP in `RATE_LIMITS`. A single broken page can emit a burst, and a school shares one NAT address.
 
+## Custom exams (student-authored) — grading is server-side
+
+### Two endpoints, one secret
+- A custom exam is **not** rows in `questions`. It is one jsonb blob on `custom_exams.questions`, and the answer key sits *inside* each question. The blob is therefore the secret: the moment it is serialised to a browser, the exam is over.
+- `src/lib/examScoring.ts` owns both halves and must never lose either: `toPublicExamQuestions(raw)` (the only shape a browser may receive) and `gradeExam(raw, answers)` (the only place a submitted answer meets a key). It imports no database and no Next.js code, which is what makes it directly testable.
+- `POST /api/exams/submit` takes `{ examId, answers }`, grades against the stored keys, and answers with the **same shape as `/api/quiz/submit`** (`results: [{ questionId, correct, correctKey }]`) so the practice page keeps one rendering path. `examSubmitSchema` is `.strict()`, so a body carrying its own `correctCount` is a 400 — the score is derived, never accepted.
+- It **awards nothing**, and that is a decision, not an omission (M3): an exam a student wrote can never move V-Points. No `pointsLog` write, no `users.points` update, always `rewardable: false, pointsAwarded: 0`.
+- `GET /api/exams/list` redacts on the server, before serialisation. `toPublicExamQuestions` **rebuilds** each object from an allowlist of fields rather than deleting `answerKey` from the stored one, so no spread can bring the key back. It also drops `__proto__`/`constructor`/`prototype` option keys. `tests/unit/examScoring.test.ts` asserts the literal string `answerKey` never appears in the serialised result.
+- `explanation` **is** sent — it is not a secret, only the key is, and the review screen shows it after grading.
+
+### `requireSession()` — the cheap guard
+- `src/lib/authz.ts` exports `requireSession()` alongside `requireUser()`/`requireModerator()`. It calls only `auth()` and fetches no user row; it returns the **Clerk id, never a database id**.
+- Use it for a route that needs *a* session but has no use for the user (`api/modules/count`, `api/modules/download`). The point is that "not worth an extra query on the hot path" is no longer a reason to skip an in-handler guard.
+- Every route must authorize in the handler. `src/proxy.ts` is defence in depth, **not** the only defence — it was dead code from M1 to M9 (see C6) and three routes silently lost their only gate. `api/exams/list`, `api/modules/count` and `api/modules/download` are now guarded locally.
+- Never hand `requireSession()`'s Clerk id to `rateLimit` or to an ownership check. Pass the **database** user id, or `null` when the identity is unknown — the IP bucket still applies.
+
 
