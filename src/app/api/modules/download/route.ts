@@ -3,8 +3,10 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { modules } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
+import { requestLogger } from "@/lib/logger";
 
 export async function POST(req: Request) {
+  const log = requestLogger(req);
   try {
     const { moduleId } = await req.json();
     if (!moduleId) {
@@ -18,7 +20,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Failed to increment download count:", error);
+    log.error("Failed to increment download count:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

@@ -1,5 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { createTestDb, seedQuestion, seedUser, type TestDb } from "../helpers/harness";
+import { apiRequest, createTestDb, seedQuestion, seedUser, type TestDb } from "../helpers/harness";
 
 const holder = vi.hoisted(() => ({ db: undefined as unknown }));
 
@@ -49,7 +49,7 @@ describe("GET /api/questions/approved", () => {
     });
 
     signOut();
-    const response = await getApproved();
+    const response = await getApproved(apiRequest("/api/questions/approved"));
     const raw = await response.text();
 
     expect(response.status).toBe(200);
@@ -72,7 +72,7 @@ describe("GET /api/questions/approved", () => {
     });
 
     signOut();
-    const body = await (await getApproved()).json();
+    const body = await (await getApproved(apiRequest("/api/questions/approved"))).json();
     const ids = body.data.map((q: { id: string }) => q.id);
 
     expect(ids).toContain(approved.id);
@@ -86,7 +86,7 @@ describe("GET /api/questions/approved", () => {
     const theirs = await seedQuestion(db, { uploaderId: someoneElse.id, difficulty: "mudah" });
 
     signIn(me.clerkId);
-    const body = await (await getApproved()).json();
+    const body = await (await getApproved(apiRequest("/api/questions/approved"))).json();
     const byId = new Map(
       body.data.map((q: { id: string; isOwnQuestion: boolean }) => [q.id, q.isOwnQuestion]),
     );
@@ -101,13 +101,13 @@ describe("GET /api/questions/approved", () => {
 describe("GET /api/moderator/auth-check", () => {
   it("reports false for an anonymous visitor", async () => {
     signOut();
-    const body = await (await getAuthCheck()).json();
+    const body = await (await getAuthCheck(apiRequest("/api/moderator/auth-check"))).json();
     expect(body.isModerator).toBe(false);
   });
 
   it("reports false for a session with no provisioned user", async () => {
     signIn("clerk-never-synced");
-    const body = await (await getAuthCheck()).json();
+    const body = await (await getAuthCheck(apiRequest("/api/moderator/auth-check"))).json();
     expect(body.isModerator).toBe(false);
   });
 
@@ -115,7 +115,7 @@ describe("GET /api/moderator/auth-check", () => {
     for (const role of ["student", "contributor"] as const) {
       const user = await seedUser(db, { role });
       signIn(user.clerkId);
-      const body = await (await getAuthCheck()).json();
+      const body = await (await getAuthCheck(apiRequest("/api/moderator/auth-check"))).json();
       expect(body.isModerator).toBe(false);
     }
   });
@@ -124,7 +124,7 @@ describe("GET /api/moderator/auth-check", () => {
     for (const role of ["moderator", "admin"] as const) {
       const user = await seedUser(db, { role });
       signIn(user.clerkId);
-      const body = await (await getAuthCheck()).json();
+      const body = await (await getAuthCheck(apiRequest("/api/moderator/auth-check"))).json();
       expect(body.isModerator).toBe(true);
     }
   });

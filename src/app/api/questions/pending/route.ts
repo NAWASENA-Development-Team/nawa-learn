@@ -4,8 +4,10 @@ import { db } from "@/db";
 import { questions, submissions, users } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireModerator } from "@/lib/authz";
+import { requestLogger } from "@/lib/logger";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const log = requestLogger(req);
   // Contains unreviewed questions *with their answer keys* — moderators only.
   const authz = await requireModerator();
   if (!authz.ok) return authz.response;
@@ -38,7 +40,7 @@ export async function GET() {
 
     return NextResponse.json({ success: true, data: rows }, { status: 200 });
   } catch (error) {
-    console.error("Pending questions error:", error);
+    log.error("Pending questions error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

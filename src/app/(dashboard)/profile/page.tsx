@@ -4,6 +4,7 @@ import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +63,9 @@ export default async function OwnProfilePage() {
         dbUser = insertedUser;
       }
     } catch (err) {
-      console.error("Self-healing manual sync failed:", err);
+      // A server component has no `Request`, so this uses the root logger and
+      // carries no requestId — it still gets level, JSON shape and redaction.
+      logger.error("self-healing user sync failed", { error: err });
       return (
         <div className="max-w-md mx-auto p-8 mt-12 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl text-center">
           <span className="text-4xl">&#x26A0;&#xFE0F;</span>

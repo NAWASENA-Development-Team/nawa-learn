@@ -85,3 +85,14 @@ export function jsonRequest(url: string, body: unknown, method: "POST" | "PATCH"
     body: JSON.stringify(body),
   });
 }
+
+/**
+ * A request object for handlers that take one. Every route handler now accepts a
+ * `Request` because the structured logger reads `x-request-id` from it; a stable
+ * header also makes the log line for a failing assertion easy to find.
+ */
+export function apiRequest(path = "/api", method: "GET" | "POST" = "GET"): Request {
+  // `Request` requires an absolute URL; the host is never contacted.
+  const url = new URL(path, "https://nawa.test").toString();
+  return new Request(url, { method, headers: { "x-request-id": uniqueId("test-req") } });
+}

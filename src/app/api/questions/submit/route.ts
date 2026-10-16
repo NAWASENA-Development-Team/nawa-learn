@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { questions, submissions, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { requestLogger } from "@/lib/logger";
 
 const submitSchema = z.object({
   questionText: z.string().min(10, "Pertanyaan terlalu pendek"),
@@ -23,6 +24,7 @@ const submitSchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const log = requestLogger(req);
   try {
     const { userId: clerkId } = await auth();
     if (!clerkId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -63,7 +65,7 @@ export async function POST(req: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Validation failed", details: error.issues }, { status: 400 });
     }
-    console.error("Question submit error:", error);
+    log.error("Question submit error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

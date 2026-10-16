@@ -5,8 +5,10 @@ import { WebhookEvent } from '@clerk/nextjs/server';
 import { db } from '@/db';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { requestLogger } from "@/lib/logger";
 
 export async function POST(req: Request) {
+  const log = requestLogger(req);
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
   
   if (!WEBHOOK_SECRET) {
@@ -35,7 +37,7 @@ export async function POST(req: Request) {
       "svix-signature": svix_signature,
     }) as WebhookEvent;
   } catch (err) {
-    console.error('Error verifying webhook:', err);
+    log.error('Error verifying webhook:', err);
     return new Response('Error: Invalid signature', { status: 400 });
   }
 
@@ -94,7 +96,7 @@ export async function POST(req: Request) {
       });
       return new Response('User successfully synced to Neon', { status: 200 });
     } catch (error) {
-      console.error('Database sync error:', error);
+      log.error('Database sync error:', error);
       return new Response('Error syncing user to database', { status: 500 });
     }
   }
@@ -111,7 +113,7 @@ export async function POST(req: Request) {
         .where(eq(users.clerkId, id));
       return new Response('User updated in Neon', { status: 200 });
     } catch (error) {
-      console.error('Database update error:', error);
+      log.error('Database update error:', error);
       return new Response('Error updating user in database', { status: 500 });
     }
   }

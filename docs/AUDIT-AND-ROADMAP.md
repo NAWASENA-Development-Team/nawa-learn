@@ -25,13 +25,13 @@ Kesimpulan singkat dalam satu kalimat:
 | Integritas data | 8 / 10 | Poin & skor dinilai server, idempotensi ditegakkan constraint DB, kunci jawaban tidak bocor, index + CHECK + partial-unique ditambahkan, `updatedAt` dijaga trigger. Kurang: soft delete (belum ada fitur hapus) & rollback teruji. |
 | Database & migrasi | 8 / 10 | Migrasi berversi, CI menolak drift skema, `db:push` dihapus, seed berpengaman, adopsi database lama terbukti nol kehilangan data. Kurang: rollback/down-migration belum diuji. |
 | Privasi & kepatuhan | 2 / 10 | Tidak ada consent, retensi, export/delete, atau kebijakan privasi (UU PDP). |
-| Observability | 2 / 10 | Hanya `console.log`, tanpa error tracking, tanpa health check. |
-| Testing & CI | 7 / 10 | 117 test di 10 file (unit + integrasi PGlite + migrasi), CI workflow, `next build` terverifikasi. Kurang: E2E, dan ~10 route masih 0% coverage. |
+| Observability | 5 / 10 | Logger terstruktur (redaksi PII teruji) + `requestId` + `/api/health` publik, seluruh route API sudah memakainya. Kurang: error tracking (Sentry), dashboard, dan log komponen klien. |
+| Testing & CI | 7.5 / 10 | 135 test di 12 file (unit + integrasi PGlite + migrasi + logger/health), CI workflow, `next build` terverifikasi. Kurang: E2E, dan ~10 route masih 0% coverage. |
 | Dokumentasi | 5 / 10 | README rapi, tapi `AGENTS.md` sudah drift dari kode. |
 
 **Estimasi jarak ke "premium":** 3 fase kerja, ~16 milestone. Fase 0 (M1–M3) bersifat darurat dan **harus selesai sebelum platform dipakai lebih luas lagi**, karena saat ini satu akun siswa terautentikasi bisa mengangkat dirinya ke puncak leaderboard dan menyetujui kontennya sendiri.
 
-> **Status per 2026-10-16:** Fase 0 **selesai** — M1 (`52bba95`), M2 (`1f5a6c7`), H12 (`836107f`), M3 (`dcb9b84`), M4 (`7c5ee5f`). Fase 1 dimulai: **M5 (migrasi database terkelola) selesai** — 117 test hijau, CI aktif, dan **database produksi sudah diadopsi ke sistem migrasi dengan nol kehilangan data**. Otorisasi approval, kebocoran kunci jawaban, integritas poin/ranking, dan workflow skema sudah ditutup. Yang tersisa: E2E, rollback migration, dan M6 ke atas.
+> **Status per 2026-10-16:** Fase 0 **selesai** — M1 (`52bba95`), M2 (`1f5a6c7`), H12 (`836107f`), M3 (`dcb9b84`), M4 (`7c5ee5f`). Fase 1 berjalan: **M5 (migrasi database terkelola) selesai** — database produksi diadopsi ke sistem migrasi dengan nol kehilangan data — dan **M6 (observability) sebagian selesai**: logger terstruktur dengan redaksi PII teruji + `/api/health`, sudah dipakai seluruh route API. Otorisasi approval, kebocoran kunci jawaban, integritas poin/ranking, dan workflow skema sudah ditutup. Sisa jujur: error tracking (Sentry) butuh DSN, E2E, rollback migration, dan M7 ke atas.
 
 ### Yang sudah bagus (jangan dirusak)
 
@@ -208,7 +208,7 @@ Tidak ada CSP, HSTS, `X-Frame-Options`/`frame-ancestors`, `Referrer-Policy`, ata
 
 **Selesai:** `src/db/migrations/` di-commit dan database produksi sudah diadopsi ke sistem migrasi (baseline 0000 + `migrate` 0001) dengan **nol kehilangan data**. `db:push` dihapus dari `package.json`, CI menolak drift antara `schema.ts` dan migrasi, dan seed diberi pengaman. Sisa jujur: rollback/down-migration belum teruji (lihat M5).
 
-### H10. Nol test, nol CI — ✅ SELESAI (M4: 108 test unit + integrasi, CI workflow; M5 menambah 9 test migrasi)
+### H10. Nol test, nol CI — ✅ SELESAI (M4: 108 test, CI workflow; M5: +9 test migrasi; M6: +18 test logger & health)
 Tidak ada `*.test.ts`, tidak ada `.github/workflows`. Tidak ada yang mencegah regresi seperti bug otorisasi di atas. `npm run lint` pun tidak pernah dijalankan otomatis.
 
 ### H11. Performa: N+1 query dan query tak terbatas
@@ -444,15 +444,23 @@ Tambahan: `AGENTS.md` mendokumentasikan password moderator default di repo publi
 
 ---
 
-#### M6 — Observability
+#### M6 — Observability 🔶 SEBAGIAN (logging + health selesai; Sentry menunggu keputusan DSN)
 **Deliverables**
-- [ ] Sentry (atau setara) untuk server + client, dengan `release` dan `user.id` (tanpa PII).
-- [ ] Structured logging (pino) dengan `requestId`, level, dan redaksi PII.
-- [ ] `GET /api/health` (DB + Clerk) untuk uptime monitor.
-- [ ] Ganti seluruh `console.log` produksi.
-- [ ] Dashboard dasar: error rate, p95 latency, poin/hari, submission/hari.
+- [x] Structured logging dengan `requestId`, level, dan redaksi PII — `src/lib/logger.ts`.
+- [x] `GET /api/health` (DB + Clerk) untuk uptime monitor, publik dan hanya mengembalikan status kasar. **Diverifikasi live**: `next start` lalu `GET /api/health` tanpa sesi → `HTTP 200` `{"status":"ok","checks":{"database":"ok","auth":"ok"},…}` dengan `cache-control: no-store` — permintaan itu benar-benar memukul Neon asli.
+- [x] Ganti seluruh `console.*` di kode server (33 pemanggilan di 22 file: 22 handler route API + 1 server component `profile/page.tsx`) dengan logger terstruktur.
+- [ ] ⏭️ Sentry (atau setara) untuk server + client. **Tidak dikerjakan**: butuh DSN dari akun pihak ketiga. Logger sengaja dibuat kompatibel pino (satu objek JSON per baris dengan `level`/`time`/`msg`/`requestId`), jadi drain/Sentry bisa ditambahkan tanpa mengubah satu pun call site.
+- [ ] ⏭️ Dashboard (error rate, p95 latency, poin/hari, submission/hari). Butuh backend observability dulu.
 
-**Definition of Done:** Error yang sengaja ditanam muncul di Sentry dengan stack + requestId dalam < 1 menit.
+**Definition of Done:** Error yang sengaja ditanam muncul di Sentry dengan stack + requestId dalam < 1 menit. — **belum terpenuhi** (menunggu Sentry).
+
+**Catatan keputusan**
+- **Kenapa bukan `pino`:** logger ini juga diimpor `proxy.ts`, yang berjalan di Edge runtime tempat modul Node tidak tersedia. Bentuk keluarannya tetap kompatibel pino, jadi menambahkan drain nanti tidak perlu menyentuh call site. `requestId` dibuat dengan Web Crypto (`globalThis.crypto.randomUUID()`), bukan `node:crypto`, justru karena alasan ini.
+- **Redaksi PII diuji, bukan diklaim.** `tests/unit/logger.test.ts` (13 test) membuktikan email, nama, `clerkId`, `bio`, `motto`, `photoUrl`, `authorization`, `cookie`, dan `token` tidak pernah keluar ke log — termasuk di dalam array dan objek bertingkat. Ada juga regression test untuk dua jebakan regex: pola `ip` yang keliru ikut meredaksi `description`, dan `\bname\b` yang gagal menangkap `userName`.
+- **Nama key yang penting:** call site yang mengirim nilai mentah (`clerkId`, `moduleId`) diperbaiki agar memakai key bernama — kalau tidak, nilainya masuk sebagai `detail` dan lolos dari redaksi.
+- **`requestId` tanpa menyentuh header request di `proxy.ts`:** menimpa header request di dalam `clerkMiddleware` berisiko menabrak header internal Clerk. Logger menghormati `x-request-id` bila ada yang memasangnya (CDN/proxy) dan membuat sendiri bila tidak, sehingga korelasi tetap utuh per request.
+- **`/api/health` publik tapi tidak bocor:** route ditambahkan ke `PUBLIC_ROUTES` karena monitor tidak punya sesi. Ia hanya mengembalikan `ok`/`down` per komponen; pesan error asli hanya masuk log. Ada test yang memastikan `ECONNREFUSED`, nama host internal, dan nomor port tidak muncul di respons.
+- **`console.*` di komponen klien sengaja belum diubah:** log browser tidak punya tempat tujuan terstruktur sebelum ada Sentry. Menggantinya sekarang hanya akan menukar `console.log` dengan JSON di konsol pengguna.
 
 ---
 

@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { questions, submissions } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { requireModerator } from "@/lib/authz";
+import { requestLogger } from "@/lib/logger";
 
 // A moderation take-down. The client may identify the target either by
 // submission id (the moderation queue) or by question id (the daily-quiz list,
@@ -22,6 +23,7 @@ const rejectSchema = z
   });
 
 export async function POST(req: Request) {
+  const log = requestLogger(req);
   // 1. Authorization: moderator or admin only.
   const authz = await requireModerator();
   if (!authz.ok) return authz.response;
@@ -74,7 +76,7 @@ export async function POST(req: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Validation failed", details: error.issues }, { status: 400 });
     }
-    console.error("Question reject error:", error);
+    log.error("Question reject error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

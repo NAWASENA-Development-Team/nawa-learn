@@ -5,8 +5,10 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
 import { requireModerator } from "@/lib/authz";
+import { requestLogger } from "@/lib/logger";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const log = requestLogger(req);
   // Exposes per-student stats, so moderators/admins only.
   const authz = await requireModerator();
   if (!authz.ok) return authz.response;
@@ -41,7 +43,7 @@ export async function GET() {
 
     return NextResponse.json({ success: true, users: rows.rows }, { status: 200 });
   } catch (error) {
-    console.error("Hidden badges API error:", error);
+    log.error("Hidden badges API error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

@@ -3,8 +3,10 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { submissions, modules, questions, users, reports } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
+import { requestLogger } from "@/lib/logger";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const log = requestLogger(req);
   try {
     const { userId: clerkId } = await auth();
     if (!clerkId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -67,7 +69,7 @@ export async function GET() {
     return NextResponse.json({ data: combined }, { status: 200 });
 
   } catch (error) {
-    console.error("Fetch user status error:", error);
+    log.error("Fetch user status error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

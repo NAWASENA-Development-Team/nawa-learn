@@ -14,6 +14,9 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/api/webhooks(.*)',  // authenticity is verified by the Svix signature in-handler
+  // Uptime probe. Public on purpose: a monitor has no session. It returns only
+  // coarse status codes and never any data, so there is nothing to leak here.
+  '/api/health',
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

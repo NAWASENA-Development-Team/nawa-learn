@@ -1,6 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
-import { createTestDb, seedQuestion, seedUser, type TestDb } from "../helpers/harness";
+import { apiRequest, createTestDb, seedQuestion, seedUser, type TestDb } from "../helpers/harness";
 
 const holder = vi.hoisted(() => ({ db: undefined as unknown }));
 
@@ -33,7 +33,7 @@ function signIn(clerkId: string) {
 }
 
 async function claim() {
-  const response = await POST();
+  const response = await POST(apiRequest("/api/quiz/daily-claim", "POST"));
   return { status: response.status, data: await response.json() };
 }
 

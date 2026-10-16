@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { modules, submissions, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { requestLogger } from "@/lib/logger";
 
 // Validate incoming request body using Zod
 const submitSchema = z.object({
@@ -19,12 +20,13 @@ const submitSchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const log = requestLogger(req);
   try {
     // 1. Authenticate the request via Clerk
     const { userId: clerkId } = await auth();
     
     if (!clerkId) {
-      console.error("Authentication failed: No clerkId");
+      log.error("Authentication failed: No clerkId");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -33,7 +35,7 @@ export async function POST(req: Request) {
     try {
       body = await req.json();
     } catch (parseError) {
-      console.error("JSON parse error:", parseError);
+      log.error("JSON parse error:", parseError);
       return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 });
     }
 
@@ -41,7 +43,7 @@ export async function POST(req: Request) {
     try {
       validatedData = submitSchema.parse(body);
     } catch (validationError) {
-      console.error("Validation error:", validationError);
+      log.error("Validation error:", validationError);
       if (validationError instanceof z.ZodError) {
         return NextResponse.json({ 
           error: "Invalid data", 
@@ -59,14 +61,14 @@ export async function POST(req: Request) {
         columns: { id: true, role: true }
       });
     } catch (dbError) {
-      console.error("Database query error:", dbError);
+      log.error("Database query error:", dbError);
       return NextResponse.json({ 
         error: "Database connection error" 
       }, { status: 503 });
     }
 
     if (!dbUser) {
-      console.error("User not found in database for clerkId:", clerkId);
+      log.error("authenticated user has no row in the users table", { clerkId });
       return NextResponse.json({ 
         error: "User profile not synced with database. Please try logging out and back in." 
       }, { status: 404 });
@@ -93,7 +95,7 @@ export async function POST(req: Request) {
       }).returning({ id: modules.id });
       newModule = insertedModule;
     } catch (moduleError) {
-      console.error("Module insert error:", moduleError);
+      log.error("Module insert error:", moduleError);
       return NextResponse.json({ 
         error: "Failed to save module. Please try again." 
       }, { status: 500 });
@@ -108,9 +110,11 @@ export async function POST(req: Request) {
         status: "pending",
       });
     } catch (submissionError) {
-      console.error("Submission record error:", submissionError);
+      log.error("submission record insert failed", { error: submissionError });
       // Module was inserted, still return success but log the issue
-      console.error("Warning: module inserted but submission record failed for moduleId:", newModule.id);
+      log.warn("module inserted but its submission record was not created", {
+        moduleId: newModule.id,
+      });
     }
 
     const result = newModule;
@@ -118,7 +122,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, moduleId: result.id }, { status: 201 });
 
   } catch (error) {
-    console.error("Unexpected submission error:", error);
+    log.error("Unexpected submission error:", error);
     return NextResponse.json({ 
       error: "Internal Server Error. Please try again later." 
     }, { status: 500 });

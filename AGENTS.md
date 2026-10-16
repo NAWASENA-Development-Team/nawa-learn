@@ -126,3 +126,18 @@ To add new badges, edit `src/lib/badges.ts`:
 2. Define unlock condition function
 3. Set category, rarity, icon, and description
 4. Badges automatically appear in profile
+
+## Observability
+
+### Structured logging
+- `src/lib/logger.ts` — one JSON object per line with a pino-compatible shape (`level`, `time`, `msg`, `requestId`).
+- Every API route handler takes a `Request` and binds `const log = requestLogger(req);` as its first statement. That binding is what puts a `requestId` on each line.
+- No `console.log` in server code — use `log.info` / `log.warn` / `log.error`.
+- `log.error("message", error)` accepts the error directly; it is normalised to `{ error: { name, message, stack } }`.
+- **PII redaction is by key name** (`email`, `*name`, `clerkId`, `token`, `authorization`, `cookie`, `bio`, `motto`, `photo*`, `*ip*`). Always give a bare value a named key — `log.error("no row", { clerkId })` — because a value passed without a key lands under `detail` and is **not** redacted.
+- Verbosity follows `LOG_LEVEL` (default: `info` in production, `debug` otherwise).
+
+### Health check
+- `GET /api/health` is deliberately public (see `PUBLIC_ROUTES` in `proxy.ts`) so an uptime monitor can reach it without a session. It returns only coarse status — `{ status, checks: { database, auth }, timestamp }` — with `200` healthy / `503` degraded, and `cache-control: no-store`.
+- Do not add data to it. The real failure reason goes to the logs, never to the anonymous caller.
+- `tests/unit/health.test.ts` asserts that no database error detail leaks into the response body.

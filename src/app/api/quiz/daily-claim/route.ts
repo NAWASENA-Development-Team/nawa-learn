@@ -13,6 +13,7 @@ import { createHash } from "node:crypto";
 import { db } from "@/db";
 import { pointsLog, questions, users } from "@/db/schema";
 import { requireUser } from "@/lib/authz";
+import { requestLogger } from "@/lib/logger";
 
 const DAILY_REWARD = 25;
 // 03:00 WIB === 20:00 UTC of the previous day.
@@ -33,7 +34,8 @@ function deterministicUuid(input: string): string {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
 }
 
-export async function POST() {
+export async function POST(req: Request) {
+  const log = requestLogger(req);
   const authz = await requireUser();
   if (!authz.ok) return authz.response;
   const user = authz.user;
@@ -97,7 +99,7 @@ export async function POST() {
       message: `Berhasil menyelesaikan Kuis Harian! +${DAILY_REWARD} V-Points`,
     });
   } catch (error) {
-    console.error("Daily claim error:", error);
+    log.error("Daily claim error:", error);
     return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
   }
 }

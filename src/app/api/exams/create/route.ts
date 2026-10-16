@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { customExams, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { requestLogger } from "@/lib/logger";
 
 const questionSchema = z.object({
   id: z.string(),
@@ -30,6 +31,7 @@ const createSchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const log = requestLogger(req);
   try {
     const { userId: clerkId } = await auth();
 
@@ -70,7 +72,7 @@ export async function POST(req: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Validation failed", details: error.issues }, { status: 400 });
     }
-    console.error("Exam create error:", error);
+    log.error("Exam create error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

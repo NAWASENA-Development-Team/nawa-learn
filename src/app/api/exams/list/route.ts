@@ -3,8 +3,10 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { customExams } from "@/db/schema";
 import { desc } from "drizzle-orm";
+import { requestLogger } from "@/lib/logger";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const log = requestLogger(req);
   try {
     const exams = await db
       .select({
@@ -23,7 +25,7 @@ export async function GET() {
 
     return NextResponse.json({ success: true, data: exams }, { status: 200 });
   } catch (error) {
-    console.error("Exam list error:", error);
+    log.error("Exam list error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

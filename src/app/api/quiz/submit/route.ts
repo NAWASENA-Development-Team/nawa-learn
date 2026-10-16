@@ -19,6 +19,7 @@ import {
   pointsForAnswer,
   quizSubmitSchema,
 } from "@/lib/quizScoring";
+import { requestLogger } from "@/lib/logger";
 
 type GradedQuestion = {
   questionId: string;
@@ -49,6 +50,7 @@ function notRewardable() {
 }
 
 export async function POST(req: Request) {
+  const log = requestLogger(req);
   const authz = await requireUser();
   if (!authz.ok) return authz.response;
   const user = authz.user;
@@ -176,7 +178,7 @@ export async function POST(req: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Validation failed", details: error.issues }, { status: 400 });
     }
-    console.error("Quiz submit error:", error);
+    log.error("Quiz submit error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

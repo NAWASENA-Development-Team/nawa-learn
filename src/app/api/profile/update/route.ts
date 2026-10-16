@@ -4,12 +4,14 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { requestLogger } from "@/lib/logger";
 
 export const maxDuration = 15;
 // For Next.js 13+ App Router, body size limit can be configured via route segment config, but actually it's done via `config` or server configuration in Next 15.
 // Let's just catch the error and return it properly so we know.
 
 export async function POST(req: Request) {
+  const log = requestLogger(req);
   const { userId: clerkId } = await auth();
   if (!clerkId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -46,7 +48,7 @@ export async function POST(req: Request) {
     await db.update(users).set(updateData).where(eq(users.clerkId, clerkId));
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Profile update error:', error);
+    log.error('Profile update error:', error);
     return NextResponse.json({ error: 'Update failed' }, { status: 500 });
   }
 }

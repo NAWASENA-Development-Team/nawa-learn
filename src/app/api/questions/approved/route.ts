@@ -10,8 +10,10 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { questions, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { requestLogger } from "@/lib/logger";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const log = requestLogger(req);
   try {
     const { userId: clerkId } = await auth();
 
@@ -47,7 +49,7 @@ export async function GET() {
 
     return NextResponse.json({ success: true, data: withOwnerFlag }, { status: 200 });
   } catch (error) {
-    console.error("Approved questions error:", error);
+    log.error("Approved questions error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

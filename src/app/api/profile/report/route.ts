@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { reports, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { requestLogger } from "@/lib/logger";
 
 const reportSchema = z.object({
   issueType: z.string().min(1),
@@ -11,6 +12,7 @@ const reportSchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const log = requestLogger(req);
   try {
     const { userId: clerkId } = await auth();
     if (!clerkId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -36,7 +38,7 @@ export async function POST(req: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Validation failed", details: error.issues }, { status: 400 });
     }
-    console.error("Submit report error:", error);
+    log.error("Submit report error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

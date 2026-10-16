@@ -4,8 +4,10 @@ import { db } from "@/db";
 import { submissions, modules, users } from "@/db/schema";
 import { and, desc, eq } from "drizzle-orm";
 import { requireModerator } from "@/lib/authz";
+import { requestLogger } from "@/lib/logger";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const log = requestLogger(req);
   // The moderation queue is not public: moderator or admin only.
   const authz = await requireModerator();
   if (!authz.ok) return authz.response;
@@ -34,7 +36,7 @@ export async function GET() {
     return NextResponse.json({ data: pendingQueue }, { status: 200 });
 
   } catch (error) {
-    console.error("Fetch pending queue error:", error);
+    log.error("Fetch pending queue error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

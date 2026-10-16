@@ -8,10 +8,12 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { hasReviewerRole } from "@/lib/authz";
+import { requestLogger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const log = requestLogger(req);
   try {
     const { userId: clerkId } = await auth();
     if (!clerkId) {
@@ -25,7 +27,7 @@ export async function GET() {
 
     return NextResponse.json({ isModerator: hasReviewerRole(currentUser?.role ?? "guest") });
   } catch (error) {
-    console.error("Moderator auth check error:", error);
+    log.error("Moderator auth check error:", error);
     return NextResponse.json({ isModerator: false });
   }
 }

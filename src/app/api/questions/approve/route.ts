@@ -7,6 +7,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { requireModerator } from "@/lib/authz";
 import { checkAndGrantLevelRewards } from "@/lib/levelRewards";
 import { needsSeasonReset } from "@/lib/season";
+import { requestLogger } from "@/lib/logger";
 
 // `questionId` and `submitterId` are resolved from the submission row in the
 // database, never from the request body.
@@ -23,6 +24,7 @@ const QUESTION_APPROVAL_POINTS: Record<string, number> = {
 };
 
 export async function POST(req: Request) {
+  const log = requestLogger(req);
   // 1. Authorization: moderator or admin only.
   const authz = await requireModerator();
   if (!authz.ok) return authz.response;
@@ -123,7 +125,7 @@ export async function POST(req: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Validation failed", details: error.issues }, { status: 400 });
     }
-    console.error("Question approve error:", error);
+    log.error("Question approve error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

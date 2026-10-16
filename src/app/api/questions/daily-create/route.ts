@@ -5,8 +5,10 @@ import { db } from "@/db";
 import { questions, submissions } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requireModerator } from "@/lib/authz";
+import { requestLogger } from "@/lib/logger";
 
 export async function POST(req: Request) {
+  const log = requestLogger(req);
   // Auto-approved content, so moderator/admin only.
   const authz = await requireModerator();
   if (!authz.ok) return authz.response;
@@ -59,13 +61,14 @@ export async function POST(req: Request) {
     });
 
   } catch (error) {
-    console.error("Daily question create error:", error);
+    log.error("Daily question create error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
 
 // GET: Fetch all existing daily quiz questions for the moderator to see
-export async function GET() {
+export async function GET(req: Request) {
+  const log = requestLogger(req);
   // Includes answer keys — moderator/admin only.
   const authz = await requireModerator();
   if (!authz.ok) return authz.response;
@@ -78,7 +81,7 @@ export async function GET() {
 
     return NextResponse.json({ success: true, data: dailyQuestions });
   } catch (error) {
-    console.error("Daily questions list error:", error);
+    log.error("Daily questions list error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

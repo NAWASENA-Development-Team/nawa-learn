@@ -7,6 +7,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { requireModerator } from "@/lib/authz";
 import { checkAndGrantLevelRewards } from "@/lib/levelRewards";
 import { needsSeasonReset } from "@/lib/season";
+import { requestLogger } from "@/lib/logger";
 
 // The client only picks *which* submission to act on.
 // `moduleId` and `submitterId` are resolved from the submission row in the
@@ -21,6 +22,7 @@ const approveSchema = z.object({
 const MODULE_APPROVAL_POINTS = 50;
 
 export async function POST(req: Request) {
+  const log = requestLogger(req);
   // 1. Authorization: moderator or admin only.
   const authz = await requireModerator();
   if (!authz.ok) return authz.response;
@@ -118,7 +120,7 @@ export async function POST(req: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Validation failed", details: error.issues }, { status: 400 });
     }
-    console.error("Approval error:", error);
+    log.error("Approval error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
