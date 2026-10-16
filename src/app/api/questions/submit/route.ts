@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { questions, submissions, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requestLogger } from "@/lib/logger";
+import { rateLimit } from "@/lib/rateLimit";
 
 const submitSchema = z.object({
   questionText: z.string().min(10, "Pertanyaan terlalu pendek"),
@@ -35,6 +36,9 @@ export async function POST(req: Request) {
     });
     if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
     if (dbUser.role === "student") return NextResponse.json({ error: "Hanya kontributor yang dapat mengunggah soal" }, { status: 403 });
+
+    const limit = await rateLimit(req, "questions/submit", dbUser.id);
+    if (!limit.ok) return limit.response;
 
     const body = await req.json();
     const data = submitSchema.parse(body);

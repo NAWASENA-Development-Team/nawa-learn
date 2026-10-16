@@ -5,6 +5,7 @@ import { reports, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { requestLogger } from "@/lib/logger";
+import { rateLimit } from "@/lib/rateLimit";
 
 const reportSchema = z.object({
   issueType: z.string().min(1),
@@ -22,6 +23,9 @@ export async function POST(req: Request) {
       columns: { id: true },
     });
     if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+    const limit = await rateLimit(req, "profile/report", dbUser.id);
+    if (!limit.ok) return limit.response;
 
     const body = await req.json();
     const data = reportSchema.parse(body);

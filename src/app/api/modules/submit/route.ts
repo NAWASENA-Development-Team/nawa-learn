@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { modules, submissions, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requestLogger } from "@/lib/logger";
+import { rateLimit } from "@/lib/rateLimit";
 
 // Validate incoming request body using Zod
 const submitSchema = z.object({
@@ -79,6 +80,9 @@ export async function POST(req: Request) {
         error: "Hanya kontributor yang dapat mengunggah modul" 
       }, { status: 403 });
     }
+
+    const limit = await rateLimit(req, "modules/submit", dbUser.id);
+    if (!limit.ok) return limit.response;
 
     // 4. Insert module into database
     // Note: neon-http driver does not support transactions, use sequential inserts

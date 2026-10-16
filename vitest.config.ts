@@ -12,6 +12,8 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/**/*.test.ts"],
+    // Resets the in-memory rate-limit counters before every test; see the file.
+    setupFiles: ["tests/setup.ts"],
     // Integration tests boot a real Postgres (PGlite) for each file, which is
     // slower than a unit test on a cold CI runner.
     testTimeout: 30_000,

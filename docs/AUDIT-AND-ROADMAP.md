@@ -21,17 +21,17 @@ Kesimpulan singkat dalam satu kalimat:
 |---|---|---|
 | UI / UX visual | 7.5 / 10 | Konsisten, animatif, responsif. Tapi ada mojibake & aksesibilitas minim. |
 | Arsitektur | 4 / 10 | Duplikasi folder API, middleware ganda, logika bisnis di komponen klien 1500+ baris. |
-| Keamanan (authz) | 6 / 10 | RBAC terpusat + deny-by-default, 8 endpoint review dijaga, matriks 401/403 teruji. Kurang: rate limiting, security header, validasi input di beberapa route. |
+| Keamanan (authz) | 7.5 / 10 | RBAC terpusat + deny-by-default, 8 endpoint review dijaga, matriks 401/403 teruji, rate limiting per user+IP di 8 endpoint mutasi (429 + `Retry-After`). Kurang: security header, bot protection sign-up (toggle dashboard Clerk), validasi input di beberapa route. |
 | Integritas data | 8 / 10 | Poin & skor dinilai server, idempotensi ditegakkan constraint DB, kunci jawaban tidak bocor, index + CHECK + partial-unique ditambahkan, `updatedAt` dijaga trigger. Kurang: soft delete (belum ada fitur hapus) & rollback teruji. |
 | Database & migrasi | 8 / 10 | Migrasi berversi, CI menolak drift skema, `db:push` dihapus, seed berpengaman, adopsi database lama terbukti nol kehilangan data. Kurang: rollback/down-migration belum diuji. |
 | Privasi & kepatuhan | 2 / 10 | Tidak ada consent, retensi, export/delete, atau kebijakan privasi (UU PDP). |
 | Observability | 5 / 10 | Logger terstruktur (redaksi PII teruji) + `requestId` + `/api/health` publik, seluruh route API sudah memakainya. Kurang: error tracking (Sentry), dashboard, dan log komponen klien. |
-| Testing & CI | 7.5 / 10 | 135 test di 12 file (unit + integrasi PGlite + migrasi + logger/health), CI workflow, `next build` terverifikasi. Kurang: E2E, dan ~10 route masih 0% coverage. |
+| Testing & CI | 8 / 10 | 156 test di 15 file, coverage **68.09%** (branch 77.96%, fungsi 93.08%) — unit + integrasi PGlite + migrasi + logger/health + rate limiting & alarm, CI workflow, `next build` terverifikasi. Kurang: E2E, dan ~10 route masih 0% coverage. |
 | Dokumentasi | 5 / 10 | README rapi, tapi `AGENTS.md` sudah drift dari kode. |
 
 **Estimasi jarak ke "premium":** 3 fase kerja, ~16 milestone. Fase 0 (M1–M3) bersifat darurat dan **harus selesai sebelum platform dipakai lebih luas lagi**, karena saat ini satu akun siswa terautentikasi bisa mengangkat dirinya ke puncak leaderboard dan menyetujui kontennya sendiri.
 
-> **Status per 2026-10-16:** Fase 0 **selesai** — M1 (`52bba95`), M2 (`1f5a6c7`), H12 (`836107f`), M3 (`dcb9b84`), M4 (`7c5ee5f`). Fase 1 berjalan: **M5 (migrasi database terkelola) selesai** — database produksi diadopsi ke sistem migrasi dengan nol kehilangan data — dan **M6 (observability) sebagian selesai**: logger terstruktur dengan redaksi PII teruji + `/api/health`, sudah dipakai seluruh route API. Otorisasi approval, kebocoran kunci jawaban, integritas poin/ranking, dan workflow skema sudah ditutup. Sisa jujur: error tracking (Sentry) butuh DSN, E2E, rollback migration, dan M7 ke atas.
+> **Status per 2026-10-16:** Fase 0 **selesai** — M1 (`52bba95`), M2 (`1f5a6c7`), H12 (`836107f`), M3 (`dcb9b84`), M4 (`7c5ee5f`), M5 (`eafd76b`), M6 (`9543af0`). Fase 1 berjalan: **M5 (migrasi database terkelola) selesai** — database produksi diadopsi ke sistem migrasi dengan nol kehilangan data. **M6 (observability) sebagian selesai**: logger terstruktur dengan redaksi PII teruji + `/api/health`, dipakai seluruh route API. **M7 (rate limiting & anti-abuse) sebagian selesai**: 8 endpoint mutasi dibatasi per user + per IP dengan 429, plus alarm lonjakan poin; bot protection sign-up tinggal toggle dashboard Clerk. Otorisasi approval, kebocoran kunci jawaban, integritas poin/ranking, workflow skema, dan penyalahgunaan endpoint sudah ditutup. Sisa jujur: rate limiting **efektif penuh hanya dengan Upstash** (env), error tracking (Sentry) butuh DSN, E2E, rollback migration, dan M8 ke atas.
 
 ### Yang sudah bagus (jangan dirusak)
 
@@ -195,8 +195,10 @@ images: { remotePatterns: [{ protocol: 'https', hostname: '**' }] }
 ```
 Next.js image optimizer akan mem-fetch URL apa pun yang diminta → **SSRF / open image proxy** atas nama domain Anda (biaya bandwidth + potensi probing jaringan internal). Ganti ke daftar hostname eksplisit (`drive.google.com`, `res.cloudinary.com`, dll.).
 
-### H7. Tidak ada rate limiting di mana pun
+### H7. Tidak ada rate limiting di mana pun — ✅ SELESAI di M7
 Semua endpoint bisa dipanggil ribuan kali per detik: submit modul/soal, kirim laporan, klaim poin, increment download, dan login. Wajib ada pembatasan per IP + per user (Upstash Ratelimit / @vercel/firewall).
+
+**Status:** 8 endpoint mutasi sekarang dibatasi per user + per IP (`RATE_LIMITS` di `src/lib/rateLimit.ts`), dengan 429 + `Retry-After`. **Catatan penting:** proteksi penuh hanya aktif bila `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` diset; tanpa itu limiter memakai store in-memory yang tidak efektif di serverless. Bot protection sign-up tetap toggle dashboard Clerk (lihat checklist M7).
 
 ### H8. Tidak ada security header
 Tidak ada CSP, HSTS, `X-Frame-Options`/`frame-ancestors`, `Referrer-Policy`, atau `Permissions-Policy`. Situs bisa di-iframe (clickjacking), dan tanpa CSP setiap celah XSS jadi jauh lebih berbahaya.
@@ -208,7 +210,7 @@ Tidak ada CSP, HSTS, `X-Frame-Options`/`frame-ancestors`, `Referrer-Policy`, ata
 
 **Selesai:** `src/db/migrations/` di-commit dan database produksi sudah diadopsi ke sistem migrasi (baseline 0000 + `migrate` 0001) dengan **nol kehilangan data**. `db:push` dihapus dari `package.json`, CI menolak drift antara `schema.ts` dan migrasi, dan seed diberi pengaman. Sisa jujur: rollback/down-migration belum teruji (lihat M5).
 
-### H10. Nol test, nol CI — ✅ SELESAI (M4: 108 test, CI workflow; M5: +9 test migrasi; M6: +18 test logger & health)
+### H10. Nol test, nol CI — ✅ SELESAI (M4: 108 test, CI workflow; M5: +9 test migrasi; M6: +18 test logger & health; M7: +21 test rate limiting & alarm)
 Tidak ada `*.test.ts`, tidak ada `.github/workflows`. Tidak ada yang mencegah regresi seperti bug otorisasi di atas. `npm run lint` pun tidak pernah dijalankan otomatis.
 
 ### H11. Performa: N+1 query dan query tak terbatas
@@ -466,11 +468,34 @@ Tambahan: `AGENTS.md` mendokumentasikan password moderator default di repo publi
 
 ### FASE 2 — HARDENING KEAMANAN (target: 3 minggu)
 
-#### M7 — Rate limiting & anti-abuse
-- [ ] Upstash Ratelimit di endpoint mutasi (submit, report, download, quiz, profile) — per user dan per IP.
-- [ ] Persempit: 1 submit modul / menit, 5 laporan / jam, dll.
-- [ ] Bot protection pada sign-up (Clerk sudah punya; aktifkan + CAPTCHA).
-- [ ] Alarm otomatis bila pola abuse terdeteksi (lonjakan poin tak wajar).
+#### M7 — Rate limiting & anti-abuse 🔶 SEBAGIAN (limiter + alarm selesai; bot protection = toggle dashboard Clerk)
+- [x] Rate limiting di 8 endpoint mutasi (`modules/submit`, `questions/submit`, `profile/update`, `profile/report`, `modules/download`, `quiz/submit`, `quiz/daily-claim`, `exams/create`) — **per user dan per IP**, dua bucket sekaligus.
+- [x] Budget per route dipersempit: submit modul 5/menit, soal 10/menit, laporan 5/jam, klaim harian 3/menit, update profil 10/menit, download 60/menit (lihat `RATE_LIMITS`).
+- [ ] ⏭️ Bot protection pada sign-up. **Tidak bisa dikerjakan dari kode**: ini toggle di Clerk Dashboard (Attack Protection → bot/CAPTCHA). Checklist ada di bawah.
+- [x] Alarm otomatis: `point_spike_detected` (lonjakan poin) + event `rate_limit_exceeded`. Keduanya log terstruktur, bukan blokir.
+- [x] Backend tanpa akun pihak ketiga: in-memory (dev/1 instance) **atau** Upstash REST via `fetch` murni (tanpa dependensi baru), dipilih dari env. Di produksi tanpa Upstash, limiter menulis satu peringatan `rate_limit_in_memory_backend` per proses, supaya deploy tidak *terlihat* terlindungi padahal tidak.
+
+**Definition of Done:** skrip yang menembak satu endpoint 1.000× berhenti di balasan 429, dan user normal tidak merasakannya.
+
+**Verifikasi:** 21 test baru — 14 unit (`tests/unit/rateLimit.test.ts`) + 3 integrasi (`tests/integration/rate-limit.test.ts`) yang benar-benar memukul route `profile/update` sampai 429, plus 4 test alarm (`tests/integration/abuse.test.ts`). Coverage total naik ke **68.09%** (dari 63.74%); `abuse.ts` 100%, `rateLimit.ts` 96%, `logger.ts` 97.3%, `api/health` 100%.
+
+**Catatan keputusan**
+- **Jujur soal batas backend in-memory.** Rate limiter in-memory hanya menghitung request yang mendarat di instance yang sama. Di serverless (Vercel), tiap invocation bisa instance baru, jadi backend ini **tidak** menghentikan flood terdistribusi. Ia berguna untuk dev dan deploy satu instance. **Produksi butuh Upstash**: set `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` dan limiter otomatis berpindah backend tanpa perubahan kode. Peringatan ini juga ikut tercetak di komentar modul dan di AGENTS.md, supaya tidak diklaim sebagai proteksi yang tidak ada.
+- **Kenapa Upstash lewat `fetch`, bukan `@upstash/ratelimit`:** satu dependensi lebih sedikit, dan perintahnya sederhana (`INCR` + `EXPIRE ... NX` + `PTTL` dalam satu pipeline). Bentuk body pipeline diuji eksplisit, termasuk bahwa TTL memakai `NX` — kalau TTL diperbarui tiap request, window-nya tidak pernah menutup.
+- **Fail-open, dengan suara.** Kalau store error, request dilewatkan dan error-nya di-log. Menutup (fail-closed) berarti gangguan Redis berubah menjadi outage seluruh platform — hasil yang lebih buruk untuk sekolah. Trade-off ini disengaja dan terdokumentasi.
+- **Identitas di-hash.** Key bucket = `sha256(ip)` / `sha256(userId)`, dipotong 32 hex. Upstash adalah pihak ketiga, dan IP adalah data pribadi di bawah UU PDP; hash menjaga key tetap tidak terbaca sambil tetap bisa dihitung. Ada test yang memastikan **IP mentah dan user id mentah tidak pernah terkirim** ke Upstash.
+- **Guard jalan sebelum body dibaca.** Ada test yang membuktikan client yang sudah kehabisan kuota langsung dapat 429 walaupun mengirim body yang bukan JSON — jadi payload besar tidak sempat diparse.
+- **`profile/update`, `modules/download`, dan `exams/create` hanya dibatasi per IP.** `profile/update` hanya mengubah baris milik pemanggil sendiri (abuse = merusak diri sendiri) dan `modules/download` tidak pernah me-resolve user; menambah query ke hot path untuk keduanya tidak sepadan. `exams/create` masih boleh anonim (lihat H3), jadi `authorId` bisa null.
+- **Alarm lonjakan poin itu tripwire, bukan detektor presisi.** M3 sudah membuat farming satu soal mustahil (unique index). Yang tersisa adalah manusia yang menjawab banyak soal *baru* dengan cepat — dan tidak ada baseline untuk membedakannya dari murid rajin. Ambangnya karena itu sengaja tinggi (500 poin / 10 menit) supaya tidak jadi alarm yang di-mute. Ia hanya menulis log `point_spike_detected`; alert sungguhan butuh log drain yang mengawasi event itu.
+- **Reset store antar test.** Hitungan limiter adalah state module; `tests/setup.ts` meresetnya di `beforeEach`, jadi tiap test mulai dari dunia yang bersih seperti instance server yang baru.
+
+**Checklist manual (butuh akses dashboard Clerk)**
+1. Clerk Dashboard → **Attack Protection** (atau **User & Authentication → Attack Protection**).
+2. Aktifkan **Bot protection** pada sign-up/sign-in.
+3. Aktifkan **CAPTCHA** (mis. Cloudflare Turnstile) untuk sign-up.
+4. Tambahkan `NEXT_PUBLIC_CLERK_...`/secret yang diminta Clerk ke env produksi, lalu verifikasi form sign-up benar-benar menantang.
+
+Sumber: `src/lib/rateLimit.ts`, `src/lib/abuse.ts`.
 
 #### M8 — Validasi & penanganan unggahan menyeluruh
 - [ ] Zod schema untuk **setiap** endpoint; `safeParse` → 400 konsisten.

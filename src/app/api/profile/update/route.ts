@@ -5,6 +5,7 @@ import { db } from '@/db';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { requestLogger } from "@/lib/logger";
+import { rateLimit } from "@/lib/rateLimit";
 
 export const maxDuration = 15;
 // For Next.js 13+ App Router, body size limit can be configured via route segment config, but actually it's done via `config` or server configuration in Next 15.
@@ -16,6 +17,11 @@ export async function POST(req: Request) {
   if (!clerkId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  // IP-scoped only: the handler updates the caller's own row, so the useful
+  // abuse signal is "one address hammering the endpoint", not a user identity.
+  const limit = await rateLimit(req, "profile/update", null);
+  if (!limit.ok) return limit.response;
 
   let body: Record<string, unknown>;
   try {

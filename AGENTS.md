@@ -141,3 +141,12 @@ To add new badges, edit `src/lib/badges.ts`:
 - `GET /api/health` is deliberately public (see `PUBLIC_ROUTES` in `proxy.ts`) so an uptime monitor can reach it without a session. It returns only coarse status — `{ status, checks: { database, auth }, timestamp }` — with `200` healthy / `503` degraded, and `cache-control: no-store`.
 - Do not add data to it. The real failure reason goes to the logs, never to the anonymous caller.
 - `tests/unit/health.test.ts` asserts that no database error detail leaks into the response body.
+
+### Rate limiting & anti-abuse
+- `src/lib/rateLimit.ts` — fixed-window counters applied **per user and per IP** on the mutating routes. Budgets live in `RATE_LIMITS`.
+- Route usage: `const limit = await rateLimit(req, "modules/submit", dbUser.id); if (!limit.ok) return limit.response;` — call it **before reading the body**, and pass the **database user id**, never a Clerk id or an email (pass `null` when the identity is unknown; the IP bucket still applies).
+- Backends: Upstash Redis when `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` are set, otherwise an in-process `Map`. **The in-memory backend does not stop a distributed flood on serverless** — production needs Upstash. The limiter fails **open** and logs loudly if the store errors.
+- Bucket keys are `sha256` digests, so no raw IP or user id reaches Upstash (a third party) or a log line.
+- A tripped limit logs the alertable event `rate_limit_exceeded` and answers `429` with `Retry-After` and `cache-control: no-store`.
+- `src/lib/abuse.ts` — `flagPointSpike()` logs `point_spike_detected` when a user's credited points in a 10-minute window pass `POINT_SPIKE_THRESHOLD`. It is a deliberately blunt tripwire, not a precise detector; alert on it from a log drain.
+- Tests reset the in-memory counters through `tests/setup.ts` (registered as `setupFiles`), so one test never spends the next one's budget.

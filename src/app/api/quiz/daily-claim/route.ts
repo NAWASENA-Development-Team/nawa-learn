@@ -14,6 +14,7 @@ import { db } from "@/db";
 import { pointsLog, questions, users } from "@/db/schema";
 import { requireUser } from "@/lib/authz";
 import { requestLogger } from "@/lib/logger";
+import { rateLimit } from "@/lib/rateLimit";
 
 const DAILY_REWARD = 25;
 // 03:00 WIB === 20:00 UTC of the previous day.
@@ -39,6 +40,9 @@ export async function POST(req: Request) {
   const authz = await requireUser();
   if (!authz.ok) return authz.response;
   const user = authz.user;
+
+  const limit = await rateLimit(req, "quiz/daily-claim", user.id);
+  if (!limit.ok) return limit.response;
 
   try {
     const now = new Date();

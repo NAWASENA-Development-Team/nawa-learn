@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { customExams, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requestLogger } from "@/lib/logger";
+import { rateLimit } from "@/lib/rateLimit";
 
 const questionSchema = z.object({
   id: z.string(),
@@ -35,12 +36,10 @@ export async function POST(req: Request) {
   try {
     const { userId: clerkId } = await auth();
 
-    const body = await req.json();
-    const data = createSchema.parse(body);
-
-    // Try to get author info from DB; fall back to "Siswa SMAN 2" if not logged in
+    // Resolve the author before parsing the body, so the rate-limit guard can sit
+    // ahead of the (potentially large) payload instead of after it.
     let authorId: string | null = null;
-    let authorName = data.questions[0] ? "Siswa SMAN 2" : "Siswa SMAN 2";
+    let authorName = "Siswa SMAN 2";
 
     if (clerkId) {
       const dbUser = await db.query.users.findFirst({
@@ -52,6 +51,14 @@ export async function POST(req: Request) {
         authorName = dbUser.name;
       }
     }
+
+    // Anonymous exam creation is still allowed (see H3), so `authorId` may be
+    // null and only the IP bucket applies.
+    const limit = await rateLimit(req, "exams/create", authorId);
+    if (!limit.ok) return limit.response;
+
+    const body = await req.json();
+    const data = createSchema.parse(body);
 
     const [exam] = await db
       .insert(customExams)

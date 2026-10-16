@@ -11,6 +11,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { pointsLog, questions, users } from "@/db/schema";
 import { requireUser } from "@/lib/authz";
+import { flagPointSpike } from "@/lib/abuse";
 import { checkAndGrantLevelRewards } from "@/lib/levelRewards";
 import { needsSeasonReset } from "@/lib/season";
 import {
@@ -20,6 +21,7 @@ import {
   quizSubmitSchema,
 } from "@/lib/quizScoring";
 import { requestLogger } from "@/lib/logger";
+import { rateLimit } from "@/lib/rateLimit";
 
 type GradedQuestion = {
   questionId: string;
@@ -54,6 +56,9 @@ export async function POST(req: Request) {
   const authz = await requireUser();
   if (!authz.ok) return authz.response;
   const user = authz.user;
+
+  const limit = await rateLimit(req, "quiz/submit", user.id);
+  if (!limit.ok) return limit.response;
 
   try {
     let body: unknown;
@@ -159,6 +164,16 @@ export async function POST(req: Request) {
       pointsAwarded > 0
         ? await checkAndGrantLevelRewards(user.id, dbUser.points, newTotal)
         : [];
+
+    // Abuse tripwire. Only worth a query when this request actually credited
+    // something, and it must never be able to fail the submission.
+    if (creditedCount > 0) {
+      try {
+        await flagPointSpike(user.id, log);
+      } catch (error) {
+        log.error("point spike check failed", { error });
+      }
+    }
 
     return NextResponse.json({
       success: true,
