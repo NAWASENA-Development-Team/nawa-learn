@@ -9,6 +9,7 @@ import { checkAndGrantLevelRewards } from "@/lib/levelRewards";
 import { needsSeasonReset } from "@/lib/season";
 import { requestLogger } from "@/lib/logger";
 import { parseJsonBody } from "@/lib/validation";
+import { recordAudit } from "@/lib/auditLog";
 
 // `questionId` and `submitterId` are resolved from the submission row in the
 // database, never from the request body.
@@ -114,7 +115,17 @@ export async function POST(req: Request) {
 
     const newPoints = submitter.points + pointsAwarded;
 
-    // 8. Check level rewards.
+    // 8. Jejak keputusan (lihat modules/approve).
+    await recordAudit(db, {
+      actorId: reviewer.id,
+      action: "content.approve",
+      entity: "question",
+      entityId: questionId,
+      before: { status: "pending", difficulty: question.difficulty },
+      after: { status: "approved", pointsAwarded },
+    }, { log });
+
+    // 9. Check level rewards.
     const levelRewards = await checkAndGrantLevelRewards(submitterId, submitter.points, newPoints);
 
     return NextResponse.json({

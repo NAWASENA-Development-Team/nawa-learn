@@ -12,6 +12,7 @@ import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import { eq } from "drizzle-orm";
 import * as schema from "./schema";
+import { recordAudit } from "../lib/auditLog";
 import dotenv from "dotenv";
 import path from "path";
 
@@ -66,6 +67,29 @@ async function main() {
   }
 
   await db.update(schema.users).set({ role }).where(eq(schema.users.id, target.id));
+
+  // Perubahan peran adalah tindakan paling sensitif di aplikasi ini: `moderator`
+  // membuka seluruh antrean moderasi dan `admin` membuka sisanya. Sampai M12 ia
+  // tidak meninggalkan jejak apa pun — hanya baris `users` yang nilainya sudah
+  // berubah, tanpa catatan siapa yang mengubahnya atau dari apa.
+  //
+  // `actorId: null` karena pelakunya adalah operator di mesinnya sendiri, yang
+  // tidak punya baris `users`; yang bisa dicatat hanyalah bahwa perubahan ini
+  // datang dari CLI, bukan dari route.
+  const audited = await recordAudit(db, {
+    actorId: null,
+    action: "user.role_change",
+    entity: "user",
+    entityId: target.id,
+    before: { role: target.role },
+    after: { role, source: "cli:db:promote" },
+  });
+
+  if (!audited) {
+    // Peran **sudah** berubah pada titik ini. Menggagalkan skrip akan berbohong
+    // tentang keadaan database, jadi yang dilakukan adalah berteriak.
+    console.warn("PERINGATAN: perubahan peran berhasil tetapi baris audit gagal ditulis. Catat manual.");
+  }
 
   console.log(`Updated "${target.name}" (${target.email}): ${target.role} → ${role}`);
   process.exit(0);

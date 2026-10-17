@@ -84,6 +84,15 @@ const PROTECTED_ROUTES: RouteCase[] = [
     method: "GET",
     load: () => import("@/app/api/moderator/hidden-badges/route"),
   },
+  {
+    // Added in M12. It reads the moderation trail, which names other
+    // moderators' decisions, so it belongs in this matrix rather than being
+    // trusted because "only reviewers know the URL".
+    name: "GET /api/moderator/audit-log",
+    url: "http://localhost/api/moderator/audit-log",
+    method: "GET",
+    load: () => import("@/app/api/moderator/audit-log/route"),
+  },
 ];
 
 async function call(route: RouteCase): Promise<Response> {

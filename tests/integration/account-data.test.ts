@@ -21,7 +21,7 @@ vi.mock("@/db", () => ({
 
 import * as schema from "@/db/schema";
 import { ANONYMOUS_DISPLAY_NAME } from "@/lib/accountConstants";
-import { collectUserData, deleteAccountData } from "@/lib/accountData";
+import { anonymiseAccountByClerkId, collectUserData, deleteAccountData } from "@/lib/accountData";
 import { POLICY_VERSION } from "@/lib/policy";
 
 let db: TestDb;
@@ -287,5 +287,42 @@ describe("deleteAccountData", () => {
 
   it("refuses an id that has no row", async () => {
     await expect(deleteAccountData(db, crypto.randomUUID())).rejects.toThrow(/no user row/);
+  });
+});
+
+// The webhook path. It cannot use an internal id — when an account is deleted
+// from the Clerk dashboard there is no session and no row id in hand, only the
+// `clerk_id` we stored. `tests/integration/clerk-webhook.test.ts` proves the HTTP
+// half; this proves the lookup itself, including the two states that must not be
+// treated as failures.
+describe("anonymiseAccountByClerkId", () => {
+  it("finds the row by clerk id and anonymises it", async () => {
+    const user = await seedUser(db, { name: "Dewi", points: 120 });
+
+    const result = await anonymiseAccountByClerkId(db, user.clerkId);
+
+    expect(result.found).toBe(true);
+    if (!result.found) throw new Error("unreachable");
+    expect(result.userId).toBe(user.id);
+
+    const row = await db.query.users.findFirst({ where: eq(schema.users.id, user.id) });
+    expect(row?.name).toBe(ANONYMOUS_DISPLAY_NAME);
+    expect(row?.clerkId).toBe(`deleted:${user.id}`);
+  });
+
+  it("returns found: false for a clerk id we never stored", async () => {
+    const result = await anonymiseAccountByClerkId(db, "clerk_never_seen");
+
+    expect(result).toEqual({ found: false });
+  });
+
+  it("returns found: false on a second delivery instead of erasing twice", async () => {
+    const user = await seedUser(db, {});
+
+    const first = await anonymiseAccountByClerkId(db, user.clerkId);
+    const second = await anonymiseAccountByClerkId(db, user.clerkId);
+
+    expect(first.found).toBe(true);
+    expect(second).toEqual({ found: false });
   });
 });

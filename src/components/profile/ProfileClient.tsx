@@ -50,9 +50,11 @@ const calcLevelThreshold = (lvl: number) => 25 * lvl * (lvl - 1);
 
 interface UserProfile {
   id: string;
-  clerkId: string;
   name: string;
-  email: string;
+  // `clerkId` dan `email` sengaja tidak ada di sini (M12). Keduanya dulu dikirim
+  // dari server padahal tidak pernah dirender — `email` malah dikosongkan untuk
+  // profil orang lain, yang berarti nilainya tetap menyeberang hanya untuk
+  // dibuang. Yang tidak dibutuhkan UI tidak boleh ada di payload.
   role: "guest" | "student" | "contributor" | "moderator" | "admin";
   points: number;
   createdAt: string; // ISO string
@@ -1693,7 +1695,11 @@ export default function ProfileClient({
                 {user.name}
               </h3>
               <p className="text-xs text-zinc-400 font-mono tracking-widest mt-2 uppercase">
-                ID KONTRIBUTOR: {user.id.slice(0, 8).toUpperCase()}-{user.clerkId.slice(-4).toUpperCase()}
+                {/* Fragmennya diambil dari `id` internal — yang sudah menjadi
+                    bagian dari URL profil — bukan dari `clerkId`. Sebelum M12
+                    empat huruf terakhir identitas Clerk tercetak di halaman
+                    publik yang bisa dibuka siapa saja. */}
+                ID KONTRIBUTOR: {user.id.slice(0, 8).toUpperCase()}-{user.id.slice(-4).toUpperCase()}
               </p>
             </div>
 

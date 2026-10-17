@@ -23,6 +23,9 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { requestLogger } from "@/lib/logger";
 import { ensureUserRow, resolveDisplayName, type ClerkProfileLike } from "@/lib/ensureUser";
+import { anonymiseAccountByClerkId } from "@/lib/accountData";
+import { recordAudit } from "@/lib/auditLog";
+import { deleteObject, isOwnStorageUrl } from "@/lib/storage";
 
 /**
  * Bentuk `data` di dalam event Clerk, diketik secara struktural.
@@ -134,6 +137,54 @@ export async function POST(req: Request) {
       }
 
       return new Response("User updated in Neon", { status: 200 });
+    }
+
+    if (evt.type === "user.deleted") {
+      // Akun yang dihapus dari dashboard Clerk tidak pernah melewati
+      // `/api/profile/delete`: tidak ada sesi, tidak ada id internal. Satu-satunya
+      // hal yang Clerk kirim dan pernah kita simpan adalah `clerk_id` — jadi
+      // anonimisasinya dicari lewat itu.
+      const result = await anonymiseAccountByClerkId(db, data.id);
+
+      if (!result.found) {
+        // Bukan kegagalan. Ini artinya salah satu dari: Svix mengirim ulang event
+        // yang sama, akun dibuat sebelum webhook `user.created` pernah berjalan,
+        // atau barisnya sudah dianonimkan (clerk_id-nya kini `deleted:<uuid>`).
+        // Membalas 5xx akan membuat Svix mencoba lagi selamanya untuk sesuatu
+        // yang tidak akan berubah, jadi jawabannya 200.
+        log.info("clerk_user_deleted_no_row", { svixId });
+        return new Response("No matching user row; nothing to anonymise", { status: 200 });
+      }
+
+      // Objek blob dihapus setelah barisnya dikosongkan, dan kegagalannya tidak
+      // fatal: URL-nya sudah tidak tersimpan di mana pun. Pola yang sama dengan
+      // `/api/profile/delete`.
+      if (result.report.photoUrlCleared && isOwnStorageUrl(result.report.photoUrlCleared)) {
+        try {
+          await deleteObject(result.report.photoUrlCleared);
+        } catch (error) {
+          log.warn("failed to delete deleted-account photo object", { error, userId: result.userId });
+        }
+      }
+
+      // Jejak penghapusan itu sendiri. `actorId: null` karena pelakunya adalah
+      // pemilik akun, yang justru sedang berhenti menjadi subjek data di sini.
+      await recordAudit(db, {
+        actorId: null,
+        action: "user.anonymise",
+        entity: "user",
+        entityId: result.userId,
+        after: { source: "clerk_webhook", completedAt: result.report.completedAt },
+      }, { log });
+
+      log.info("clerk_user_deleted_anonymised", {
+        userId: result.userId,
+        reportsDeleted: result.report.deleted.reports,
+        pointsDeleted: result.report.deleted.pointsLog,
+        submissionsFeedbackCleared: result.report.submissionsFeedbackCleared,
+      });
+
+      return new Response("User anonymised in Neon", { status: 200 });
     }
   } catch (error) {
     log.error("clerk_webhook_db_error", { error, eventType: evt.type });

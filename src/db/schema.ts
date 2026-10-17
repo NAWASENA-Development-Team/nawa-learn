@@ -149,3 +149,36 @@ export const reports = pgTable("reports", {
   status: statusEnum("status").default("pending").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// ── Audit log (M12) ───────────────────────────────────────────────────────────
+// Siapa melakukan apa, terhadap apa. Tabel ini menjawab pertanyaan yang tidak
+// bisa dijawab `points_log`: `points_log` mencatat **poin** (dan hanya itu),
+// sementara keputusan moderasi yang tidak memberi poin — menolak soal,
+// menurunkan konten — tidak meninggalkan jejak apa pun selain `reviewer_id` di
+// baris pengajuan yang bisa ditimpa keputusan berikutnya.
+//
+// `before`/`after` sengaja hanya berisi **id, status, peran, dan angka** — bukan
+// baris utuh. Sebuah audit log yang menyalin baris `users` akan menjadi salinan
+// PII kedua yang harus ikut diekspor dan dihapus; bentuk sempit ini membuat itu
+// mustahil secara struktural, bukan sekadar konvensi.
+//
+// `actor_id` menunjuk ke baris `users` dan **tidak** ikut dikosongkan saat akun
+// dianonimkan (`deleteAccountData`): barisnya tetap ada dengan nama "Anonim",
+// jadi jejak tindakan administratif tetap utuh sementara tidak lagi menunjuk
+// siapa pun. NULL berarti tindakan sistem/CLI (mis. `npm run db:promote`).
+export const auditLog = pgTable("audit_log", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  actorId: uuid("actor_id").references(() => users.id),
+  action: varchar("action", { length: 64 }).notNull(),   // 'content.approve' | 'content.reject' | 'user.role_change'
+  entity: varchar("entity", { length: 64 }).notNull(),   // 'module' | 'question' | 'submission' | 'user'
+  entityId: uuid("entity_id"),
+  before: jsonb("before").$type<Record<string, unknown>>(),
+  after: jsonb("after").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  // "Riwayat konten ini" dan "riwayat moderator ini" adalah dua pertanyaan yang
+  // benar-benar ditanyakan saat menyelidiki sesuatu.
+  index("audit_log_entity_idx").on(table.entity, table.entityId),
+  index("audit_log_actor_created_idx").on(table.actorId, table.createdAt.desc()),
+  index("audit_log_created_idx").on(table.createdAt.desc()),
+]);

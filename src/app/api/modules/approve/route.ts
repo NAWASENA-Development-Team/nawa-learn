@@ -9,6 +9,7 @@ import { checkAndGrantLevelRewards } from "@/lib/levelRewards";
 import { needsSeasonReset } from "@/lib/season";
 import { requestLogger } from "@/lib/logger";
 import { parseJsonBody } from "@/lib/validation";
+import { recordAudit } from "@/lib/auditLog";
 
 // The client only picks *which* submission to act on.
 // `moduleId` and `submitterId` are resolved from the submission row in the
@@ -109,7 +110,18 @@ export async function POST(req: Request) {
 
     const newPoints = submitter.points + MODULE_APPROVAL_POINTS;
 
-    // 8. Check and grant level rewards.
+    // 8. Jejak keputusan. Setelah poinnya benar-benar bertambah, supaya yang
+    // tercatat adalah keadaan yang sungguh terjadi — bukan niat.
+    await recordAudit(db, {
+      actorId: reviewer.id,
+      action: "content.approve",
+      entity: "module",
+      entityId: moduleId,
+      before: { status: "pending" },
+      after: { status: "approved", pointsAwarded: MODULE_APPROVAL_POINTS },
+    }, { log });
+
+    // 9. Check and grant level rewards.
     const levelRewards = await checkAndGrantLevelRewards(submitterId, submitter.points, newPoints);
 
     return NextResponse.json({

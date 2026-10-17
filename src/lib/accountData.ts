@@ -353,3 +353,43 @@ export async function deleteAccountData(
     completedAt: now.toISOString(),
   };
 }
+
+// ─── Anonimisasi berdasarkan Clerk id (jalur webhook) ─────────────────────────
+
+export type ClerkAnonymiseResult =
+  | { found: false }
+  | { found: true; userId: string; report: AccountDeletionReport };
+
+/**
+ * Anonimisasi akun yang dikenali lewat **Clerk id**, bukan id internal kita.
+ *
+ * Dipakai webhook `user.deleted`: ketika seseorang menghapus akunnya dari
+ * dashboard Clerk (atau lewat aplikasi Clerk lain), tidak ada sesi yang bisa
+ * dipakai `requireUser()` dan tidak ada id internal yang kita ketahui. Clerk
+ * hanya mengirim satu hal yang pernah kita simpan — `clerk_id`.
+ *
+ * Idempoten dengan sendirinya: `deleteAccountData` mengganti `clerk_id` menjadi
+ * `deleted:<uuid>`, jadi pengiriman ulang event yang sama (Svix mencoba lagi
+ * ketika kita membalas 5xx, dan bisa mengirim ganda) tidak menemukan baris apa
+ * pun dan mengembalikan `{ found: false }` — bukan kegagalan, dan bukan
+ * penghapusan kedua.
+ *
+ * Mengembalikan `found: false` juga ketika tidak ada baris sama sekali. Itu
+ * keadaan normal untuk akun yang dibuat sebelum webhook `user.created` pernah
+ * berjalan, dan bukan alasan membalas 5xx ke Clerk.
+ */
+export async function anonymiseAccountByClerkId(
+  db: AppDb,
+  clerkId: string,
+  options: { now?: Date } = {},
+): Promise<ClerkAnonymiseResult> {
+  const account = await db.query.users.findFirst({
+    where: eq(schema.users.clerkId, clerkId),
+    columns: { id: true },
+  });
+
+  if (!account) return { found: false };
+
+  const report = await deleteAccountData(db, account.id, options);
+  return { found: true, userId: account.id, report };
+}

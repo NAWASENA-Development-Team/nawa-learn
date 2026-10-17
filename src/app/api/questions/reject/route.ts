@@ -7,6 +7,7 @@ import { and, eq } from "drizzle-orm";
 import { requireModerator } from "@/lib/authz";
 import { requestLogger } from "@/lib/logger";
 import { parseJsonBody } from "@/lib/validation";
+import { recordAudit } from "@/lib/auditLog";
 
 // A moderation take-down. The client may identify the target either by
 // submission id (the moderation queue) or by question id (the daily-quiz list,
@@ -73,6 +74,19 @@ export async function POST(req: Request) {
         feedback: feedback || "Soal ditolak oleh moderator.",
       })
       .where(eq(submissions.id, submission.id));
+
+    // 4. Jejak keputusan. Penolakan tidak memberi poin, jadi `points_log` tidak
+    // akan pernah punya baris untuknya — tanpa audit log, satu-satunya bukti
+    // bahwa soal ini pernah ditinjau adalah `reviewer_id`, yang akan tertimpa
+    // bila soal yang sama diputuskan lagi.
+    await recordAudit(db, {
+      actorId: reviewer.id,
+      action: "content.reject",
+      entity: "question",
+      entityId: targetQuestionId,
+      before: { status: "pending" },
+      after: { status: "rejected", submissionId: submission.id },
+    }, { log });
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {

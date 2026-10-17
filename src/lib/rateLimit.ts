@@ -84,6 +84,10 @@ export const RATE_LIMITS = {
   // The retention job runs on a schedule, not in a loop, and it is guarded by a
   // shared secret rather than a session. The IP bucket is the only real signal.
   "cron/retention": { perUser: { limit: 6, windowMs: HOUR }, perIp: { limit: 12, windowMs: HOUR } },
+  // Reading the moderation trail. Reviewer-only, but it is a page through a
+  // table that only ever grows, so it gets a budget of its own rather than
+  // sharing the read allowance of the public routes.
+  "moderator/audit-log": { perUser: { limit: 60, windowMs: MINUTE }, perIp: { limit: 120, windowMs: MINUTE } },
 } as const satisfies Record<string, Policy>;
 
 export type RateLimitPolicyName = keyof typeof RATE_LIMITS;
