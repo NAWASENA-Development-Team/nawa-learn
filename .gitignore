@@ -30,6 +30,13 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# Test output. `vitest run *> file.log` is how a full run is captured on a
+# 2-core machine (it takes ~23 minutes), and that file must never be committed:
+# it is machine-specific noise, and a 35 KB blob in a public repo is noise other
+# people download. This line was added in M12 after two commits accidentally
+# carried one.
+*.log
+
 # env files (can opt-in for committing if needed)
 .env*
 # ...except the template, which documents *which* variables are needed and

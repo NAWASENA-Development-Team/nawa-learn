@@ -3,7 +3,6 @@ import { db } from "@/db";
 import { users, modules, questions, pointsLog } from "@/db/schema";
 import { eq, desc, count, sql } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
 import ProfileClient from "@/components/profile/ProfileClient";
 
 export const dynamic = "force-dynamic";
