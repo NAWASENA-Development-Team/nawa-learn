@@ -18,6 +18,7 @@ import {
   Moon,
   Map,
   Shield,
+  ShieldCheck,
 } from "lucide-react";
 import NawaIcon from "@/components/icons/NawaIcon";
 
@@ -111,6 +112,9 @@ const NAV_ITEMS = [
   { href: "/leaderboard",        label: "Peringkat",    icon: Trophy },
   { href: "/submit",             label: "Upload",       icon: Upload },
   { href: "/profile",            label: "Profil Saya",  icon: User },
+  // UU PDP: hak subjek data harus bisa ditemukan, bukan hanya ada. Tautannya
+  // sengaja ada di navigasi utama, bukan terkubur di dalam halaman profil.
+  { href: "/profile/privacy",    label: "Privasi",       icon: ShieldCheck },
 ];
 
 // ── Main Navbar ───────────────────────────────────────────────────────────────
@@ -138,8 +142,11 @@ export default function Navbar() {
     return () => { document.body.style.overflow = ""; };
   }, [mobileOpen]);
 
+  // Pencocokan per segmen, bukan sekadar awalan string: `/profile/privacy`
+  // tidak boleh membuat `/profile` ikut menyala. Tanpa ini, halaman privasi
+  // menyalakan dua item navigasi sekaligus.
   const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname.startsWith(href);
+    href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <>

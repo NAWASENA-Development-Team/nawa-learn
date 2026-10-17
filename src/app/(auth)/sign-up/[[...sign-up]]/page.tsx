@@ -3,6 +3,7 @@ import { SignUp } from "@clerk/nextjs";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { Metadata } from "next";
+import { POLICY_PATHS } from "@/lib/policy";
 
 export const metadata: Metadata = {
   title: "Daftar Akun | NAWA-LEARN SMAN 2 Jonggol",
@@ -137,6 +138,33 @@ export default function SignUpPage() {
                   }
                 }}
               />
+
+              {/* ── Pemberitahuan persetujuan (UU PDP) ────────────────────────
+                  Persetujuan yang *tercatat* diambil satu langkah setelah ini,
+                  di /consent, dengan kotak centang yang harus dicentang sendiri
+                  dan tombol yang menulis timestamp + versi kebijakan. Yang ada
+                  di sini adalah pemberitahuannya: siswa berhak tahu sejak awal
+                  apa yang akan ia setujui, sebelum mengetikkan apa pun. */}
+              <p className="mt-4 text-center text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                Setelah akun dibuat, kamu akan diminta menyetujui{" "}
+                <Link
+                  href={POLICY_PATHS.privacy}
+                  target="_blank"
+                  className="font-bold text-indigo-600 hover:underline dark:text-indigo-400"
+                >
+                  Kebijakan Privasi
+                </Link>{" "}
+                dan{" "}
+                <Link
+                  href={POLICY_PATHS.terms}
+                  target="_blank"
+                  className="font-bold text-indigo-600 hover:underline dark:text-indigo-400"
+                >
+                  Ketentuan Layanan
+                </Link>{" "}
+                kami sebelum bisa memakai fitur-fiturnya. Bacalah dulu — keduanya ditulis
+                dengan bahasa sehari-hari, bukan pasal berbelit.
+              </p>
             </div>
           </div>
 

@@ -24,6 +24,12 @@ export default defineConfig({
     // different file each run. A hook timeout is there to catch a hang, not to
     // enforce a performance budget, and a gate that fails at random is a gate
     // people learn to re-run instead of read.
+    //
+    // Raising it here was only half the fix: every integration file also passed
+    // an explicit `60_000` to its own `beforeAll`, and a per-call timeout beats
+    // this one without a word. So the number below was not in force anywhere
+    // until those literals were deleted. Do not put one back —
+    // `tests/unit/ci-gates.test.ts` fails if any test file hard-codes a timeout.
     hookTimeout: 120_000,
     coverage: {
       provider: "v8",

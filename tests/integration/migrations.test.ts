@@ -3,12 +3,14 @@ import path from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { beforeAll, describe, expect, it } from "vitest";
 
-// Migration 0000 is the schema as it existed before M5; 0001 is the M5 upgrade.
-// These tests run the real SQL files against a database that already holds data,
-// which is the only way to prove the upgrade is safe on the live database.
+// Migration 0000 is the schema as it existed before M5; 0001 is the M5 upgrade;
+// 0002 adds the UU PDP consent columns in M11. These tests run the real SQL files
+// against a database that already holds data, which is the only way to prove the
+// upgrade is safe on the live database.
 const MIGRATIONS_DIR = path.resolve(process.cwd(), "src/db/migrations");
 const LEGACY = "0000_absurd_warhawk.sql";
 const UPGRADE = "0001_clever_lady_mastermind.sql";
+const CONSENT = "0002_charming_venom.sql";
 
 const sqlOf = (file: string) => readFileSync(path.join(MIGRATIONS_DIR, file), "utf8");
 
@@ -60,7 +62,7 @@ describe("M5 upgrade on a database that already has data", () => {
 
     // 3. Apply the upgrade.
     await db.exec(sqlOf(UPGRADE));
-  }, 60_000);
+  });
 
   it("keeps every row that existed before the upgrade", async () => {
     expect(await count(db, "users")).toBe(2);
@@ -153,5 +155,73 @@ describe("M5 upgrade on a database that already has data", () => {
       `SELECT avatar_index FROM users WHERE id = '${USER_A}'`,
     );
     expect(result.rows[0].avatar_index).toBe(7);
+  });
+});
+
+describe("M11 consent columns on a database that already has data", () => {
+  let db: PGlite;
+
+  beforeAll(async () => {
+    db = new PGlite();
+
+    // 1. The pre-M11 schema, with the M5 upgrade applied — exactly the live
+    //    database's state the moment before 0002 runs.
+    await db.exec(sqlOf(LEGACY));
+    await db.exec(sqlOf(UPGRADE));
+
+    // 2. A row that exists before the consent columns are added.
+    await db.exec(`
+      INSERT INTO users (id, clerk_id, name, email, role, points)
+      VALUES ('${USER_A}', 'clerk_a', 'A', 'a@example.test', 'student', 120);
+    `);
+
+    // 3. Apply the consent migration.
+    await db.exec(sqlOf(CONSENT));
+  });
+
+  it("keeps the pre-existing row and leaves its consent NULL", async () => {
+    const result = await db.query<{
+      consent_policy_version: string | null;
+      consent_accepted_at: Date | null;
+    }>(
+      `SELECT consent_policy_version, consent_accepted_at FROM users WHERE id = '${USER_A}'`,
+    );
+
+    expect(result.rows).toHaveLength(1);
+    // NULL is what the gate reads as "never accepted", so a pre-M11 account is
+    // correctly asked for consent once instead of being assumed to have given it.
+    expect(result.rows[0].consent_policy_version).toBeNull();
+    expect(result.rows[0].consent_accepted_at).toBeNull();
+  });
+
+  it("adds both columns to the existing table", async () => {
+    const result = await db.query<{ column_name: string }>(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'users'
+         AND column_name IN ('consent_policy_version', 'consent_accepted_at')`,
+    );
+    expect(result.rows.map((row) => row.column_name).sort()).toEqual([
+      "consent_accepted_at",
+      "consent_policy_version",
+    ]);
+  });
+
+  it("accepts a version and timestamp", async () => {
+    await db.exec(
+      `UPDATE users SET consent_policy_version = '1.0', consent_accepted_at = '2026-10-17T03:00:00Z'
+       WHERE id = '${USER_A}'`,
+    );
+    const result = await db.query<{ consent_policy_version: string }>(
+      `SELECT consent_policy_version FROM users WHERE id = '${USER_A}'`,
+    );
+    expect(result.rows[0].consent_policy_version).toBe("1.0");
+  });
+
+  it("refuses a version longer than the varchar(20) column", async () => {
+    // A silently truncated version would compare unequal to the constant and
+    // re-prompt forever; the column is sized to make an over-long value an error.
+    await expect(
+      db.exec(`UPDATE users SET consent_policy_version = repeat('x', 21) WHERE id = '${USER_A}'`),
+    ).rejects.toThrow();
   });
 });

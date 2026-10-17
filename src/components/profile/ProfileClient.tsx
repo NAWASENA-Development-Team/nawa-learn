@@ -33,6 +33,7 @@ import {
   Star,
   Flag,
   Bell,
+  ShieldCheck,
   Crown,
   Flame,
   Target
@@ -742,6 +743,13 @@ export default function ProfileClient({
                   >
                     <Flag className="h-4 w-4" /> Lapor Isu
                   </button>
+                  {/* UU PDP: hak ekspor & hapus harus punya pintunya sendiri. */}
+                  <Link
+                    href="/profile/privacy"
+                    className="inline-flex items-center gap-2 rounded-xl bg-zinc-800/80 hover:bg-emerald-900/40 border border-zinc-700/80 hover:border-emerald-500/50 text-emerald-300 px-4 py-2.5 text-xs font-bold transition-all hover:scale-[1.02] active:scale-95 cursor-pointer"
+                  >
+                    <ShieldCheck className="h-4 w-4" /> Privasi & Data
+                  </Link>
                 </>
               )}
             </div>

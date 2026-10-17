@@ -72,6 +72,18 @@ export const RATE_LIMITS = {
   // Public and anonymous, so only the IP budget can ever apply. A single broken
   // page can emit a burst of reports; a whole school shares one NAT address.
   "csp/report": { perUser: { limit: 120, windowMs: MINUTE }, perIp: { limit: 120, windowMs: MINUTE } },
+  // Consent is recorded once per policy version, so this budget exists only to
+  // stop a script from hammering the write. The caller may not have a database
+  // row yet, so the route passes `null` and only the IP bucket applies.
+  "consent/accept": { perUser: { limit: 5, windowMs: MINUTE }, perIp: { limit: 15, windowMs: MINUTE } },
+  // Reading your own data. Cheap, but it serialises every row the user owns, so
+  // it is not something to let a script call in a tight loop.
+  "profile/export": { perUser: { limit: 3, windowMs: HOUR }, perIp: { limit: 10, windowMs: HOUR } },
+  // Deleting an account is a one-way door. Nothing legitimate calls it twice.
+  "profile/delete": { perUser: { limit: 3, windowMs: HOUR }, perIp: { limit: 10, windowMs: HOUR } },
+  // The retention job runs on a schedule, not in a loop, and it is guarded by a
+  // shared secret rather than a session. The IP bucket is the only real signal.
+  "cron/retention": { perUser: { limit: 6, windowMs: HOUR }, perIp: { limit: 12, windowMs: HOUR } },
 } as const satisfies Record<string, Policy>;
 
 export type RateLimitPolicyName = keyof typeof RATE_LIMITS;

@@ -27,6 +27,15 @@ const isPublicRoute = createRouteMatcher([
   // Browsers POST CSP violation reports without credentials, from the document
   // that was just blocked. The handler logs a bounded subset and stores nothing.
   '/api/csp-report',
+  // Legal documents. Public on purpose: a prospective user has to be able to read
+  // what they are agreeing to *before* they have an account — and a link sent to
+  // a student must not bounce them to a sign-in page.
+  '/privacy',
+  '/terms',
+  // Scheduled data-retention job. The platform's scheduler has no session, so it
+  // cannot pass the proxy; its own `CRON_SECRET` check is the gate, and it fails
+  // closed (401) when that secret is unset or wrong.
+  '/api/cron/retention',
 ]);
 
 export default clerkMiddleware(

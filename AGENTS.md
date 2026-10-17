@@ -229,6 +229,30 @@ To add new badges, edit `src/lib/badges.ts`:
 - Every route must authorize in the handler. `src/proxy.ts` is defence in depth, **not** the only defence — it was dead code from M1 to M9 (see C6) and three routes silently lost their only gate. `api/exams/list`, `api/modules/count` and `api/modules/download` are now guarded locally.
 - Never hand `requireSession()`'s Clerk id to `rateLimit` or to an ownership check. Pass the **database** user id, or `null` when the identity is unknown — the IP bucket still applies.
 
+## Privacy & data governance (UU PDP)
+
+### Consent is a server-side gate, not a sign-up checkbox
+- `src/lib/policy.ts` holds `POLICY_VERSION` and `hasAcceptedCurrentPolicy()`. The version lives in **code**, never as a column default: bumping it is what re-prompts every user whose stored version no longer matches.
+- The gate is `src/app/(dashboard)/layout.tsx`, not the Clerk `<SignUp>` form. A layout runs before any page beneath it, so form sign-up, Google OAuth and pre-M11 rows are all caught by one check. Clerk's express-consent checkbox is a dashboard toggle that cannot be tested and fails silently; ours cannot.
+- `/consent` deliberately sits **outside** the `(dashboard)` route group. Inside it, the gate would redirect the consent page to itself and the user could never accept anything.
+- **`POST /api/consent/accept` is the only writer** of `users.consent_policy_version` / `users.consent_accepted_at`. It takes the version from the server constant, never from the body, and the schema is `.strict()` with `accept: true` required.
+- The Clerk webhook **never** writes consent. It knows an account was created; it does not know anyone ticked anything. A `legal_accepted_at` from Clerk is logged (`clerk_legal_consent_seen`) but never stored as our consent — Clerk does not know our version.
+- Pre-M11 accounts have `NULL` consent columns and are asked **once**. That is intended, not an oversight.
+
+### `RETENTION_POLICY` is one array with two readers
+- `src/lib/retention.ts` owns the windows (`reports` 12 months, `points_log` 24, `submissions` 24). The table on `/privacy` renders from it and `runRetention()` deletes from it, so the policy a student reads cannot drift from the one the machine runs.
+- `modules`, `questions` and `custom_exams` are deliberately **not** retention targets: they are library content other students read, not a record about one person. Attribution is handled by account deletion instead.
+- `POST /api/cron/retention` is **POST-only** — `GET` answers 405. It is destructive, and a GET can be fired by a prefetcher, crawler or stray tab. Vercel Cron sends POST.
+- An unset `CRON_SECRET` means **401 for everyone** (fail closed), logged as `cron_retention_misconfigured` rather than `cron_retention_unauthorized` because the two need different midnight actions. The token comparison is hand-rolled constant-time so no `node:crypto` is needed on that path. Schedule lives in `vercel.json`.
+
+### Data-subject requests: export and delete
+- `GET /api/profile/export?format=json|csv` and `POST /api/profile/delete` back `/profile/privacy`. Both take the identity **from the session**; there is no `userId` field anywhere, so the routes cannot be aimed at someone else.
+- Route handlers are **not** under `(dashboard)/layout.tsx`, so the consent gate does not cover them — each guards itself (`requireUser()` → `rateLimit()` → then read input).
+- Export lists every column **by name**. A bare `select()` would silently pick up PII columns added later.
+- CSV is long form (`kategori,kolom,nilai`) with a BOM (Excel reads UTF-8) and a leading `'` on cells starting with `=`, `+`, `-`, `@`, tab or CR to defuse CSV injection. Six record types with unrelated columns cannot share one header without dropping data, and this file is evidence.
+- Delete is **anonymisation, not `DELETE FROM users`**: `modules.uploader_id`, `questions.uploader_id` and `submissions.submitter_id` are `NOT NULL` and point here, so deleting the row would destroy unrelated students' work. `clerk_id` becomes a unique `deleted:<uuid>` tombstone, identity fields are blanked, consent columns are nulled, `reports` + `points_log` are deleted, and the user's exams are renamed to "Anonim". The UI requires typing `HAPUS AKUN SAYA`, and that phrase is defined **once** in `src/lib/accountConstants.ts` — a copy anywhere else is the drift the module exists to prevent (`tests/unit/ci-gates.test.ts` fails if a second literal appears in `src/`).
+- Order is deliberate and **not transactional** (Neon HTTP has none): local data is anonymised first, the Clerk account is deleted last. If the last step fails the user already has no personal data with us and it is logged (`account_deletion_clerk_failed`); the reverse — Clerk gone, data still here — would be unrecoverable.
+
 ## Secrets & supply chain
 
 ### The repository is public

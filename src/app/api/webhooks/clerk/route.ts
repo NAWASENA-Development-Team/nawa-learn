@@ -1,122 +1,144 @@
-// app/api/webhooks/clerk/route.ts
-import { Webhook } from 'svix';
-import { headers } from 'next/headers';
-import { WebhookEvent } from '@clerk/nextjs/server';
-import { db } from '@/db';
-import { users } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+// src/app/api/webhooks/clerk/route.ts
+// ─── Sinkronisasi pengguna Clerk → tabel `users` ──────────────────────────────
+// Jalur normal yang membuat baris `users`. Tugasnya sempit dan sengaja begitu:
+// memastikan setiap akun Clerk punya padanannya di database kami, dengan nama
+// tampilan dan surel yang benar.
+//
+// Yang **tidak** dikerjakan di sini: mencatat persetujuan kebijakan. Sebuah
+// webhook tidak tahu apakah pemilik akun benar-benar mencentang apa pun — ia
+// hanya tahu Clerk membuat sebuah akun. Menulis `consent_accepted_at` dari sini
+// berarti mencatat persetujuan yang tidak pernah diberikan, dan itu justru hal
+// yang UU PDP melarang. Persetujuan dicatat di satu tempat saja:
+// `POST /api/consent/accept`, setelah pengguna menekan tombolnya sendiri.
+//
+// Yang dicatat di sini hanya **sinyal**: bila dashboard Clerk menyalakan
+// persyaratan persetujuan, Clerk mengirim `legal_accepted_at`, dan nilainya
+// dilaporkan ke log sebagai bukti tambahan. Nilai itu tidak pernah disimpan
+// sebagai persetujuan versi kebijakan kami, karena Clerk tidak tahu versi kami.
+import { Webhook } from "svix";
+import { headers } from "next/headers";
+import type { WebhookEvent } from "@clerk/nextjs/server";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { users } from "@/db/schema";
 import { requestLogger } from "@/lib/logger";
+import { ensureUserRow, resolveDisplayName, type ClerkProfileLike } from "@/lib/ensureUser";
+
+/**
+ * Bentuk `data` di dalam event Clerk, diketik secara struktural.
+ *
+ * Clerk memakai `snake_case` di payload webhook dan `camelCase` di SDK-nya;
+ * modul `ensureUser` memilih `camelCase` (itu yang dipakai `currentUser()`),
+ * jadi pemetaannya dilakukan di sini, di satu tempat, alih-alih menyalin logika
+ * nama tampilan ke dua bentuk yang berbeda.
+ */
+interface ClerkWebhookUser {
+  id: string;
+  email_addresses?: { email_address: string }[];
+  username?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  external_accounts?: { provider: string }[];
+  legal_accepted_at?: string | null;
+}
+
+function toProfileLike(data: ClerkWebhookUser): ClerkProfileLike {
+  return {
+    id: data.id,
+    emailAddresses: data.email_addresses?.map((address) => ({
+      emailAddress: address.email_address,
+    })),
+    username: data.username,
+    firstName: data.first_name,
+    lastName: data.last_name,
+    externalAccounts: data.external_accounts?.map((account) => ({
+      provider: account.provider,
+    })),
+  };
+}
 
 export async function POST(req: Request) {
   const log = requestLogger(req);
-  const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
-  
-  if (!WEBHOOK_SECRET) {
-    throw new Error('Please add CLERK_WEBHOOK_SECRET from Clerk Dashboard to .env');
+  const webhookSecret = process.env.CLERK_WEBHOOK_SECRET;
+
+  if (!webhookSecret) {
+    // Gagal keras, bukan diam-diam: tanpa rahasia ini tanda tangan Svix tidak
+    // bisa diverifikasi, dan sebuah endpoint yang menerima payload tanpa
+    // verifikasi berarti siapa pun bisa membuat baris `users` palsu.
+    log.error("clerk_webhook_misconfigured", { reason: "CLERK_WEBHOOK_SECRET is not set" });
+    return new Response("Error: webhook secret is not configured", { status: 500 });
   }
 
-  // Get headers for Svix verification
   const headerPayload = await headers();
-  const svix_id = headerPayload.get("svix-id");
-  const svix_timestamp = headerPayload.get("svix-timestamp");
-  const svix_signature = headerPayload.get("svix-signature");
+  const svixId = headerPayload.get("svix-id");
+  const svixTimestamp = headerPayload.get("svix-timestamp");
+  const svixSignature = headerPayload.get("svix-signature");
 
-  if (!svix_id || !svix_timestamp || !svix_signature) {
-    return new Response('Error: Missing Svix headers', { status: 400 });
+  if (!svixId || !svixTimestamp || !svixSignature) {
+    return new Response("Error: Missing Svix headers", { status: 400 });
   }
 
-  const payload = await req.json();
-  const body = JSON.stringify(payload);
-  const wh = new Webhook(WEBHOOK_SECRET);
-  let evt: WebhookEvent;
+  // Badan mentah, bukan hasil `JSON.stringify(await req.json())`. Svix menandatangani
+  // byte-nya, bukan maknanya: mengurai lalu menyusun ulang JSON bergantung pada
+  // urutan kunci dan spasi yang kebetulan sama. `req.text()` tidak menebak.
+  const rawBody = await req.text();
 
+  let evt: WebhookEvent;
   try {
-    evt = wh.verify(body, {
-      "svix-id": svix_id,
-      "svix-timestamp": svix_timestamp,
-      "svix-signature": svix_signature,
+    evt = new Webhook(webhookSecret).verify(rawBody, {
+      "svix-id": svixId,
+      "svix-timestamp": svixTimestamp,
+      "svix-signature": svixSignature,
     }) as WebhookEvent;
   } catch (err) {
-    log.error('Error verifying webhook:', err);
-    return new Response('Error: Invalid signature', { status: 400 });
+    log.error("clerk_webhook_invalid_signature", { error: err });
+    return new Response("Error: Invalid signature", { status: 400 });
   }
 
-  const eventType = evt.type;
+  const data = evt.data as unknown as ClerkWebhookUser;
 
-  // Helper: resolve the best display name from Clerk event data
-  function resolveName(data: {
-    first_name?: string | null;
-    last_name?: string | null;
-    username?: string | null;
-    email_addresses?: { email_address: string }[];
-    external_accounts?: { provider: string }[];
-  }): string {
-    const { first_name, last_name, username, email_addresses, external_accounts } = data;
-    const isGoogleAuth = external_accounts?.some(
-      (acc) => acc.provider === 'google' || acc.provider === 'oauth_google',
-    );
-    // Google OAuth → use real name from Google profile
-    if (isGoogleAuth && (first_name || last_name)) {
-      return `${first_name || ''} ${last_name || ''}`.trim();
-    }
-    // Username-based sign-up → use username as display name
-    if (username) return username;
-    // Last resort: name fields or email prefix
-    const fromName = `${first_name || ''} ${last_name || ''}`.trim();
-    if (fromName) return fromName;
-    return email_addresses?.[0]?.email_address?.split('@')[0] || 'Student';
-  }
+  try {
+    if (evt.type === "user.created") {
+      // `ensureUserRow` sengaja mencocokkan lewat surel lebih dulu: saat berpindah
+      // dari instance Clerk dev ke produksi, barisnya sudah ada dengan `clerk_id`
+      // lama, dan membuat baris kedua akan memecah riwayat poin pengguna itu.
+      const user = await ensureUserRow(toProfileLike(data));
 
-  // Sync new user to our database
-  if (eventType === 'user.created') {
-    const { id, email_addresses } = evt.data;
-    const email = email_addresses?.[0]?.email_address || `${id}@user.nawasena.site`;
-    const name = resolveName(evt.data as Parameters<typeof resolveName>[0]);
+      log.info("clerk_user_created", { userId: user?.id });
 
-    try {
-      // Check if email already exists (e.g. dev → production Clerk migration)
-      const existing = await db.query.users.findFirst({
-        where: eq(users.email, email),
-      });
-
-      if (existing) {
-        // Update clerk_id to the new production one
-        await db.update(users)
-          .set({ clerkId: id, name: name })
-          .where(eq(users.email, email));
-        return new Response('User re-linked to production Clerk', { status: 200 });
+      if (data.legal_accepted_at) {
+        // Bukti tambahan dari dashboard Clerk. Tidak disimpan sebagai
+        // persetujuan versi kami — lihat catatan di kepala berkas ini.
+        log.info("clerk_legal_consent_seen", { userId: user?.id });
       }
 
-      await db.insert(users).values({
-        clerkId: id,
-        email: email,
-        name: name,
-        role: 'student',
-        points: 0,
-      });
-      return new Response('User successfully synced to Neon', { status: 200 });
-    } catch (error) {
-      log.error('Database sync error:', error);
-      return new Response('Error syncing user to database', { status: 500 });
+      return new Response("User successfully synced to Neon", { status: 200 });
     }
+
+    if (evt.type === "user.updated") {
+      const profile = toProfileLike(data);
+
+      // Pencocokan lewat `clerk_id`, bukan surel: siswa yang mengganti surelnya
+      // akan menghasilkan baris kedua bila kita mencocokkan dengan surel baru.
+      const [updated] = await db
+        .update(users)
+        .set({ name: resolveDisplayName(profile), email: profile.emailAddresses?.[0]?.emailAddress ?? `${data.id}@user.nawasena.site` })
+        .where(eq(users.clerkId, data.id))
+        .returning({ id: users.id });
+
+      // Baris yang belum ada (webhook `user.created` hilang, atau migrasi
+      // instance) dibuat di sini alih-alih dibiarkan tanpa padanan.
+      if (!updated) {
+        const created = await ensureUserRow(profile);
+        log.info("clerk_user_updated_created_missing_row", { userId: created?.id });
+      }
+
+      return new Response("User updated in Neon", { status: 200 });
+    }
+  } catch (error) {
+    log.error("clerk_webhook_db_error", { error, eventType: evt.type });
+    return new Response("Error syncing user to database", { status: 500 });
   }
 
-  // Keep DB name in sync when user updates their Clerk profile
-  if (eventType === 'user.updated') {
-    const { id, email_addresses } = evt.data;
-    const email = email_addresses?.[0]?.email_address || `${id}@user.nawasena.site`;
-    const name = resolveName(evt.data as Parameters<typeof resolveName>[0]);
-
-    try {
-      await db.update(users)
-        .set({ name, email })
-        .where(eq(users.clerkId, id));
-      return new Response('User updated in Neon', { status: 200 });
-    } catch (error) {
-      log.error('Database update error:', error);
-      return new Response('Error updating user in database', { status: 500 });
-    }
-  }
-
-  return new Response('Webhook received', { status: 200 });
+  return new Response("Webhook received", { status: 200 });
 }

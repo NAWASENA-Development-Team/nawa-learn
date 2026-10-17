@@ -22,7 +22,7 @@ let db: TestDb;
 beforeAll(async () => {
   db = await createTestDb();
   holder.db = db;
-}, 60_000);
+});
 
 beforeEach(() => {
   authMock.mockReset();

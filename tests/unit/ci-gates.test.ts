@@ -10,7 +10,7 @@
 // to M9 while CI stayed green (C6). M10's whole purpose is to make that class of
 // failure visible, so the controls it adds are pinned in place.
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -193,5 +193,68 @@ describe("dependency hygiene config", () => {
     // only, and this test keeps it that way.
     const gitleaks = read(".gitleaks.toml");
     expect(gitleaks).not.toMatch(/^\s*paths\s*=/m);
+  });
+});
+
+describe("the integration suite's timeouts", () => {
+  it("lets the config own the hook timeout instead of overriding it per file", () => {
+    // `beforeAll(fn, 60_000)` beats `hookTimeout` in vitest.config.ts, silently.
+    // Every integration file used to carry that literal, so the 120s ceiling the
+    // config documents was not actually in force anywhere: `migrations.test.ts`
+    // died at 60s under v8 coverage while the same file passed without it. This
+    // is the C6 shape again — a setting that looks configured and is not — so
+    // the absence of per-call timeouts is asserted rather than assumed.
+    const dir = path.join(root, "tests");
+    const offenders: string[] = [];
+
+    const walk = (current: string) => {
+      for (const entry of readdirSync(current, { withFileTypes: true })) {
+        const full = path.join(current, entry.name);
+        if (entry.isDirectory()) {
+          walk(full);
+        } else if (entry.name.endsWith(".test.ts")) {
+          // Comments are stripped first, for the same reason `ciBody` strips
+          // them: the note explaining what is forbidden would otherwise contain
+          // the forbidden text. This file's own comment above is such a case.
+          const code = readFileSync(full, "utf8")
+            .split(/\r?\n/)
+            .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
+            .join("\n");
+          // An inline timeout is `}, 60_000);` — a number after the closing brace.
+          if (/\},\s*\d[\d_]*\)\s*;/.test(code)) {
+            offenders.push(path.relative(root, full));
+          }
+        }
+      }
+    };
+    walk(dir);
+
+    expect(offenders).toEqual([]);
+  });
+});
+
+describe("the account-deletion confirmation phrase", () => {
+  it("is written down exactly once, in the module both sides import", () => {
+    // The phrase exists in two places that must agree: the button that asks the
+    // user to type it, and the schema that accepts it. A copy in `accountData.ts`
+    // used to exist alongside `accountConstants.ts`, which is precisely the drift
+    // that module was created to prevent — change one literal and the delete
+    // button silently stops working, with no error anywhere to notice.
+    const occurrences: string[] = [];
+    const walk = (current: string) => {
+      for (const entry of readdirSync(current, { withFileTypes: true })) {
+        const full = path.join(current, entry.name);
+        if (entry.isDirectory()) {
+          walk(full);
+        } else if (/\.tsx?$/.test(entry.name)) {
+          if (readFileSync(full, "utf8").includes("HAPUS AKUN SAYA")) {
+            occurrences.push(path.relative(root, full).replaceAll("\\", "/"));
+          }
+        }
+      }
+    };
+    walk(path.join(root, "src"));
+
+    expect(occurrences).toEqual(["src/lib/accountConstants.ts"]);
   });
 });

@@ -25,6 +25,16 @@ export const users = pgTable("users", {
   levelFrame: varchar("level_frame", { length: 20 }),                    // "wood"|"bronze"|"silver"|"gold"
   // Daily quiz tracking
   lastDailyQuizAt: timestamp("last_daily_quiz_at"),
+  // ── Consent (UU PDP) ────────────────────────────────────────────────────────
+  // Written in exactly one place: `POST /api/consent/accept`, after the user
+  // presses the button on /consent. The Clerk webhook deliberately does *not*
+  // write these columns — a webhook cannot know that anyone ticked a box, and
+  // recording a consent that was never given is what UU PDP forbids. NULL means
+  // the user has never agreed to the current policy, and the dashboard layout
+  // refuses to render until it is set. The version is stored next to the
+  // timestamp so a later policy change can be told apart from an old consent.
+  consentPolicyVersion: varchar("consent_policy_version", { length: 20 }),
+  consentAcceptedAt: timestamp("consent_accepted_at"),
   // Seasonal leaderboard
   seasonPoints: integer("season_points").default(0).notNull(),   // points earned in current season only
   seasonResetAt: timestamp("season_reset_at"),                   // when this user's season points were last reset
