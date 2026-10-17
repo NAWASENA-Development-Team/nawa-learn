@@ -11,7 +11,7 @@ const MIGRATIONS_DIR = path.resolve(process.cwd(), "src/db/migrations");
 const LEGACY = "0000_absurd_warhawk.sql";
 const UPGRADE = "0001_clever_lady_mastermind.sql";
 const CONSENT = "0002_charming_venom.sql";
-const AUDIT = "0003_greedy_johnny_blaze.sql";
+const AUDIT = "0003_panoramic_landau.sql";
 
 const sqlOf = (file: string) => readFileSync(path.join(MIGRATIONS_DIR, file), "utf8");
 

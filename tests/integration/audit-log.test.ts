@@ -194,6 +194,24 @@ describe("listAuditEntries", () => {
     expect(entries.map((entry) => entry.entityId)).toEqual([second, first]);
   });
 
+  // Pin the reason the test above is deterministic. Both rows are written inside
+  // this file's single transaction, and `now()` would stamp them identically —
+  // that is exactly how CI caught the original `defaultNow()`: it passed here and
+  // failed on the runner, where the two inserts landed in the same microsecond.
+  // `clock_timestamp()` reads the clock per statement, so the ordering contract
+  // holds regardless of transaction boundaries.
+  it("stamps two entries written in one transaction with different times", async () => {
+    const entityId = crypto.randomUUID();
+
+    await recordAudit(db, { actorId: null, action: "content.approve", entity: "module", entityId });
+    await recordAudit(db, { actorId: null, action: "content.reject", entity: "module", entityId });
+
+    const entries = await listAuditEntries(db, { entityId });
+
+    expect(entries).toHaveLength(2);
+    expect(entries[0].createdAt.getTime()).not.toBe(entries[1].createdAt.getTime());
+  });
+
   it("never returns more rows than the hard cap, whatever the caller asks for", async () => {
     const entityId = crypto.randomUUID();
     for (let i = 0; i < 3; i += 1) {

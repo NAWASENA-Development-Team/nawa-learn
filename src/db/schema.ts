@@ -174,7 +174,14 @@ export const auditLog = pgTable("audit_log", {
   entityId: uuid("entity_id"),
   before: jsonb("before").$type<Record<string, unknown>>(),
   after: jsonb("after").$type<Record<string, unknown>>(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  // `clock_timestamp()`, bukan `now()`. Ini bukan selera: `now()` mengembalikan
+  // waktu **mulai transaksi**, jadi dua baris audit yang ditulis dalam satu
+  // transaksi mendapat stempel waktu yang identik dan urutannya menjadi tidak
+  // bisa ditentukan. Untuk tabel yang gunanya justru "apa yang terjadi lebih
+  // dulu", itu kehilangan informasi. `clock_timestamp()` membaca jam sungguhan
+  // per pernyataan, sehingga urutan tetap benar berapa pun batas transaksinya.
+  // Bug ini tertangkap CI, bukan tinjauan kode (lihat catatan M12).
+  createdAt: timestamp("created_at").default(sql`clock_timestamp()`).notNull(),
 }, (table) => [
   // "Riwayat konten ini" dan "riwayat moderator ini" adalah dua pertanyaan yang
   // benar-benar ditanyakan saat menyelidiki sesuatu.

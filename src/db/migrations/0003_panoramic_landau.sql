@@ -6,7 +6,7 @@ CREATE TABLE "audit_log" (
 	"entity_id" uuid,
 	"before" jsonb,
 	"after" jsonb,
-	"created_at" timestamp DEFAULT now() NOT NULL
+	"created_at" timestamp DEFAULT clock_timestamp() NOT NULL
 );
 --> statement-breakpoint
 ALTER TABLE "audit_log" ADD CONSTRAINT "audit_log_actor_id_users_id_fk" FOREIGN KEY ("actor_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
