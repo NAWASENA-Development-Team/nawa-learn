@@ -4,6 +4,7 @@ import { users, modules, questions, pointsLog } from "@/db/schema";
 import { eq, desc, count, sql, and } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
 import ProfileClient from "@/components/profile/ProfileClient";
+import { logger } from "@/lib/logger";
 import { IS_PARTICIPANT } from "@/lib/participants";
 import { emptySpecialtyStats, getSpecialtyStats } from "@/lib/specialtyStats";
 
@@ -45,7 +46,11 @@ export default async function PublicProfilePage({ params }: PageProps) {
       },
     });
   } catch (err) {
-    console.error("Invalid UUID or database error fetching profile:", err);
+    // A malformed UUID in the URL and a database outage both land here, and both
+    // end up rendering the "not found" card below — so the log line is the only
+    // place the two can be told apart. The user id is deliberately not logged:
+    // it is a data-subject identifier and `logger` only redacts known key names.
+    logger.error("profile_fetch_failed", err);
   }
 
   // 2. Render user not found if user does not exist

@@ -238,7 +238,7 @@ To add new badges, edit `src/lib/badges.ts`:
 ### A nonce forces every route to render dynamically
 - `src/app/layout.tsx` reads `headers().get("x-nonce")` and passes it to `<ClerkProvider nonce={nonce}>` and `<ThemeProvider nonce={nonce}>`. Both render a `<script>`; under `'strict-dynamic'` a document script tag is only trusted if it carries the nonce, so omitting either one costs sign-in or the theme.
 - Reading `headers()` in the root layout opts **every** route into dynamic rendering. That is a requirement of nonce CSP, not a regression: a nonce cannot be baked into HTML prerendered at build time. It incidentally fixes `/moderator` and `/questions/practice`, which used to be statically prerendered.
-- `@vercel/analytics` needs nothing special: it injects its script via `document.createElement("script")` in `useEffect`, which `'strict-dynamic'` trusts.
+- `@vercel/analytics` is **not mounted**. `cb970a5` claims "integrate analytics in layout", but its diff only added the import — `<Analytics />` was never rendered, so the package has never collected anything. M14a removed the dead import rather than leaving a line that reads like telemetry is installed. If it is ever mounted it needs nothing special under CSP (it injects its script via `document.createElement("script")` in `useEffect`, which `'strict-dynamic'` trusts) — but it also needs a `/privacy` disclosure, because "we collect nothing" is currently true and the policy says so.
 
 ### CSRF guard runs before authentication
 - `src/lib/csrf.ts` — `isCrossSiteRequest(req)` and `requestOrigin(req)`, deliberately free of Clerk imports so it is unit-testable with a plain object.
@@ -294,6 +294,13 @@ To add new badges, edit `src/lib/badges.ts`:
 - Order is deliberate and **not transactional** (Neon HTTP has none): local data is anonymised first, the Clerk account is deleted last. If the last step fails the user already has no personal data with us and it is logged (`account_deletion_clerk_failed`); the reverse — Clerk gone, data still here — would be unrecoverable.
 - **Two doors, one implementation.** `POST /api/profile/delete` (self-service) and the `user.deleted` branch of `webhooks/clerk` (deleted from the Clerk dashboard) both call `anonymiseAccountByClerkId()` in `src/lib/accountData.ts`. Never duplicate the anonymisation field list in a route — that is how the two doors drift and one of them quietly stops blanking a column.
 - `anonymiseAccountByClerkId()` is **idempotent by construction**: after it runs, `clerk_id` is `deleted:<uuid>`, so a replayed webhook finds no row and answers `200` (`clerk_user_deleted_no_row`). A Clerk `user.deleted` for an unknown id is also `200`, not `404` — Clerk retries on non-2xx.
+
+### Bookmarks are account-owned, and the request carries a desired state
+- `bookmarks` (`user_id`, `module_id`, unique on the pair) replaced one global `localStorage` key, `nawa_bookmarks`. On a shared school PC that key had no user id in it, so the next student inherited the previous one's saved list — a correctness bug and a small privacy leak at once.
+- `POST /api/bookmarks` takes `{ moduleId, bookmarked }`, **not** a toggle. A toggle is not idempotent: one click delivered twice (bad network, double tap) silently returns to the original state. The unique index plus `onConflictDoNothing()` is what makes the desired-state form safe to retry.
+- A bookmark may only target an `approved` module — 404, not an FK-violation 500. That check is the only thing stopping a student from bookmarking someone else's pending submission.
+- Bookmarks are personal data: they are in `collectUserData()` as `penanda` (module id + saved time only — never the module title, which belongs to another student) and in the anonymisation delete list. They are **not** a retention target, like `modules`/`questions`.
+- This is a deliberate **reversal of M5**, which dropped `bookmarks` for having no writer and no reader. The reason M5 gave is exactly why the table earns its place now: it ships with a writer, a reader and an owner.
 
 ## Audit log
 
@@ -358,5 +365,21 @@ Next resolves `proxy.ts`, `instrumentation.ts` and friends **relative to the dir
 - The two signals that genuinely differ: `next build` prints `ƒ Proxy (Middleware)`, and a real `next start` answers an unauthenticated `/api/*` request with **401** plus a nonce-bearing `content-security-policy`.
 - `npm run verify:proxy` performs the runtime half. `tests/unit/ci-gates.test.ts` keeps CI performing both — though note that until the end of M10 neither gate had ever actually run in CI: the `Build` step failed first on every run (see *CI holds no repository secret*).
 
+## Lint, types, and gates that actually block
 
+### `lint` is blocking, and that is the whole point
+- `eslint .` is **0 errors / 0 warnings** as of M14a, down from 180 problems (51 errors / 129 warnings). `continue-on-error: true` sat on the CI lint step from M4 to M13 behind a `TODO(M14)`, which means the gate reported for nine milestones and blocked for none — the same failure shape as C6 (dead `proxy.ts`) and C8 (CI red at `Build`): a control that is present, documented, and permanently ignored.
+- `tests/unit/ci-gates.test.ts` asserts the workflow contains a `run: npm run lint` step and that `continue-on-error` appears nowhere in it. Removing the flag without that assertion would let the next helpful person put it back to "unblock a PR".
+- `@typescript-eslint/no-explicit-any` is an **error**, not a warning. When a `no-explicit-any` fires, the usual cause is dead code, not a missing type: every `(x as any).emoji` in the avatar picker was a leftover from an emoji-avatar era, because `AvatarOption` requires `svg`. Delete the dead arm; do not widen the type.
+- `no-console` is an **error** everywhere, with written exceptions where stdout *is* the interface: `src/lib/logger.ts` (the sink itself), `src/db/seed.ts`, `src/db/promote.ts`, `scripts/**/*.mjs`, `src/components/**/*.tsx` (browser behaviour, not server logging), and `tests/**/*.ts` (stdout is a failing assertion's explanation). Server code uses `log.info` / `log.warn` / `log.error` from `src/lib/logger.ts` — see *Structured logging*.
+- `.opencode/**` is ignored. Bundled skill scripts under it produced 94 of the 129 baseline warnings; linting a vendored tool directory drowns the warnings that concern this repository.
+- Two client pages keep a scoped, written `eslint-disable`: `PrivacyClient` uses `window.location.assign("/")` rather than `router.push` on purpose (a soft navigation keeps the deleted Clerk user in memory, so the next page renders as if the session were alive), and that reason belongs in the comment above the disable, not in a chat log.
 
+### ESLint catches correctness bugs, not just style
+Every one of these was a real defect surfaced by turning the gate on, and each is worth recognising again:
+- `fetch` only rejects on **network** failure. A handler that never checked `res.ok` announced "Avatar berhasil diperbarui" for a 400 or a 429, and the picker kept the rejected avatar until reload. Check `res.ok`, and revert optimistic state on failure.
+- A `setState` updater must be pure. `masteredCount` was incremented inside the `setQueue` updater, and React calls updaters twice in dev StrictMode — every correct answer counted twice.
+- A state value that can be derived from props is not state. `bio`/`motto` were mirrored into `useState` from props via a `useEffect`, which gave one value two sources of truth plus an extra render on every `router.refresh()`.
+- `watch(name)` from react-hook-form makes React Compiler bail out of the whole component ("Use of incompatible library"). `useWatch({ control, name })` does not. If the compiler bails, the file is no longer compiled — a silent, whole-file regression.
+- `react-hooks/refs` fires when a function that writes a ref is passed during render. `onSubmit={handleSubmit(onSubmit)}` writes `fileInputRef.current` transitively, so it must be `onSubmit={(event) => { void handleSubmit(onSubmit)(event); }}` — ref access in an event handler is allowed, during render it is not.
+- Dead state is worse than missing state. `editName`, `isNameChanged`, `isSaving`, `restUsers`, and a never-set `totalQuestions` `useState` all read like features and were never read by anything. Delete them; a fake spinner is a lie that survives review.

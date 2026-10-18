@@ -49,3 +49,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local agent tooling (skills, cached scripts). Not part of the app, and it
+# carries its own bundled JavaScript that ESLint is told to skip - keeping it
+# out of `git status` stops it from looking like pending work. Added in M14a.
+/.opencode/

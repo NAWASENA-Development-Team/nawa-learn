@@ -11,7 +11,7 @@ import {
   MAX_MODULE_FILE_BYTES,
   uploadFile,
 } from "@/lib/uploadClient";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { 
@@ -146,7 +146,7 @@ export default function SubmitClient() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { register, handleSubmit, formState: { errors }, reset, setValue, trigger, watch } = useForm<FormData>({
+  const { register, handleSubmit, formState: { errors }, reset, setValue, trigger, control } = useForm<FormData>({
     resolver: zodResolver(moduleSchema),
     defaultValues: {
       title: "",
@@ -157,10 +157,15 @@ export default function SubmitClient() {
     }
   });
 
-  const selectedSubject = watch("subject");
-  const selectedGrade = watch("grade");
-  const selectedCategory = watch("category");
-  const currentContentUrl = watch("contentUrl");
+  // `watch(name)` is a plain function returned by `useForm`, and the React
+  // Compiler refuses to compile a component that calls it ("Use of incompatible
+  // library") — the whole form fell out of auto-memoisation. `useWatch` is the
+  // subscription hook for the same value, and it is a real hook, so the compiler
+  // keeps the component.
+  const selectedSubject = useWatch({ control, name: "subject" });
+  const selectedGrade = useWatch({ control, name: "grade" });
+  const selectedCategory = useWatch({ control, name: "category" });
+  const currentContentUrl = useWatch({ control, name: "contentUrl" });
   const photoAttached = attachedPhotoUrl !== null && currentContentUrl === attachedPhotoUrl;
 
   // Clean up camera stream on unmount or tab change
@@ -839,7 +844,17 @@ export default function SubmitClient() {
         {/* Right side: Interactive Form (lg:col-span-8) */}
         <div className="lg:col-span-8">
           {submitType === "module" ? (
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-white dark:bg-zinc-900 p-6 sm:p-8 border border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-sm">
+            <form
+              // `handleSubmit(onSubmit)` is evaluated *inside* the event
+              // handler rather than during render. `onSubmit` resets the file
+              // input by writing `fileInputRef.current`, so the React Compiler
+              // (rightly) refuses to hand a ref-reading function to another
+              // function during render — it cannot prove `handleSubmit` will
+              // not call it immediately. Inside an event handler that
+              // restriction does not apply.
+              onSubmit={(event) => { void handleSubmit(onSubmit)(event); }}
+              className="space-y-6 bg-white dark:bg-zinc-900 p-6 sm:p-8 border border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-sm"
+            >
               
               {/* Step 1: Judul Modul */}
               <div>

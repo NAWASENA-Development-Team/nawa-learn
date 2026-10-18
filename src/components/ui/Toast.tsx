@@ -125,7 +125,6 @@ function ToastCard({
     };
     rafRef.current = requestAnimationFrame(tick);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [duration, dismiss]);
 
   return (

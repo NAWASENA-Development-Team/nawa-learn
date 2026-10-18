@@ -115,6 +115,24 @@ describe("collectUserData", () => {
     expect(data.catatan.length).toBeGreaterThan(0);
   });
 
+  it("includes the modules the user saved, because a saved list is a statement about them", async () => {
+    // The module belongs to someone else; the *choice* to save it belongs to this
+    // student, and on a shared school PC that choice used to leak to the next
+    // person through `localStorage`. It is part of their data now.
+    const owner = await seedUser(db, {});
+    const saver = await seedUser(db, {});
+    const saved = await seedModule(owner.id);
+    await db.insert(schema.bookmarks).values({ userId: saver.id, moduleId: saved.id });
+
+    const data = await collectUserData(db, saver.id);
+
+    expect(data.penanda).toHaveLength(1);
+    expect(JSON.stringify(data.penanda)).toContain(saved.id);
+    // The title is deliberately absent: copying another student's content into
+    // this file would add nothing the id does not already say.
+    expect(JSON.stringify(data.penanda)).not.toContain("Modul Budi");
+  });
+
   it("returns an empty array, never a missing key, for a user with no content", async () => {
     const user = await seedUser(db, {});
 
@@ -149,7 +167,7 @@ describe("deleteAccountData", () => {
       })
       .where(eq(schema.users.id, user.id));
 
-    const module = await seedModule(user.id);
+    const seededModule = await seedModule(user.id);
     const question = await seedQuestion(db, { uploaderId: user.id, difficulty: "mudah" });
     const exam = await seedExam(user.id);
     await db.insert(schema.pointsLog).values({ userId: user.id, action: "quiz_answer", delta: 10 });
@@ -166,8 +184,9 @@ describe("deleteAccountData", () => {
     await db
       .insert(schema.reports)
       .values({ userId: user.id, issueType: "bug", description: "laporan Budi" });
+    await db.insert(schema.bookmarks).values({ userId: user.id, moduleId: seededModule.id });
 
-    return { user, module, question, exam, submission };
+    return { user, seededModule, question, exam, submission };
   }
 
   it("empties the identity and reports what it removed", async () => {
@@ -178,6 +197,7 @@ describe("deleteAccountData", () => {
     expect(report.userId).toBe(user.id);
     expect(report.deleted.reports).toBe(1);
     expect(report.deleted.pointsLog).toBe(1);
+    expect(report.deleted.bookmarks).toBe(1);
     expect(report.photoUrlCleared).toContain("blob.vercel-storage.com");
 
     const row = await db.query.users.findFirst({ where: eq(schema.users.id, user.id) });
@@ -215,19 +235,24 @@ describe("deleteAccountData", () => {
       .select()
       .from(schema.pointsLog)
       .where(eq(schema.pointsLog.userId, user.id));
+    const saved = await db
+      .select()
+      .from(schema.bookmarks)
+      .where(eq(schema.bookmarks.userId, user.id));
     expect(reports).toEqual([]);
     expect(points).toEqual([]);
+    expect(saved).toEqual([]);
   });
 
   it("keeps other students' library content, only anonymising the author", async () => {
-    const { user, module, question, exam } = await seedFullAccount();
+    const { user, seededModule, question, exam } = await seedFullAccount();
 
     await deleteAccountData(db, user.id);
 
     // The module and question remain readable — they were never only about the
     // author — and keep pointing at the now-anonymous row.
     const keptModule = await db.query.modules.findFirst({
-      where: eq(schema.modules.id, module.id),
+      where: eq(schema.modules.id, seededModule.id),
     });
     const keptQuestion = await db.query.questions.findFirst({
       where: eq(schema.questions.id, question.id),

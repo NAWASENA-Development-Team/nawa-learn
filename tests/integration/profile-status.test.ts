@@ -108,12 +108,12 @@ describe("GET /api/profile/status", () => {
 
   it("labels module and question submissions with the title of the thing submitted", async () => {
     const user = await seedUser(db, {});
-    const module = await seedModule(user.id);
+    const seededModule = await seedModule(user.id);
     const question = await seedQuestion(db, { uploaderId: user.id, difficulty: "sedang" });
 
     await seedSubmission(user.id, {
       type: "module",
-      refId: module.id,
+      refId: seededModule.id,
       submittedAt: new Date("2026-02-01T10:00:00.000Z"),
     });
     await seedSubmission(user.id, {
@@ -150,11 +150,11 @@ describe("GET /api/profile/status", () => {
 
   it("merges reports with submissions and orders the whole list newest-first", async () => {
     const user = await seedUser(db, {});
-    const module = await seedModule(user.id);
+    const seededModule = await seedModule(user.id);
 
     await seedSubmission(user.id, {
       type: "module",
-      refId: module.id,
+      refId: seededModule.id,
       submittedAt: new Date("2026-03-01T00:00:00.000Z"),
     });
     await db.insert(schema.reports).values({
@@ -213,7 +213,7 @@ describe("GET /api/profile/status", () => {
 
   it("never reads module content or question answer keys to build a title", async () => {
     const user = await seedUser(db, {});
-    const module = await seedModule(user.id);
+    const seededModule = await seedModule(user.id);
     const question = await seedQuestion(db, {
       uploaderId: user.id,
       difficulty: "sulit",
@@ -222,7 +222,7 @@ describe("GET /api/profile/status", () => {
 
     await seedSubmission(user.id, {
       type: "module",
-      refId: module.id,
+      refId: seededModule.id,
       submittedAt: new Date("2026-02-01T10:00:00.000Z"),
     });
     await seedSubmission(user.id, {

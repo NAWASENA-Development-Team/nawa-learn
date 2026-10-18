@@ -57,6 +57,39 @@ type Quiz = {
   isCustom?: boolean;
 };
 
+// ─── API payloads ─────────────────────────────────────────────────────────────
+// The shapes `/api/questions/approved` and `/api/exams/list` actually return.
+// These used to be cast to `any[]`, which meant a renamed field in either route
+// became `undefined` rendered into a quiz instead of a compile error.
+
+type ApprovedQuestionPayload = {
+  id: string;
+  questionText: string;
+  options: Record<string, string> | null;
+  subject: string | null;
+  category: string | null;
+  uploaderId: string;
+  isOwnQuestion?: boolean;
+};
+
+type ExamQuestionPayload = {
+  id: string;
+  text: string;
+  options: Record<string, string>;
+  explanation?: string | null;
+};
+
+type ExamListItemPayload = {
+  id: string;
+  title: string;
+  subject: string;
+  category: string;
+  difficulty: string;
+  durationMinutes: number;
+  authorName?: string | null;
+  questions: ExamQuestionPayload[];
+};
+
 type QuestionDraft = {
   text: string;
   optA: string; optB: string; optC: string; optD: string; optE: string;
@@ -197,7 +230,7 @@ export default function PracticeMode() {
   const [examDrafts, setExamDrafts] = useState<QuestionDraft[]>([]);
   const [examQIdx, setExamQIdx] = useState(0);
 
-  // ── Load quizzes: fetch approved questions from DB + custom exams from localStorage ─────
+  // ── Load quizzes: approved questions from the DB + custom exams from /api/exams/list ──
   useEffect(() => {
     async function loadQuizzes() {
       // Fetch approved questions from real DB API (includes isOwnQuestion flag)
@@ -206,7 +239,7 @@ export default function PracticeMode() {
         const res = await fetch("/api/questions/approved");
         if (res.ok) {
           const { data } = await res.json();
-          parsedContributedQuestions = (data as any[]).map((q, index) => ({
+          parsedContributedQuestions = (data as ApprovedQuestionPayload[]).map((q, index) => ({
             id: q.id || `cq-${index}`,
             text: q.questionText,
             options: {
@@ -305,8 +338,8 @@ export default function PracticeMode() {
       const examRes = await fetch("/api/exams/list");
       if (examRes.ok) {
         const { data: dbExams } = await examRes.json();
-        (dbExams as any[]).forEach((exam) => {
-          const qs: Question[] = (exam.questions as any[]).map((q: any) => ({
+        (dbExams as ExamListItemPayload[]).forEach((exam) => {
+          const qs: Question[] = (exam.questions ?? []).map((q) => ({
             id: q.id,
             text: q.text,
             options: q.options,
@@ -340,7 +373,6 @@ export default function PracticeMode() {
       setQuizzes(allQuizzes);
     }
     loadQuizzes();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Timer ─────────────────────────────────────────────────────────────────

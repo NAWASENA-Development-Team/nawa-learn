@@ -16,7 +16,6 @@ import {
   Menu,
   Sun,
   Moon,
-  Map,
   Shield,
   ShieldCheck,
 } from "lucide-react";

@@ -7,12 +7,9 @@ import {
   X, 
   BookOpen, 
   HelpCircle, 
-  Sparkles, 
   Clock, 
   User, 
   CheckCircle2, 
-  AlertCircle, 
-  Award,
   BookMarked,
   Lock,
   Loader2,
@@ -563,7 +560,7 @@ export default function ModeratorDashboard() {
             <Eye className="h-4 w-4 shrink-0 mt-0.5" />
             <span>
               Halaman ini hanya terlihat oleh moderator. Lencana tersembunyi <strong>tidak ditampilkan</strong> kepada
-              siswa — mereka hanya melihat slot <em>"???"</em> di profil. Pantau siapa saja yang berhasil
+              siswa — mereka hanya melihat slot <em>&quot;???&quot;</em> di profil. Pantau siapa saja yang berhasil
               membukanya di sini.
             </span>
           </div>

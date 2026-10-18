@@ -150,6 +150,12 @@ export default function PrivacyClient({
       // Akun Clerk-nya sudah hilang, jadi tidak ada lagi sesi yang valid.
       // Memuat ulang ke beranda membuat proxy menilai ulang sesi yang tinggal
       // sampah ini dan mengarahkan ke halaman masuk.
+      //
+      // Ini sengaja **bukan** `router.push("/")`: navigasi klien tidak memuat
+      // ulang bundel Clerk, sehingga `useUser()` masih memegang objek user yang
+      // sudah dihapus dan halaman berikutnya dirender seolah sesinya hidup.
+      // Aturan lint-nya ada untuk mencegah reload tak sengaja, bukan yang ini.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.assign("/");
     } catch {
       toastError("Gagal menghapus", "Tidak bisa menghubungi server. Periksa koneksimu.");

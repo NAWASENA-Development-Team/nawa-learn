@@ -130,10 +130,12 @@ jobs:
           git diff --cached --exit-code -- src/db/migrations
 
       - name: Lint
-        # TODO(M14): the repository still carries ~45 pre-existing eslint errors
-        # (mostly react-hooks/set-state-in-effect), so this step reports without
-        # blocking yet. Remove `continue-on-error` once that backlog is paid down.
-        continue-on-error: true
+        # Blocking as of M14a. The backlog this used to hide behind (~45
+        # pre-existing errors, mostly `react-hooks/set-state-in-effect` plus a
+        # long tail of unused imports) is paid down and `eslint .` is now clean,
+        # so `continue-on-error` is gone. `tests/unit/ci-gates.test.ts` fails if
+        # it comes back: a lint step that reports without blocking is a lint step
+        # that nothing reads.
         run: npm run lint
 
       - name: Unit + integration tests

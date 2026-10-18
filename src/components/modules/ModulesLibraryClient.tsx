@@ -8,20 +8,16 @@ import {
   Download, 
   Sparkles, 
   FileText, 
-  FolderOpen, 
   Image as ImageIcon, 
   ExternalLink,
   Filter,
-  User,
   ArrowRight,
   SlidersHorizontal,
   GraduationCap,
   X,
-  Calendar,
   Check,
   Bookmark,
   BookmarkCheck,
-  ChevronDown
 } from "lucide-react";
 
 // ─── Own-storage helpers ──────────────────────────────────────────────────────
@@ -60,9 +56,21 @@ interface Module {
 
 interface ModulesLibraryClientProps {
   initialModules: Module[];
+  /**
+   * The reader's own bookmarked module ids, read from the database by the page.
+   *
+   * These used to come from a single global `localStorage` key (`nawa_bookmarks`)
+   * with no user id in it, so on a shared school computer one student opened the
+   * library and saw another student's saved modules. Bookmarks belong to an
+   * account, so the server is the only place that can answer this.
+   */
+  initialBookmarkedIds: string[];
 }
 
-export default function ModulesLibraryClient({ initialModules }: ModulesLibraryClientProps) {
+export default function ModulesLibraryClient({
+  initialModules,
+  initialBookmarkedIds,
+}: ModulesLibraryClientProps) {
   const [modulesList, setModulesList] = useState<Module[]>(initialModules);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("Semua");
@@ -72,50 +80,79 @@ export default function ModulesLibraryClient({ initialModules }: ModulesLibraryC
   // Reader Modal State
   const [selectedReaderModule, setSelectedReaderModule] = useState<Module | null>(null);
   const [printSuccess, setPrintSuccess] = useState(false);
-  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
 
   // ─── Bookmark State ─────────────────────────────────────────────────────────────
-  const [bookmarks, setBookmarks] = useState<string[]>([]);
+  // Seeded from the server, not from `localStorage`: lihat catatan pada prop
+  // `initialBookmarkedIds`.
+  const [bookmarks, setBookmarks] = useState<string[]>(initialBookmarkedIds);
   const [showBookmarksOnly, setShowBookmarksOnly] = useState(false);
 
-  useEffect(() => {
-    const saved = localStorage.getItem("nawa_bookmarks");
-    if (saved) {
-      try { setBookmarks(JSON.parse(saved)); } catch {}
-    }
-  }, []);
-
-  const toggleBookmark = (id: string, e: React.MouseEvent) => {
+  /**
+   * Kirim **keadaan yang diminta**, bukan "balikkan".
+   *
+   * Toggle di server tidak idempoten: satu klik yang terkirim dua kali akan
+   * mengembalikan penanda ke keadaan semula tanpa ada yang menyadarinya. Di sini
+   * UI berubah lebih dulu (tombol harus terasa langsung merespons) lalu
+   * dikembalikan kalau server menolak, sehingga yang terlihat selalu sama dengan
+   * yang tersimpan.
+   */
+  const toggleBookmark = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setBookmarks(prev => {
-      const newBookmarks = prev.includes(id) ? prev.filter(b => b !== id) : [...prev, id];
-      localStorage.setItem("nawa_bookmarks", JSON.stringify(newBookmarks));
-      return newBookmarks;
-    });
+    const wasBookmarked = bookmarks.includes(id);
+    const next = !wasBookmarked;
+
+    // Idempotent set/delete rather than append/filter: a revert must not be able
+    // to add a second copy of an id that is already in the list.
+    const apply = (target: boolean) =>
+      setBookmarks((prev) => {
+        const ids = new Set(prev);
+        if (target) ids.add(id);
+        else ids.delete(id);
+        return [...ids];
+      });
+
+    apply(next);
+
+    try {
+      const res = await fetch("/api/bookmarks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ moduleId: id, bookmarked: next }),
+      });
+      if (!res.ok) throw new Error(`bookmark failed: ${res.status}`);
+    } catch (err) {
+      console.error("Gagal menyimpan penanda:", err);
+      apply(wasBookmarked);
+    }
   };
 
-  useEffect(() => {
-    if (selectedReaderModule && selectedReaderModule.contentUrl.startsWith("data:application/pdf")) {
-      const parts = selectedReaderModule.contentUrl.split(",");
-      if (parts.length === 2) {
-        try {
-          const byteString = atob(parts[1]);
-          const ab = new ArrayBuffer(byteString.length);
-          const ia = new Uint8Array(ab);
-          for (let i = 0; i < byteString.length; i++) {
-            ia[i] = byteString.charCodeAt(i);
-          }
-          const blob = new Blob([ab], { type: "application/pdf" });
-          const url = URL.createObjectURL(blob);
-          setPdfBlobUrl(url);
-          return () => URL.revokeObjectURL(url);
-        } catch (e) {
-          console.error("Failed to parse PDF data URI", e);
-        }
+  // A legacy `data:application/pdf` row has no URL to point an <iframe> at, so it
+  // is turned into a blob URL. This is derived state — computed from
+  // `selectedReaderModule` during render rather than assigned from an effect —
+  // and the object URL is revoked when the value it replaced goes away.
+  const pdfBlobUrl = useMemo(() => {
+    const mod = selectedReaderModule;
+    if (!mod || !mod.contentUrl.startsWith("data:application/pdf")) return null;
+    const parts = mod.contentUrl.split(",");
+    if (parts.length !== 2) return null;
+    try {
+      const byteString = atob(parts[1]);
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
       }
+      return URL.createObjectURL(new Blob([ab], { type: "application/pdf" }));
+    } catch (e) {
+      console.error("Failed to parse PDF data URI", e);
+      return null;
     }
-    setPdfBlobUrl(null);
   }, [selectedReaderModule]);
+
+  useEffect(() => {
+    if (!pdfBlobUrl) return;
+    return () => URL.revokeObjectURL(pdfBlobUrl);
+  }, [pdfBlobUrl]);
 
   // Unique lists for filtering
   const categories = ["Semua", "UTBK", "Olimpiade", "Reguler"];
@@ -564,7 +601,7 @@ export default function ModulesLibraryClient({ initialModules }: ModulesLibraryC
                             I. Hukum II Newton ⚖️
                           </h4>
                           <p className="mt-2 text-zinc-700">
-                            "Percepatan dari suatu benda sebanding dengan resultan gaya yang bekerja pada benda tersebut dan berbanding terbalik dengan massanya."
+                            &quot;Percepatan dari suatu benda sebanding dengan resultan gaya yang bekerja pada benda tersebut dan berbanding terbalik dengan massanya.&quot;
                           </p>
                           <div className="bg-amber-50/85 border border-dashed border-amber-300 rounded-xl p-4 my-3 text-center">
                             <span className="font-mono text-xl sm:text-2xl font-black text-indigo-800 select-all">
@@ -603,11 +640,11 @@ export default function ModulesLibraryClient({ initialModules }: ModulesLibraryC
                             I. Integral Substitusi 🧮
                           </h4>
                           <p className="mt-2 text-zinc-750">
-                            Metode ini digunakan jika integran dapat dipecah menjadi bentuk f(g(x)) · g'(x) · dx. Caranya dengan memisalkan u = g(x), sehingga du = g'(x)dx.
+                            Metode ini digunakan jika integran dapat dipecah menjadi bentuk f(g(x)) · g&apos;(x) · dx. Caranya dengan memisalkan u = g(x), sehingga du = g&apos;(x)dx.
                           </p>
                           <div className="bg-amber-50/85 border border-dashed border-amber-300 rounded-xl p-4 my-3 text-center">
                             <span className="font-mono text-lg sm:text-xl font-bold text-indigo-850">
-                              ∫ f(g(x)) g'(x) dx = ∫ f(u) du = F(u) + C
+                              ∫ f(g(x)) g&apos;(x) dx = ∫ f(u) du = F(u) + C
                             </span>
                           </div>
                         </div>
@@ -704,7 +741,7 @@ export default function ModulesLibraryClient({ initialModules }: ModulesLibraryC
                     <div>
                       <h3 className="text-base font-extrabold text-indigo-600 dark:text-indigo-400 mb-2">2. Peta Konsep Esensial</h3>
                       <div className="p-4 bg-zinc-50 dark:bg-zinc-950 border border-zinc-250 dark:border-zinc-800 rounded-xl font-mono text-xs text-indigo-650 dark:text-indigo-400">
-                        <p className="font-bold">// RENCANA MATERI BELAJAR:</p>
+                        <p className="font-bold">{"// RENCANA MATERI BELAJAR:"}</p>
                         <p className="mt-1">→ Pendahuluan & Definisi Istilah Penting</p>
                         <p>→ Teori Utama & Rumus Praktis Cepat</p>
                         <p>→ Pembahasan Contoh Soal Standard Ujian Sekolah</p>

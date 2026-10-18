@@ -5,10 +5,8 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { 
-  Trophy, 
   Search, 
   Sparkles, 
-  Award, 
   Crown, 
   Smile,
   ArrowRight
@@ -92,9 +90,6 @@ export default function LeaderboardClient({
     const third  = topUsers[2] || null;
     return { first, second, third };
   }, [topUsers]);
-
-  // Rest of the list (Rank 4+)
-  const restUsers = useMemo(() => topUsers.slice(3), [topUsers]);
 
   // Filter & Search Logic
   const filteredUsers = useMemo(() => {
@@ -199,9 +194,7 @@ export default function LeaderboardClient({
                   <div className={`relative w-24 h-24 rounded-[22px] bg-gradient-to-br ${avatar.bg} flex items-center justify-center shadow-xl border-4 border-white/10 overflow-hidden shadow-zinc-400/30 z-10 transition-transform duration-300 group-hover:scale-105`}>
                     {photo
                       ? <Image src={photo} alt="foto" fill className="object-cover" />
-                      : (avatar as any).svg
-                        ? <Image src={(avatar as any).svg} alt={avatar.label} fill className="object-cover" />
-                        : <span className="text-5xl">{(avatar as any).emoji}</span>
+                      : <Image src={avatar.svg} alt={avatar.label} fill className="object-cover" />
                     }
                   </div>
                 </div>
@@ -264,9 +257,7 @@ export default function LeaderboardClient({
                   <div className={`relative w-28 h-28 rounded-[24px] bg-gradient-to-br ${avatar.bg} flex items-center justify-center shadow-2xl border-4 border-white/10 overflow-hidden shadow-yellow-500/30 z-10 transition-transform duration-300 group-hover:scale-105`}>
                     {photo
                       ? <Image src={photo} alt="foto" fill className="object-cover" />
-                      : (avatar as any).svg
-                        ? <Image src={(avatar as any).svg} alt={avatar.label} fill className="object-cover" />
-                        : <span className="text-6xl">{(avatar as any).emoji}</span>
+                      : <Image src={avatar.svg} alt={avatar.label} fill className="object-cover" />
                     }
                   </div>
                   {/* #1 badge overlaid */}
@@ -329,9 +320,7 @@ export default function LeaderboardClient({
                   <div className={`relative w-24 h-24 rounded-[22px] bg-gradient-to-br ${avatar.bg} flex items-center justify-center shadow-xl border-4 border-white/10 overflow-hidden shadow-orange-400/20 z-10 transition-transform duration-300 group-hover:scale-105`}>
                     {photo
                       ? <Image src={photo} alt="foto" fill className="object-cover" />
-                      : (avatar as any).svg
-                        ? <Image src={(avatar as any).svg} alt={avatar.label} fill className="object-cover" />
-                        : <span className="text-5xl">{(avatar as any).emoji}</span>
+                      : <Image src={avatar.svg} alt={avatar.label} fill className="object-cover" />
                     }
                   </div>
                 </div>
@@ -493,9 +482,7 @@ export default function LeaderboardClient({
                       <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${avatar.bg} flex items-center justify-center shrink-0 overflow-hidden relative shadow-sm border border-zinc-200 dark:border-zinc-700`}>
                         {photo
                           ? <Image src={photo} alt="foto" fill className="object-cover" />
-                          : (avatar as any).svg
-                            ? <Image src={(avatar as any).svg} alt={avatar.label} fill className="object-cover" />
-                            : <span className="text-sm">{(avatar as any).emoji}</span>
+                          : <Image src={avatar.svg} alt={avatar.label} fill className="object-cover" />
                         }
                       </div>
                       <h3 className="font-extrabold text-sm text-zinc-900 dark:text-zinc-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">

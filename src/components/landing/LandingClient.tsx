@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { SignInButton, Show } from "@clerk/nextjs";
+import { Show } from "@clerk/nextjs";
 import { useEffect, useRef, useState, ReactNode } from "react";
 
 /* === Animated counter ======================================================= */

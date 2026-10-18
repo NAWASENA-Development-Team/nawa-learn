@@ -13,12 +13,8 @@ import {
   Award, 
   Download, 
   Edit3, 
-  Check, 
-  ChevronRight, 
   Clock, 
   Shield,
-  FileText,
-  Bookmark,
   Share2,
   Lock,
   ArrowRight,
@@ -27,18 +23,14 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  Zap,
   Camera,
-  MessageSquare,
   Star,
   Flag,
   Bell,
   ShieldCheck,
-  Crown,
-  Flame,
   Target
 } from "lucide-react";
-import { BADGES, Badge, getDaysOldAccount, getRarityColor, getRarityTextColor, BadgeUnlockData, getSpecialtyBadge, SpecialtyStats } from "@/lib/badges";
+import { BADGES, getDaysOldAccount, getRarityColor, BadgeUnlockData, getSpecialtyBadge, SpecialtyStats } from "@/lib/badges";
 import { AVATAR_OPTIONS, AvatarOption } from "@/lib/avatars";
 import { ACCEPTED_AVATAR_TYPES, MAX_AVATAR_BYTES, uploadFile } from "@/lib/uploadClient";
 import { useToast } from "@/components/ui/Toast";
@@ -116,6 +108,36 @@ interface ProfileClientProps {
 
 // AVATAR_OPTIONS is imported from @/lib/avatars
 
+// Nilai tampilan ketika kolomnya `NULL` di database. Sebuah konstanta, bukan
+// state: nilai ini tidak pernah berubah selama komponen hidup, dan menyimpannya
+// di state membuatnya ikut "disinkronkan" dari prop — persis bug yang baru saja
+// dihapus.
+const ADMIN_DEFAULT_BIO =
+  "Administrator Platform NAWA-LEARN SMAN 2 Jonggol. Siap menyaring modul-modul berkualitas!";
+const STUDENT_DEFAULT_BIO =
+  "Siswa aktif SMAN 2 Jonggol. Senang berbagi catatan dan belajar bersama teman-teman.";
+const DEFAULT_MOTTO = "Belajar hari ini, memimpin esok hari!";
+
+
+/**
+ * One row of `GET /api/profile/status`: a contribution or a report, flattened
+ * for the "status" tab of this page.
+ *
+ * `status` is `statusEnum` — both `submissions.status` and `reports.status` use
+ * it, so the two branches of that route genuinely share one union. It used to
+ * be typed `any[]`, and the JSX compared it against `"resolved"`, a value the
+ * enum has never contained.
+ */
+type ProfileStatusItem = {
+  type: "module" | "question" | "report";
+  title: string;
+  status: "pending" | "approved" | "rejected";
+  /** ISO-8601 string: a `Date` does not survive `JSON.stringify`. */
+  submittedAt: string;
+  feedback: string | null;
+};
+
+
 // Playful Bios list for generator
 const PLAYFUL_BIOS = [
   "Siswa teladan SMAN 2 Jonggol yang hobi belajar sambil dengerin lagu pop alternatif. 🎧",
@@ -140,59 +162,45 @@ export default function ProfileClient({
   // Local States
   const [activeTab, setActiveTab] = useState<"summary" | "modules" | "questions" | "logs">("summary");
   const [selectedAvatar, setSelectedAvatar] = useState<AvatarOption>(() => {
-    // Priority: DB (avatarIndex) → localStorage JSON → points-based default
+    // Priority: DB (avatarIndex) → points-based default.
+    //
+    // Sebelumnya ada satu cabang lagi di antaranya: `localStorage["nawa_avatar_<id>"]`.
+    // Itu murni redundansi — kolom `avatar_index` sudah menyimpan pilihan yang
+    // sama di server — dan lebih buruk daripada redundansi: salinan lokal itu
+    // **menutupi** nilai server, jadi pilihan avatar yang diubah dari perangkat
+    // lain (atau setelah akun dianonimkan) tetap terlihat seperti yang lama.
     if (user.avatarIndex !== null && user.avatarIndex !== undefined) {
       return AVATAR_OPTIONS[user.avatarIndex] ?? AVATAR_OPTIONS[user.points % AVATAR_OPTIONS.length];
-    }
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(`nawa_avatar_${user.id}`);
-      if (saved) {
-        try { return JSON.parse(saved) as AvatarOption; } catch {}
-      }
     }
     return AVATAR_OPTIONS[user.points % AVATAR_OPTIONS.length];
   });
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   
-  const [bio, setBio] = useState(() => {
-    // Priority: DB → localStorage → role-based default
-    if (user.bio) return user.bio;
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(`nawa_bio_${user.id}`);
-      if (saved) return saved;
-    }
-    return user.role === "admin" 
-      ? "Administrator Platform NAWA-LEARN SMAN 2 Jonggol. Siap menyaring modul-modul berkualitas!" 
-      : "Siswa aktif SMAN 2 Jonggol. Senang berbagi catatan dan belajar bersama teman-teman.";
-  });
-  const [motto, setMotto] = useState(() => {
-    // Priority: DB → localStorage → default
-    if (user.motto) return user.motto;
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(`nawa_motto_${user.id}`);
-      if (saved) return saved;
-    }
-    return "Belajar hari ini, memimpin esok hari!";
-  });
+  /**
+   * Nilai yang ditampilkan, diturunkan langsung dari baris `users`.
+   *
+   * Dulu `bio` dan `motto` adalah `useState` tersendiri yang diisi dari
+   * `localStorage`, lalu "disinkronkan" ke prop oleh sebuah `useEffect`. Itu dua
+   * sumber kebenaran untuk satu nilai: kolom di database sudah menjadi tempat
+   * penyimpanan yang sebenarnya (`/api/profile/update` menulis ke sana), dan
+   * salinan lokal hanya bisa membuat keduanya berbeda pendapat. Efeknya bahkan
+   * menimbulkan satu render tambahan pada setiap `router.refresh()`.
+   *
+   * Sekarang satu sumber: server. `router.refresh()` setelah menyimpan mengirim
+   * baris baru, dan nilai default hanya berlaku ketika kolomnya memang `NULL`.
+   */
+  const bio = user.bio ?? (user.role === "admin" ? ADMIN_DEFAULT_BIO : STUDENT_DEFAULT_BIO);
+  const motto = user.motto ?? DEFAULT_MOTTO;
 
-  // Sync state if user prop changes from router.refresh()
-  useEffect(() => {
-    if (user.bio && user.bio !== bio) setBio(user.bio);
-    if (user.motto && user.motto !== motto) setMotto(user.motto);
-    if (user.name && user.name !== editName) setEditName(user.name);
-  }, [user.bio, user.motto, user.name]);
-  
   const [isEditing, setIsEditing] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [editName, setEditName] = useState(user.name);
   const [editBio, setEditBio] = useState(bio);
   const [editMotto, setEditMotto] = useState(motto);
-  const [isSaving, setIsSaving] = useState(false);
 
   // Status & Report Modals
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
-  const [statusData, setStatusData] = useState<any[]>([]);
+  const [statusData, setStatusData] = useState<ProfileStatusItem[]>([]);
   const [isLoadingStatus, setIsLoadingStatus] = useState(false);
   const [reportType, setReportType] = useState("bug");
   const [reportDesc, setReportDesc] = useState("");
@@ -217,14 +225,7 @@ export default function ProfileClient({
 
   // Custom photo upload state (Top 10 perk)
   const photoInputRef = useRef<HTMLInputElement>(null);
-  const [customPhoto, setCustomPhoto] = useState<string | null>(() => {
-    // Priority: DB → localStorage
-    if (user.photoUrl) return user.photoUrl;
-    if (typeof window !== "undefined") {
-      return localStorage.getItem(`nawa_photo_${user.id}`);
-    }
-    return null;
-  });
+  const [customPhoto, setCustomPhoto] = useState<string | null>(user.photoUrl);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -249,9 +250,6 @@ export default function ProfileClient({
       }
 
       setCustomPhoto(uploaded.url);
-      if (typeof window !== "undefined") {
-        localStorage.setItem(`nawa_photo_${user.id}`, uploaded.url);
-      }
 
       const res = await fetch('/api/profile/update', {
         method: 'POST',
@@ -274,9 +272,6 @@ export default function ProfileClient({
   };
   const handleRemovePhoto = async () => {
     setCustomPhoto(null);
-    if (typeof window !== "undefined") {
-      localStorage.removeItem(`nawa_photo_${user.id}`);
-    }
     try {
       await fetch('/api/profile/update', {
         method: 'POST',
@@ -393,24 +388,27 @@ export default function ProfileClient({
 
   // Save selected avatar
   const handleSelectAvatar = async (avatar: AvatarOption) => {
+    const previous = selectedAvatar;
     setSelectedAvatar(avatar);
     setShowAvatarPicker(false);
-    if (typeof window !== "undefined") {
-      localStorage.setItem(`nawa_avatar_${user.id}`, JSON.stringify(avatar));
-    }
     const idx = AVATAR_OPTIONS.findIndex(a => a.svg === avatar.svg);
-    if (idx !== -1) {
-      try {
-        await fetch('/api/profile/update', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ avatarIndex: idx }),
-        });
-        toastSuccess("Berhasil", "Avatar berhasil diperbarui.");
-        router.refresh();
-      } catch (err) {
-        toastError("Gagal", "Gagal menyimpan avatar.");
-      }
+    if (idx === -1) return;
+
+    try {
+      const res = await fetch('/api/profile/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avatarIndex: idx }),
+      });
+      // `fetch` only rejects on a network failure — a 400 or a 429 resolves
+      // normally. Without this check a rejected avatar was announced as saved
+      // and the picker kept showing it until the next reload.
+      if (!res.ok) throw new Error(`avatar update failed: ${res.status}`);
+      toastSuccess("Berhasil", "Avatar berhasil diperbarui.");
+      router.refresh();
+    } catch {
+      setSelectedAvatar(previous);
+      toastError("Gagal", "Gagal menyimpan avatar.");
     }
   };
 
@@ -421,25 +419,23 @@ export default function ProfileClient({
   };
 
   // Save profile edits
+  //
+  // Nama tidak ikut disimpan: `/api/profile/update` tidak menerima kolom `name`
+  // sama sekali (nama datang dari akun Clerk lewat webhook). Dulu ada state
+  // `editName` yang dibandingkan di sini dan disetel di tombol Edit, tetapi tidak
+  // pernah dirender dan tidak pernah dikirim — perbandingan yang selalu bernilai
+  // `false` dan field yang tidak pernah sampai ke server.
   const handleSaveProfile = async () => {
-    const isNameChanged = editName !== user.name;
     const isBioChanged = editBio !== bio;
     const isMottoChanged = editMotto !== motto;
 
-    if (!isNameChanged && !isBioChanged && !isMottoChanged) {
+    if (!isBioChanged && !isMottoChanged) {
       setIsEditing(false);
       return;
     }
 
-    setBio(editBio);
-    setMotto(editMotto);
     setIsEditing(false);
-    
-    if (typeof window !== "undefined") {
-      localStorage.setItem(`nawa_bio_${user.id}`, editBio);
-      localStorage.setItem(`nawa_motto_${user.id}`, editMotto);
-    }
-    
+
     try {
       // Update bio and motto in our DB
       const res = await fetch('/api/profile/update', {
@@ -569,10 +565,8 @@ export default function ProfileClient({
               {/* Custom photo takes priority over SVG avatar */}
               {customPhoto ? (
                 <Image src={customPhoto} alt="Custom photo" fill className="object-cover" />
-              ) : (selectedAvatar as any).svg ? (
-                <Image src={(selectedAvatar as any).svg} alt={selectedAvatar.label} fill className="object-cover" />
               ) : (
-                <span className="text-6xl">{(selectedAvatar as any).emoji}</span>
+                <Image src={selectedAvatar.svg} alt={selectedAvatar.label} fill className="object-cover" />
               )}
               
               {isOwnProfile && !customPhoto && (
@@ -664,7 +658,7 @@ export default function ProfileClient({
 
             {/* Playful Motto */}
             <p className="italic text-zinc-300 text-sm mt-3 bg-white/5 border border-white/5 px-4 py-2 rounded-2xl max-w-xl mx-auto md:mx-0 leading-relaxed font-sans">
-              "{motto}"
+              &quot;{motto}&quot;
             </p>
 
             {/* Playful Short Bio */}
@@ -677,7 +671,6 @@ export default function ProfileClient({
               {isOwnProfile && (
                 <button
                   onClick={() => {
-                    setEditName(user.name);
                     setEditBio(bio);
                     setEditMotto(motto);
                     setIsEditing(true);
@@ -1294,7 +1287,7 @@ export default function ProfileClient({
                   </div>
 
                   <p className="font-semibold text-sm text-zinc-800 dark:text-zinc-200 line-clamp-3 leading-relaxed relative z-10 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors mb-4">
-                    "{q.questionText}"
+                    &quot;{q.questionText}&quot;
                   </p>
                   
                   <div className="mt-auto pt-4 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-[10px] text-zinc-500 font-semibold relative z-10">
@@ -1511,22 +1504,13 @@ export default function ProfileClient({
                   key={idx}
                   onClick={() => handleSelectAvatar(av)}
                   className={`group aspect-square rounded-2xl bg-gradient-to-br ${av.bg} flex flex-col items-center justify-center shadow-md border-2 transition-all hover:scale-110 active:scale-95 cursor-pointer overflow-hidden ${
-                    (selectedAvatar as any).svg === av.svg || (selectedAvatar as any).emoji === (av as any).emoji
+                    selectedAvatar.svg === av.svg
                       ? "border-indigo-600 scale-105 shadow-lg shadow-indigo-600/10" 
                       : "border-transparent"
                   }`}
                   title={av.label}
                 >
-                  {av.svg ? (
-                    <Image src={av.svg} alt={av.label} fill className="object-cover" />
-                  ) : (
-                    <>
-                      <span className="transition-transform group-hover:rotate-6 text-4xl">{(av as any).emoji}</span>
-                      <span className="text-[8px] text-white/80 font-black tracking-tighter uppercase mt-1">
-                        {av.label.split(" ")[0]}
-                      </span>
-                    </>
-                  )}
+                  <Image src={av.svg} alt={av.label} fill className="object-cover" />
                 </button>
               ))}
             </div>
@@ -1581,7 +1565,7 @@ export default function ProfileClient({
                         <h4 className="text-sm font-bold text-zinc-200 leading-snug">{item.title}</h4>
                       </div>
                       <span className={`shrink-0 text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider border ${
-                        item.status === "approved" || item.status === "resolved" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                        item.status === "approved" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
                         item.status === "rejected" ? "bg-red-500/10 text-red-400 border-red-500/20" :
                         "bg-amber-500/10 text-amber-400 border-amber-500/20"
                       }`}>

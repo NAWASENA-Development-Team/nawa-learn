@@ -68,6 +68,16 @@ describe("CI workflow", () => {
     expect(ciBody).toMatch(/npm run audit:gate/);
   });
 
+  it("blocks on lint rather than only reporting it", () => {
+    // The step carried `continue-on-error: true` from M4 to M13 behind a
+    // `TODO(M14)`, so `eslint .` could fail on every run and the job stayed
+    // green. That is the same failure shape as C6 and C8: a control that is
+    // present, documented and permanently ignored. The backlog is paid down and
+    // `eslint .` exits 0, so nothing needs the escape hatch any more.
+    expect(ciBody).toMatch(/run:\s*npm run lint\b/);
+    expect(ciBody).not.toMatch(/continue-on-error/);
+  });
+
   it("proves the build registered the proxy", () => {
     // The only build-time signal that the proxy is live.
     expect(ciBody).toMatch(/Proxy \(Middleware\)/);

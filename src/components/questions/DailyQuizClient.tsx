@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { 
   BrainCircuit, 
   CheckCircle2, 
@@ -16,7 +16,10 @@ import confetti from "canvas-confetti";
 interface Question {
   id: string;
   questionText: string;
-  options: any;
+  // The options object is `{ A: "...", B: "...", ... }` (jsonb in the database).
+  // Typing it as `Record<string, string>` rather than `any` is what lets
+  // `Object.entries` below hand back `string` keys and values instead of `any`.
+  options: Record<string, string>;
   // No `answerKey` here on purpose: the server grades every answer and hands
   // back the correct key only after the answer has been committed.
 }
@@ -26,21 +29,23 @@ interface DailyQuizClientProps {
 }
 
 export default function DailyQuizClient({ initialQuestions }: DailyQuizClientProps) {
-  // Shuffle array utility
-  const shuffle = (array: any[]) => {
-    const newArr = [...array];
-    for (let i = newArr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
-    }
-    return newArr;
-  };
-
-  // Queue of questions to answer
-  const [queue, setQueue] = useState<Question[]>([]);
+  // Queue of questions to answer.
+  //
+  // `initialQuestions` arrives **already shuffled and already capped at 20** by
+  // the page. It used to arrive whole, and this component shuffled it in a
+  // `useEffect` on mount. That had three costs: the browser downloaded every
+  // question in the category to throw most of them away, the first paint showed
+  // no question at all, and the effect was a setState-during-effect that React
+  // flags as a cascading render. Randomness does not need to happen on the
+  // client at all — it only needs to happen *somewhere*, and the server is
+  // cheaper and hydration-safe.
+  const [queue, setQueue] = useState<Question[]>(initialQuestions);
   const [masteredCount, setMasteredCount] = useState(0);
-  const [totalQuestions, setTotalQuestions] = useState(0);
-  
+  // Derived, not state: it can never change for a given session, and a
+  // `useState` whose setter is never called is just a constant with extra
+  // bookkeeping.
+  const totalQuestions = initialQuestions.length;
+
   // Current question state
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   // Verdict returned by the server after "Cek Jawaban": correctness + the key.
@@ -48,32 +53,24 @@ export default function DailyQuizClient({ initialQuestions }: DailyQuizClientPro
   const [isChecking, setIsChecking] = useState(false);
   const [streak, setStreak] = useState(0);
 
-  // Initialize queue on mount
-  useEffect(() => {
-    if (initialQuestions.length > 0) {
-      // Limit to 20 questions for a session to not overwhelm
-      const sessionQuestions = shuffle(initialQuestions).slice(0, 20);
-      setQueue(sessionQuestions);
-      setTotalQuestions(sessionQuestions.length);
-    }
-  }, [initialQuestions]);
-
   const currentQ = queue[0];
   const isFinished = queue.length === 0 && totalQuestions > 0;
   const progressPercent = totalQuestions > 0 ? (masteredCount / totalQuestions) * 100 : 0;
 
   const [claimResult, setClaimResult] = useState<{success: boolean, message: string} | null>(null);
-  const [isClaiming, setIsClaiming] = useState(false);
+  // Derived, not stored: "still claiming" is exactly "the session just finished
+  // and no answer has come back yet". A separate `isClaiming` state had to be
+  // set true synchronously inside the effect and false in `.finally` — two
+  // writes that could disagree with `claimResult`, for a value that is a pure
+  // function of it.
+  const isClaiming = isFinished && claimResult === null;
 
   useEffect(() => {
-    if (isFinished) {
-      setIsClaiming(true);
-      fetch("/api/quiz/daily-claim", { method: "POST" })
-        .then(res => res.json())
-        .then(data => setClaimResult(data))
-        .catch(err => setClaimResult({ success: false, message: "Gagal memproses hadiah." }))
-        .finally(() => setIsClaiming(false));
-    }
+    if (!isFinished) return;
+    fetch("/api/quiz/daily-claim", { method: "POST" })
+      .then(res => res.json())
+      .then(data => setClaimResult(data))
+      .catch(() => setClaimResult({ success: false, message: "Gagal memproses hadiah." }));
   }, [isFinished]);
 
   const handleSelect = (key: string) => {
@@ -121,7 +118,7 @@ export default function DailyQuizClient({ initialQuestions }: DailyQuizClientPro
 
   const handleNext = () => {
     const isCorrect = revealed?.correct ?? false;
-    
+
     setQueue(prev => {
       const newQueue = [...prev.slice(1)];
       if (!isCorrect) {
@@ -129,12 +126,15 @@ export default function DailyQuizClient({ initialQuestions }: DailyQuizClientPro
         // Put it at the end or halfway
         const insertIndex = Math.min(newQueue.length, 3);
         newQueue.splice(insertIndex, 0, currentQ);
-      } else {
-        setMasteredCount(m => m + 1);
       }
       return newQueue;
     });
-    
+
+    // Outside the updater on purpose: a state updater must be pure, and React
+    // calls it twice in development StrictMode to prove it. Incrementing the
+    // mastered count from inside meant every correct answer counted twice.
+    if (isCorrect) setMasteredCount(m => m + 1);
+
     setSelectedOption(null);
     setRevealed(null);
   };

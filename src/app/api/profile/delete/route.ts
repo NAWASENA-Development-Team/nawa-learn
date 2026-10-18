@@ -79,6 +79,7 @@ export async function POST(req: Request) {
       userId: user.id,
       reportsDeleted: report.deleted.reports,
       pointsDeleted: report.deleted.pointsLog,
+      bookmarksDeleted: report.deleted.bookmarks,
       // Not `clerkDeleted`: the logger redacts any key containing "clerk" (it is
       // a credential marker), which would turn the one field an operator needs
       // into `"[redacted]"`. The failure path is still distinguishable by the

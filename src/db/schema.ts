@@ -125,9 +125,39 @@ export const submissions = pgTable("submissions", {
   index("submissions_submitter_created_idx").on(table.submitterId, table.submittedAt.desc()),
 ]);
 
-// `reviews` and `bookmarks` were dropped in M5: neither table was referenced
-// anywhere in src/ (the bookmark button is client-side state, not this table).
-// They can come back — with proper constraints — once those features exist.
+// `reviews` was dropped in M5: nothing in src/ ever referenced it. It can come
+// back, with proper constraints, once the feature exists. `bookmarks` was
+// dropped in M5 for the same reason and has now come back below — the reader and
+// the writer exist now, which is exactly the condition M5 set.
+//
+// ── Bookmarks (M14) ───────────────────────────────────────────────────────────
+// Kenapa tabel ini kembali. M5 membuangnya karena tidak ada penulis dan tidak
+// ada pembaca di seluruh `src/`. Penggantinya di sisi klien ternyata **lebih
+// buruk daripada tidak ada**: satu kunci `localStorage` bernama `nawa_bookmarks`,
+// tanpa id pengguna. Di komputer sekolah yang dipakai bergantian, siswa kedua
+// membuka perpustakaan dan melihat modul yang disimpan siswa pertama. Itu bug
+// kebenaran sekaligus kebocoran privasi kecil, dan keduanya berasal dari satu
+// kesalahan: data milik seseorang disimpan di perangkat, bukan di akun.
+//
+// `uniqueIndex(userId, moduleId)` membuat "tersimpan" menjadi keadaan yang
+// mustahil terduplikasi, sehingga tombol bookmark tidak perlu membaca-dulu-lalu-
+// menulis (pola yang sudah pernah balapan di `submissions`).
+export const bookmarks = pgTable("bookmarks", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  moduleId: uuid("module_id")
+    .references(() => modules.id, { onDelete: "cascade" })
+    .notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  // Idempotensi ada di database, bukan di kode: menekan tombol dua kali tidak
+  // bisa menghasilkan dua baris, berapa pun jumlah permintaan yang balapan.
+  uniqueIndex("bookmarks_user_module_unique").on(table.userId, table.moduleId),
+  // `GET /api/bookmarks` membaca seluruh simpanan satu pengguna.
+  index("bookmarks_user_idx").on(table.userId),
+]);
 
 export const customExams = pgTable("custom_exams", {
   id: uuid("id").defaultRandom().primaryKey(),

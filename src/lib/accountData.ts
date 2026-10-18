@@ -59,6 +59,8 @@ export interface UserDataExport {
   poin: unknown[];
   pengajuan: unknown[];
   laporan: unknown[];
+  /** Modul yang ditandai "tersimpan" oleh pengguna ini. */
+  penanda: unknown[];
 }
 
 const iso = (value: Date | null | undefined): string | null =>
@@ -98,7 +100,7 @@ export async function collectUserData(db: AppDb, userId: string): Promise<UserDa
     throw new Error(`accountData: no user row for ${userId}`);
   }
 
-  const [modul, soal, ujian, poin, pengajuan, laporan] = await Promise.all([
+  const [modul, soal, ujian, poin, pengajuan, laporan, penanda] = await Promise.all([
     db.query.modules.findMany({
       where: eq(schema.modules.uploaderId, userId),
       columns: {
@@ -161,6 +163,15 @@ export async function collectUserData(db: AppDb, userId: string): Promise<UserDa
       where: eq(schema.reports.userId, userId),
       columns: { id: true, issueType: true, description: true, status: true, createdAt: true },
     }),
+    // What a student chose to save is a statement about that student, even though
+    // the module itself belongs to someone else. The module id is enough to
+    // identify it; copying the title in would duplicate another user's content
+    // into this file for no gain.
+    db.query.bookmarks.findMany({
+      where: eq(schema.bookmarks.userId, userId),
+      columns: { moduleId: true, createdAt: true },
+      orderBy: (table, { desc }) => [desc(table.createdAt)],
+    }),
   ]);
 
   return {
@@ -181,6 +192,7 @@ export async function collectUserData(db: AppDb, userId: string): Promise<UserDa
     poin,
     pengajuan,
     laporan,
+    penanda,
   };
 }
 
@@ -254,7 +266,7 @@ export interface AccountDeletionReport {
   userId: string;
   /** URL foto lama, supaya route bisa menghapus objeknya dari penyimpanan. */
   photoUrlCleared: string | null;
-  deleted: { reports: number; pointsLog: number };
+  deleted: { reports: number; pointsLog: number; bookmarks: number };
   /** Baris `submissions` yang catatan reviewer-nya dikosongkan. */
   submissionsFeedbackCleared: number;
   /** Ujian buatan pengguna yang namanya diganti menjadi "Anonim". */
@@ -309,6 +321,15 @@ export async function deleteAccountData(
     .where(eq(schema.pointsLog.userId, userId))
     .returning({ id: schema.pointsLog.id });
 
+  // Bookmarks are a reading history in disguise — "this student was preparing
+  // for UTBK, in these subjects". They are also the only row this account owns
+  // that is purely about the person and not about their work, so they go with
+  // the reports and the points rather than being anonymised.
+  const deletedBookmarks = await db
+    .delete(schema.bookmarks)
+    .where(eq(schema.bookmarks.userId, userId))
+    .returning({ id: schema.bookmarks.id });
+
   const clearedFeedback = await db
     .update(schema.submissions)
     .set({ feedback: null })
@@ -347,7 +368,11 @@ export async function deleteAccountData(
   return {
     userId,
     photoUrlCleared: account.photoUrl,
-    deleted: { reports: deletedReports.length, pointsLog: deletedPoints.length },
+    deleted: {
+      reports: deletedReports.length,
+      pointsLog: deletedPoints.length,
+      bookmarks: deletedBookmarks.length,
+    },
     submissionsFeedbackCleared: clearedFeedback.length,
     customExamsAnonymized: anonymizedExams.length,
     completedAt: now.toISOString(),

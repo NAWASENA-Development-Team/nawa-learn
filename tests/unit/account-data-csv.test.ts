@@ -88,6 +88,7 @@ function fixture(): UserDataExport {
     poin: [{ id: "p1", action: "quiz_answer", delta: 10, refId: null }],
     pengajuan: [{ id: "s1", type: "module", status: "approved" }],
     laporan: [{ id: "r1", issueType: "bug", status: "pending" }],
+    penanda: [{ moduleId: "m1", savedAt: "2026-10-17T00:00:00.000Z" }],
   };
 }
 

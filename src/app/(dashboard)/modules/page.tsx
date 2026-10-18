@@ -1,6 +1,7 @@
 // app/(dashboard)/modules/page.tsx
+import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
-import { modules, users } from "@/db/schema";
+import { bookmarks, modules, users } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import ModulesLibraryClient from "@/components/modules/ModulesLibraryClient";
 
@@ -31,5 +32,25 @@ export default async function ModulesPage() {
     createdAt: mod.createdAt.toISOString(),
   }));
 
-  return <ModulesLibraryClient initialModules={serializedModules} />;
+  // The reader's own bookmarks. This used to be one global `localStorage` key with
+  // no user id in it, which meant a shared school computer showed one student
+  // another student's saved modules. Reading it here keeps the first paint correct
+  // instead of filling the stars in after hydration.
+  const { userId: clerkId } = await auth();
+  let bookmarkedIds: string[] = [];
+  if (clerkId) {
+    const rows = await db
+      .select({ moduleId: bookmarks.moduleId })
+      .from(bookmarks)
+      .innerJoin(users, eq(bookmarks.userId, users.id))
+      .where(eq(users.clerkId, clerkId));
+    bookmarkedIds = rows.map((row) => row.moduleId);
+  }
+
+  return (
+    <ModulesLibraryClient
+      initialModules={serializedModules}
+      initialBookmarkedIds={bookmarkedIds}
+    />
+  );
 }

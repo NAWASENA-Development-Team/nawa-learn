@@ -98,11 +98,11 @@ describe("GET /api/profile/status query count", () => {
     // Three modules, three questions, three reports — the old handler ran one
     // extra lookup per row here, so this would have been 3 + 3 + 3 + 3 = 12.
     for (let i = 0; i < 3; i += 1) {
-      const module = await seedModule(user.id, `Modul ${i}`);
+      const seededModule = await seedModule(user.id, `Modul ${i}`);
       const question = await seedQuestion(db, { uploaderId: user.id, difficulty: "sedang" });
       await db.insert(schema.submissions).values({
         type: "module",
-        refId: module.id,
+        refId: seededModule.id,
         submitterId: user.id,
         submittedAt: new Date(Date.UTC(2026, 1, 1, 0, i)),
       });
@@ -129,10 +129,10 @@ describe("GET /api/profile/status query count", () => {
     // survive: the old handler issued one lookup per row, so it would have grown
     // to 5 + 12 here.
     for (let i = 3; i < 6; i += 1) {
-      const module = await seedModule(user.id, `Modul ${i}`);
+      const seededModule = await seedModule(user.id, `Modul ${i}`);
       await db.insert(schema.submissions).values({
         type: "module",
-        refId: module.id,
+        refId: seededModule.id,
         submitterId: user.id,
         submittedAt: new Date(Date.UTC(2026, 1, 3, 0, i)),
       });

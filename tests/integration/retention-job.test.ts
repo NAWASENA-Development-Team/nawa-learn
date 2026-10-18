@@ -8,8 +8,7 @@
 //   2. The endpoint that performs the deletion is reachable only with the cron
 //      secret, fails closed when the secret is missing, and refuses GET.
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { eq } from "drizzle-orm";
-import { apiRequest, createTestDb, seedUser, type TestDb } from "../helpers/harness";
+import { createTestDb, seedUser, type TestDb } from "../helpers/harness";
 
 const holder = vi.hoisted(() => ({ db: undefined as unknown }));
 

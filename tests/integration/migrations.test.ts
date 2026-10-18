@@ -5,15 +5,16 @@ import { beforeAll, describe, expect, it } from "vitest";
 
 // Migration 0000 is the schema as it existed before M5; 0001 is the M5 upgrade;
 // 0002 adds the UU PDP consent columns in M11; 0003 adds the audit log in M12;
-// 0004 adds the M13 indexes. These tests run the real SQL files against a
-// database that already holds data, which is the only way to prove the upgrade is
-// safe on the live database.
+// 0004 adds the M13 indexes; 0005 adds the M14 bookmarks table. These tests run
+// the real SQL files against a database that already holds data, which is the only
+// way to prove the upgrade is safe on the live database.
 const MIGRATIONS_DIR = path.resolve(process.cwd(), "src/db/migrations");
 const LEGACY = "0000_absurd_warhawk.sql";
 const UPGRADE = "0001_clever_lady_mastermind.sql";
 const CONSENT = "0002_charming_venom.sql";
 const AUDIT = "0003_panoramic_landau.sql";
 const INDEXES = "0004_wide_tyrannus.sql";
+const BOOKMARKS = "0005_curvy_vampiro.sql";
 
 const sqlOf = (file: string) => readFileSync(path.join(MIGRATIONS_DIR, file), "utf8");
 
@@ -439,5 +440,88 @@ describe("M13 indexes on a database that already has data", () => {
     // added it would fail only on deploy, not in this test — unless the file
     // itself is asserted, which is what this does.
     expect(sqlOf(INDEXES)).not.toMatch(/CONCURRENTLY/i);
+  });
+});
+
+// M14. `bookmarks` is the first table this project has *re-added* after dropping
+// it in M5, and the difference is the whole point: M5 removed it because nothing
+// wrote to it and nothing read it, so it was a table pretending to be a feature.
+// This version ships with a writer, a reader and an owner. What the migration must
+// prove is that it does not lose the rows already present, that it will not accept
+// the same (user, module) pair twice — that unique index is what makes the API
+// idempotent — and that a deleted module cannot leave a bookmark pointing at
+// nothing.
+describe("M14 bookmarks table on a database that already has data", () => {
+  let db: PGlite;
+
+  beforeAll(async () => {
+    db = new PGlite();
+
+    await db.exec(sqlOf(LEGACY));
+    await db.exec(sqlOf(UPGRADE));
+    await db.exec(sqlOf(CONSENT));
+    await db.exec(sqlOf(AUDIT));
+    await db.exec(sqlOf(INDEXES));
+
+    await db.exec(`
+      INSERT INTO users (id, clerk_id, name, email, role, points)
+      VALUES
+        ('${USER_A}', 'clerk_a', 'A', 'a@example.test', 'student', 120),
+        ('${USER_B}', 'clerk_b', 'B', 'b@example.test', 'student', 50);
+
+      INSERT INTO modules (id, title, subject, grade, category, content_url, uploader_id, status)
+      VALUES ('${MODULE}', 'Modul', 'Matematika', '10', 'UTBK', 'https://example.test/m', '${USER_A}', 'approved');
+    `);
+
+    await db.exec(sqlOf(BOOKMARKS));
+  });
+
+  it("leaves every pre-existing row untouched", async () => {
+    expect(await count(db, "users")).toBe(2);
+    expect(await count(db, "modules")).toBe(1);
+  });
+
+  it("creates the table and both indexes", async () => {
+    const result = await db.query<{ indexname: string }>(
+      `SELECT indexname FROM pg_indexes
+       WHERE schemaname = 'public' AND tablename = 'bookmarks'`,
+    );
+    const names = result.rows.map((row) => row.indexname);
+
+    expect(names).toContain("bookmarks_user_module_unique");
+    expect(names).toContain("bookmarks_user_idx");
+  });
+
+  it("refuses a second bookmark for the same user and module", async () => {
+    // This constraint is the reason `POST /api/bookmarks` can use
+    // `onConflictDoNothing()` and stay idempotent under retry. Without it a flaky
+    // connection would produce duplicate rows, and the unique index is a cheaper
+    // guard than a read-then-write race in the handler.
+    await db.exec(`
+      INSERT INTO bookmarks (user_id, module_id) VALUES ('${USER_A}', '${MODULE}');
+    `);
+
+    await expect(
+      db.exec(`
+        INSERT INTO bookmarks (user_id, module_id) VALUES ('${USER_A}', '${MODULE}');
+      `),
+    ).rejects.toThrow();
+
+    expect(await count(db, "bookmarks")).toBe(1);
+  });
+
+  it("takes the bookmark with it when the module is deleted", async () => {
+    // A bookmark to a module that no longer exists would render as a blank card
+    // forever. `ON DELETE cascade` is what prevents that, so it is asserted rather
+    // than assumed from the SQL.
+    expect(await count(db, "bookmarks")).toBe(1);
+
+    await db.exec(`DELETE FROM modules WHERE id = '${MODULE}';`);
+
+    expect(await count(db, "bookmarks")).toBe(0);
+  });
+
+  it("is safe to re-run as plain DDL (no CONCURRENTLY in the file)", async () => {
+    expect(sqlOf(BOOKMARKS)).not.toMatch(/CONCURRENTLY/i);
   });
 });

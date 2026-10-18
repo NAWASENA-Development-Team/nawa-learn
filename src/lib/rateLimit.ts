@@ -88,6 +88,9 @@ export const RATE_LIMITS = {
   // table that only ever grows, so it gets a budget of its own rather than
   // sharing the read allowance of the public routes.
   "moderator/audit-log": { perUser: { limit: 60, windowMs: MINUTE }, perIp: { limit: 120, windowMs: MINUTE } },
+  // A bookmark is one row keyed by (user, module). The button is clicked by a
+  // human, so this budget is generous for a person and still bounded for a script.
+  "bookmarks/toggle": { perUser: { limit: 60, windowMs: MINUTE }, perIp: { limit: 120, windowMs: MINUTE } },
 } as const satisfies Record<string, Policy>;
 
 export type RateLimitPolicyName = keyof typeof RATE_LIMITS;
