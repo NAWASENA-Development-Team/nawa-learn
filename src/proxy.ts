@@ -36,6 +36,19 @@ const isPublicRoute = createRouteMatcher([
   // cannot pass the proxy; its own `CRON_SECRET` check is the gate, and it fails
   // closed (401) when that secret is unset or wrong.
   '/api/cron/retention',
+  // Crawler-facing metadata (M14b). Public because a crawler is an anonymous
+  // visitor with no cookie jar: hidden behind the auth gate, `/robots.txt`
+  // answers a 307 to Clerk's hosted sign-in domain, which reads to a search
+  // engine as "this entire site is a login page". Both files contain only URLs
+  // and policy text — there is nothing to leak, and `robots.ts` is what keeps
+  // crawlers out of `/api/**` in the first place.
+  //
+  // These two are listed because the matcher below does not exclude `.txt` or
+  // `.xml`. `/manifest.webmanifest` is *not* listed: `webmanifest` is in the
+  // matcher's static-extension exclusion, so the proxy never runs for it and an
+  // entry here would be configuration that does nothing.
+  '/robots.txt',
+  '/sitemap.xml',
 ]);
 
 export default clerkMiddleware(

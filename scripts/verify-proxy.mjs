@@ -110,6 +110,42 @@ const nonce = csp.match(/'nonce-([^']+)'/)?.[1];
 console.log(`  status: ${res.status}`);
 console.log(`  content-security-policy: ${csp ? `${csp.slice(0, 72)}…` : "(absent)"}`);
 
+// ─── Public metadata routes ───────────────────────────────────────────────────
+// `config.matcher` in src/proxy.ts excludes `.svg`, `.ico`, `.webmanifest` and
+// the like, but NOT `.txt` or `.xml` — so `/robots.txt` and `/sitemap.xml` do
+// reach the proxy. Under deny-by-default that meant a 307 to Clerk's hosted
+// sign-in, which reads to a crawler as "the whole site is a login page". They
+// are in `PUBLIC_ROUTES` now, and this probe is what keeps them there: a static
+// route can start working while the allowlist entry quietly goes missing, and
+// the resulting 307 is invisible in a browser tab that is already signed in.
+const METADATA_PROBES = [
+  {
+    path: "/robots.txt",
+    type: /^text\/plain\b/i,
+    body: (b) => b.includes("Sitemap:") && b.includes("Disallow: /api/"),
+  },
+  {
+    path: "/sitemap.xml",
+    type: /^(application|text)\/xml\b/i,
+    body: (b) => b.includes("<urlset") && b.includes("<loc>http"),
+  },
+];
+
+async function probe(pathname) {
+  const r = await fetch(`http://${HOST}:${PORT}${pathname}`, {
+    redirect: "manual",
+    signal: AbortSignal.timeout(10_000),
+  });
+  return { pathname, res: r, body: await r.text() };
+}
+
+const metadataResults = [];
+for (const spec of METADATA_PROBES) {
+  const result = await probe(spec.path);
+  metadataResults.push({ spec, ...result });
+  console.log(`  ${spec.path}: ${result.res.status} ${result.res.headers.get("content-type") ?? "(no type)"}`);
+}
+
 shutdown();
 
 if (res.status !== 401) {
@@ -128,4 +164,31 @@ if (!nonce) {
   );
 }
 
-console.log(`\n✔ Proxy is live: unauthenticated ${PROBE_PATH} → 401, CSP nonce ${nonce.slice(0, 8)}…\n`);
+for (const { spec, res: metaRes, body } of metadataResults) {
+  const location = metaRes.headers.get("location");
+  if (metaRes.status !== 200) {
+    fail(
+      `Expected 200 from ${spec.path}, got ${metaRes.status}` +
+        `${location ? ` → ${location}` : ""}.\n` +
+        `  A 3xx to a sign-in page means the proxy still treats this path as\n` +
+        `  private. Check PUBLIC_ROUTES in src/proxy.ts — and note that the\n` +
+        `  matcher excludes .webmanifest/.svg/.ico but not .txt/.xml, so this\n` +
+        `  file genuinely passes through the auth gate.`,
+    );
+  }
+  const contentType = metaRes.headers.get("content-type") ?? "";
+  if (!spec.type.test(contentType)) {
+    fail(`Expected ${spec.path} to answer with ${spec.type}, got "${contentType || "(absent)"}".`);
+  }
+  if (!spec.body(body)) {
+    fail(
+      `The body of ${spec.path} does not look like what it claims to be.\n` +
+        `  First 200 characters:\n\n${body.slice(0, 200)}\n`,
+    );
+  }
+}
+
+console.log(
+  `\n✔ Proxy is live: unauthenticated ${PROBE_PATH} → 401, CSP nonce ${nonce.slice(0, 8)}…\n` +
+    `✔ Public metadata routes answer without a session: ${METADATA_PROBES.map((p) => p.path).join(", ")}\n`,
+);

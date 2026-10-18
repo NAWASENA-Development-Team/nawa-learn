@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <!--
+    The site mark, served by the `src/app/icon.svg` file convention (M14b).
+    Before this file existed the browser tab showed Next's blank default.
+
+    Two deliberate differences from the original `public/icon-nawa.svg` (moved
+    here by M14b; nothing references the old path any more):
+      • a background. The glyph is white, so on a light browser tab (which is the
+        default in most themes) it was invisible - a white mark on white.
+      • no `feGaussianBlur` glow. At 16x16 a blur is not a glow, it is a smear,
+        and the filter cost is paid on every tab render.
+    The gradient matches the indigo-600 → violet-600 pair used across the app.
+  -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="120" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4f46e5" />
+      <stop offset="1" stop-color="#7c3aed" />
+    </linearGradient>
+  </defs>
+
+  <rect width="120" height="120" rx="26" fill="url(#bg)" />
+
+  <g transform="translate(0 -4)">
+    <!-- Core star -->
+    <polygon points="60,38 69,57 60,78 51,57" fill="#FFFFFF" />
+
+    <!-- Upper wings -->
+    <g fill="#FFFFFF" fill-opacity="0.72">
+      <polygon points="55,34 33,24 39,41 51,44" />
+      <polygon points="65,34 87,24 81,41 69,44" />
+    </g>
+
+    <!-- Lower wings -->
+    <g fill="#FFFFFF" fill-opacity="0.72">
+      <polygon points="28,46 47,52 44,68 30,63" />
+      <polygon points="92,46 73,52 76,68 90,63" />
+      <polygon points="34,68 48,74 41,90 36,84" />
+      <polygon points="86,68 72,74 79,90 84,84" />
+    </g>
+
+    <!-- Base orbs -->
+    <g fill="#FFFFFF" fill-opacity="0.38">
+      <circle cx="49" cy="96" r="5" />
+      <circle cx="71" cy="96" r="5" />
+    </g>
+  </g>
+</svg>
