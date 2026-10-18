@@ -1,9 +1,11 @@
 // app/(dashboard)/profile/[id]/page.tsx
 import { db } from "@/db";
 import { users, modules, questions, pointsLog } from "@/db/schema";
-import { eq, desc, count, sql } from "drizzle-orm";
+import { eq, desc, count, sql, and } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
 import ProfileClient from "@/components/profile/ProfileClient";
+import { IS_PARTICIPANT } from "@/lib/participants";
+import { emptySpecialtyStats, getSpecialtyStats } from "@/lib/specialtyStats";
 
 export const dynamic = "force-dynamic";
 
@@ -85,10 +87,19 @@ export default async function PublicProfilePage({ params }: PageProps) {
     totalStudentsResult,
     fetchedModules,
     fetchedQuestions,
-    fetchedPointLogs
+    fetchedPointLogs,
+    specialtyStatsById
   ] = await Promise.all([
-    db.select({ value: count() }).from(users).where(sql`${users.points} > ${dbUser.points}`),
-    db.select({ value: count() }).from(users),
+    // Peringkat dan "total siswa" memakai definisi peserta yang **sama** dengan
+    // papan peringkat (`IS_PARTICIPANT`). Akun yang sudah dianonimkan tetap berupa
+    // baris `users` demi integritas foreign key, tetapi bukan siswa lagi; tanpa
+    // filter ini, profil menampilkan "1 dari 7" sementara papan peringkat
+    // menampilkan "1 dari 6".
+    db
+      .select({ value: count() })
+      .from(users)
+      .where(and(IS_PARTICIPANT, sql`${users.points} > ${dbUser.points}`)),
+    db.select({ value: count() }).from(users).where(IS_PARTICIPANT),
     // Daftar kolom eksplisit, bukan `select()`. Dua alasan, dan yang kedua
     // serius: `questions` punya kolom `answer_key` dan `options`. Sebuah
     // `select()` liar menarik kunci jawaban ke dalam halaman profil publik —
@@ -130,7 +141,12 @@ export default async function PublicProfilePage({ params }: PageProps) {
       .from(pointsLog)
       .where(eq(pointsLog.userId, dbUser.id))
       .orderBy(desc(pointsLog.createdAt))
-      .limit(20)
+      .limit(20),
+    // Enam angka lencana, dihitung SQL. Sebelumnya `ProfileClient` menurunkannya
+    // dari 20 baris log di atas — jendela yang terlalu pendek untuk sebuah
+    // pencapaian seumur akun, dan disaring dengan nama aksi yang tidak pernah
+    // ditulis (`quiz_completed*`), sehingga selalu nol.
+    getSpecialtyStats(db, [dbUser.id]),
   ]);
 
   const rank = (higherPointsResult[0]?.value || 0) + 1;
@@ -195,6 +211,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
       userModules={serializedModules}
       userQuestions={serializedQuestions}
       pointLogs={serializedPointLogs}
+      specialtyStats={specialtyStatsById.get(dbUser.id) ?? emptySpecialtyStats()}
       isOwnProfile={isOwnProfile}
     />
   );

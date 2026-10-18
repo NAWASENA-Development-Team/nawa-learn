@@ -1,19 +1,24 @@
 // app/(dashboard)/leaderboard/page.tsx
 import { db } from "@/db";
-import { users, modules, questions, pointsLog } from "@/db/schema";
-import { desc, count, eq, sql, inArray } from "drizzle-orm";
+import { users } from "@/db/schema";
+import { and, count, desc, eq, gt } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
 import LeaderboardClient from "@/components/leaderboard/LeaderboardClient";
+import { IS_PARTICIPANT } from "@/lib/participants";
 import { getSeasonLabel } from "@/lib/season";
+import { emptySpecialtyStats, getSpecialtyStats } from "@/lib/specialtyStats";
 
 // Halaman ini dirender di server untuk memastikan data peringkat selalu up-to-date
 export const dynamic = "force-dynamic";
 
-export default async function LeaderboardPage() {
-  // 1. Mengambil 100 kontributor teratas untuk pencarian interaktif di client
-  const topUsersData = await db.query.users.findMany({
-    orderBy: [desc(users.seasonPoints)],
-    limit: 100,
+/** Papan peringkat menampilkan 100 teratas; pencarian di client bekerja pada set itu. */
+const LEADERBOARD_SIZE = 100;
+
+async function loadLoggedInUser(clerkId: string | null) {
+  if (!clerkId) return null;
+
+  const dbUser = await db.query.users.findFirst({
+    where: eq(users.clerkId, clerkId),
     columns: {
       id: true,
       name: true,
@@ -21,59 +26,40 @@ export default async function LeaderboardPage() {
       seasonPoints: true,
       avatarIndex: true,
       photoUrl: true,
-    }
+    },
   });
+  if (!dbUser) return null;
 
-  const topUserIds = topUsersData.map(u => u.id);
-
-  // Get data to compute exact specialty badges
-  const allModules = topUserIds.length ? await db.query.modules.findMany({
-    where: inArray(modules.uploaderId, topUserIds),
-  }) : [];
-  
-  const allQuestions = topUserIds.length ? await db.query.questions.findMany({
-    where: inArray(questions.uploaderId, topUserIds),
-  }) : [];
-  
-  const allLogs = topUserIds.length ? await db.query.pointsLog.findMany({
-    where: inArray(pointsLog.userId, topUserIds),
-  }) : [];
-
-  const topUsers = topUsersData.map((u, i) => {
-    const rank = i + 1;
-    const userMods = allModules.filter(m => m.uploaderId === u.id);
-    const userQs = allQuestions.filter(q => q.uploaderId === u.id);
-    const userLogs = allLogs.filter(l => l.userId === u.id);
-
-    const stats = {
-      hardQuizzes: userLogs.filter(l => l.action === "quiz_completed_sulit" || l.action === "quiz_completed_sangat sulit").length,
-      approvedMods: userMods.filter(m => m.status === "approved").length,
-      quizTotal: userLogs.filter(l => l.action.startsWith("quiz_completed")).length,
-      diverseSubjects: new Set(userMods.filter(m => m.status === "approved").map(m => m.subject)).size,
-      approvedQuestions: userQs.filter(q => q.status === "approved").length,
-      totalDownloads: userMods.reduce((a, m) => a + m.downloads, 0),
-    };
-
-    return {
-      ...u,
-      stats // We pass stats down so client can use getSpecialtyBadge
-    };
-  });
-
-  // 2. Mengambil total seluruh siswa kontributor
-  const [totalStudentsResult] = await db
+  // Peringkat = jumlah peserta dengan poin musim lebih tinggi + 1.
+  const [higher] = await db
     .select({ value: count() })
-    .from(users);
-  
-  const totalStudents = totalStudentsResult?.value || 1;
+    .from(users)
+    .where(and(IS_PARTICIPANT, gt(users.seasonPoints, dbUser.seasonPoints)));
 
-  // 3. Mengambil status peringkat user yang sedang login saat ini (jika ada)
+  return {
+    id: dbUser.id,
+    name: dbUser.name,
+    points: dbUser.points,
+    seasonPoints: dbUser.seasonPoints,
+    rank: (higher?.value ?? 0) + 1,
+    avatarIndex: dbUser.avatarIndex ?? null,
+    photoUrl: dbUser.photoUrl ?? null,
+  };
+}
+
+export default async function LeaderboardPage() {
   const { userId: clerkId } = await auth();
-  let loggedInUser = null;
 
-  if (clerkId) {
-    const dbUser = await db.query.users.findFirst({
-      where: eq(users.clerkId, clerkId),
+  // 1. Seratus kontributor teratas, plus jumlah peserta.
+  //
+  // `desc(users.id)` sebagai pemecah seri: `season_points` tidak unik, dan tanpa
+  // kunci kedua urutan baris yang poinnya sama ditentukan Postgres — artinya
+  // "peringkat 7" bisa berpindah orang di antara dua pemuatan halaman.
+  const [topUsersData, totalStudentsResult] = await Promise.all([
+    db.query.users.findMany({
+      where: IS_PARTICIPANT,
+      orderBy: [desc(users.seasonPoints), desc(users.id)],
+      limit: LEADERBOARD_SIZE,
       columns: {
         id: true,
         name: true,
@@ -81,32 +67,33 @@ export default async function LeaderboardPage() {
         seasonPoints: true,
         avatarIndex: true,
         photoUrl: true,
-      }
-    });
+      },
+    }),
+    db.select({ value: count() }).from(users).where(IS_PARTICIPANT),
+  ]);
 
-    if (dbUser) {
-      // Hitung rank user dengan menjumlahkan siswa yang punya poin di atas user ini + 1
-      const [higherPointsResult] = await db
-        .select({ value: count() })
-        .from(users)
-        .where(sql`${users.seasonPoints} > ${dbUser.seasonPoints}`);
-      
-      loggedInUser = {
-        id: dbUser.id,
-        name: dbUser.name,
-        points: dbUser.points,
-        seasonPoints: dbUser.seasonPoints,
-        rank: (higherPointsResult?.value || 0) + 1,
-        avatarIndex: dbUser.avatarIndex ?? null,
-        photoUrl: dbUser.photoUrl ?? null,
-      };
-    }
-  }
+  const topUserIds = topUsersData.map((u) => u.id);
 
+  // 2. Enam angka lencana per pengguna, dihitung SQL (tiga query agregat).
+  //
+  // Sebelum M13 di sini ada tiga `findMany` tanpa daftar kolom yang memuat
+  // **seluruh** modul, soal (termasuk `answer_key`), dan baris poin milik 100
+  // pengguna ke memori Node, lalu menyaringnya di JavaScript.
+  const [stats, loggedInUser] = await Promise.all([
+    getSpecialtyStats(db, topUserIds),
+    loadLoggedInUser(clerkId),
+  ]);
+
+  const topUsers = topUsersData.map((user) => ({
+    ...user,
+    stats: stats.get(user.id) ?? emptySpecialtyStats(),
+  }));
+
+  const totalStudents = totalStudentsResult[0]?.value || 1;
   const seasonLabel = getSeasonLabel();
 
   return (
-    <LeaderboardClient 
+    <LeaderboardClient
       topUsers={topUsers}
       loggedInUser={loggedInUser}
       totalStudents={totalStudents}

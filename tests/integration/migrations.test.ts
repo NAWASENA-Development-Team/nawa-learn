@@ -4,14 +4,16 @@ import { PGlite } from "@electric-sql/pglite";
 import { beforeAll, describe, expect, it } from "vitest";
 
 // Migration 0000 is the schema as it existed before M5; 0001 is the M5 upgrade;
-// 0002 adds the UU PDP consent columns in M11; 0003 adds the audit log in M12.
-// These tests run the real SQL files against a database that already holds data,
-// which is the only way to prove the upgrade is safe on the live database.
+// 0002 adds the UU PDP consent columns in M11; 0003 adds the audit log in M12;
+// 0004 adds the M13 indexes. These tests run the real SQL files against a
+// database that already holds data, which is the only way to prove the upgrade is
+// safe on the live database.
 const MIGRATIONS_DIR = path.resolve(process.cwd(), "src/db/migrations");
 const LEGACY = "0000_absurd_warhawk.sql";
 const UPGRADE = "0001_clever_lady_mastermind.sql";
 const CONSENT = "0002_charming_venom.sql";
 const AUDIT = "0003_panoramic_landau.sql";
+const INDEXES = "0004_wide_tyrannus.sql";
 
 const sqlOf = (file: string) => readFileSync(path.join(MIGRATIONS_DIR, file), "utf8");
 
@@ -342,5 +344,100 @@ describe("M12 audit log on a database that already has data", () => {
     `);
 
     expect(await count(db, "audit_log")).toBeGreaterThan(0);
+  });
+});
+
+// M13. Seven indexes, no columns. The migration cannot lose data by construction —
+// but it *can* be wrong in a way only production notices: a descending index that
+// silently came out ascending, which makes the keyset pagination this milestone
+// added scan-and-sort instead of seek. So the direction is asserted, not just the
+// name.
+describe("M13 indexes on a database that already has data", () => {
+  let db: PGlite;
+
+  beforeAll(async () => {
+    db = new PGlite();
+
+    await db.exec(sqlOf(LEGACY));
+    await db.exec(sqlOf(UPGRADE));
+    await db.exec(sqlOf(CONSENT));
+    await db.exec(sqlOf(AUDIT));
+
+    // Rows that exist before the indexes are created. CREATE INDEX rewrites the
+    // whole table to build its tree, so this is exactly the run where a bad
+    // expression would be noticed.
+    await db.exec(`
+      INSERT INTO users (id, clerk_id, name, email, role, points)
+      VALUES
+        ('${USER_A}', 'clerk_a', 'A', 'a@example.test', 'student', 120),
+        ('${USER_B}', 'clerk_b', 'B', 'b@example.test', 'student', 50);
+
+      INSERT INTO modules (id, title, subject, grade, category, content_url, uploader_id, status)
+      VALUES ('${MODULE}', 'Modul', 'Matematika', '10', 'UTBK', 'https://example.test/m', '${USER_A}', 'approved');
+
+      INSERT INTO questions (id, question_text, options, answer_key, difficulty, subject, category, uploader_id, status)
+      VALUES ('${QUESTION}', 'Soal', '{"A":"a","B":"b"}', 'A', 'mudah', 'Matematika', 'UTBK', '${USER_A}', 'approved');
+    `);
+
+    await db.exec(sqlOf(INDEXES));
+  });
+
+  it("leaves every pre-existing row untouched", async () => {
+    expect(await count(db, "users")).toBe(2);
+    expect(await count(db, "modules")).toBe(1);
+    expect(await count(db, "questions")).toBe(1);
+  });
+
+  it("creates all seven indexes", async () => {
+    const result = await db.query<{ indexname: string }>(
+      `SELECT indexname FROM pg_indexes WHERE schemaname = 'public'`,
+    );
+    const names = result.rows.map((row) => row.indexname);
+
+    for (const name of [
+      "custom_exams_created_idx",
+      "modules_uploader_idx",
+      "questions_status_created_idx",
+      "questions_uploader_idx",
+      "reports_user_created_idx",
+      "submissions_submitter_created_idx",
+      "users_points_idx",
+    ]) {
+      expect(names).toContain(name);
+    }
+  });
+
+  it("keeps the sort direction the keyset pagination depends on", async () => {
+    // `pg_get_indexdef` is the only place the direction is visible. An index that
+    // came out ascending is still "present" and still satisfies the test above,
+    // while quietly forcing a sort on every page.
+    const result = await db.query<{ indexname: string; indexdef: string }>(
+      `SELECT indexname, indexdef FROM pg_indexes
+       WHERE schemaname = 'public'
+         AND indexname IN ('custom_exams_created_idx', 'questions_status_created_idx',
+                           'reports_user_created_idx', 'submissions_submitter_created_idx',
+                           'users_points_idx')`,
+    );
+    const byName = new Map(result.rows.map((row) => [row.indexname, row.indexdef]));
+
+    // `pg_get_indexdef` omits quotes on non-reserved identifiers, so these
+    // assertions match the shape Postgres actually prints: `created_at DESC
+    // NULLS LAST, id DESC NULLS LAST`.
+    expect(byName.get("custom_exams_created_idx")).toContain("created_at DESC");
+    expect(byName.get("custom_exams_created_idx")).toContain("id DESC");
+    expect(byName.get("questions_status_created_idx")).toContain("status, created_at DESC");
+    expect(byName.get("reports_user_created_idx")).toContain("user_id, created_at DESC");
+    expect(byName.get("submissions_submitter_created_idx")).toContain(
+      "submitter_id, submitted_at DESC",
+    );
+    expect(byName.get("users_points_idx")).toContain("points DESC");
+  });
+
+  it("is safe to re-run as a plain CREATE INDEX (no CONCURRENTLY in the file)", async () => {
+    // `drizzle-kit migrate` runs each statement inside a transaction, and
+    // `CREATE INDEX CONCURRENTLY` is illegal there. A hand-edited migration that
+    // added it would fail only on deploy, not in this test — unless the file
+    // itself is asserted, which is what this does.
+    expect(sqlOf(INDEXES)).not.toMatch(/CONCURRENTLY/i);
   });
 });

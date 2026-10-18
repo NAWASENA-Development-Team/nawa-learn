@@ -17,7 +17,7 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   // Profile customisation (server-persisted so other users can see them)
   avatarIndex: integer("avatar_index"),        // index into AVATAR_OPTIONS[]
-  photoUrl: text("photo_url"),                 // base64 data-URL (Top-10 perk)
+  photoUrl: text("photo_url"),                 // URL in our own Vercel Blob store (M8), not a data-URL
   bio: text("bio"),
   motto: varchar("motto", { length: 200 }),
   // Level reward tracking
@@ -44,6 +44,11 @@ export const users = pgTable("users", {
 }, (table) => [
   // The leaderboard orders by season points and pages through the whole table.
   index("users_season_points_idx").on(table.seasonPoints.desc()),
+  // M13: the public profile computes "peringkat saya" with
+  // `SELECT count(*) FROM users WHERE points > $1`, and the leaderboard does the
+  // same over season points. The season index above covers the second; this one
+  // covers the first, which previously scanned `users` on every profile view.
+  index("users_points_idx").on(table.points.desc()),
   // `avatar_index` is an index into AVATAR_OPTIONS[]; a negative value would
   // render a broken avatar. NULL is allowed (user never picked one).
   check("users_avatar_index_non_negative", sql`${table.avatarIndex} IS NULL OR ${table.avatarIndex} >= 0`),
@@ -64,6 +69,9 @@ export const modules = pgTable("modules", {
 }, (table) => [
   // The library and the moderation queue both filter on status and subject.
   index("modules_status_subject_idx").on(table.status, table.subject),
+  // M13: the leaderboard aggregates per uploader (`GROUP BY uploader_id`). The
+  // index above is leading on `status`, so it cannot serve that grouping.
+  index("modules_uploader_idx").on(table.uploaderId),
 ]);
 
 export const questions = pgTable("questions", {
@@ -85,6 +93,13 @@ export const questions = pgTable("questions", {
   // The practice quiz loads approved questions, the daily quiz loads approved
   // daily questions — both filter on these two columns.
   index("questions_status_category_idx").on(table.status, table.category),
+  // M13: keyset pagination of the approved-question list is
+  // `WHERE status = 'approved' AND (created_at, id) < (cursor)
+  //  ORDER BY created_at DESC, id DESC`. This index is exactly that order, so
+  // the scan starts at the cursor instead of sorting the whole table.
+  index("questions_status_created_idx").on(table.status, table.createdAt.desc(), table.id.desc()),
+  // M13: the leaderboard aggregates per uploader (`GROUP BY uploader_id`).
+  index("questions_uploader_idx").on(table.uploaderId),
 ]);
 
 export const submissions = pgTable("submissions", {
@@ -105,6 +120,9 @@ export const submissions = pgTable("submissions", {
   uniqueIndex("submissions_pending_ref_unique")
     .on(table.type, table.refId)
     .where(sql`${table.status} = 'pending'`),
+  // M13: `GET /api/profile/status` reads a user's own submissions newest-first.
+  // There was no index on `submitter_id` at all, so that was a sequential scan.
+  index("submissions_submitter_created_idx").on(table.submitterId, table.submittedAt.desc()),
 ]);
 
 // `reviews` and `bookmarks` were dropped in M5: neither table was referenced
@@ -123,7 +141,11 @@ export const customExams = pgTable("custom_exams", {
   authorId: uuid("author_id").references(() => users.id),
   authorName: varchar("author_name", { length: 255 }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  // M13: `/api/exams/list` is keyset-paginated newest-first. Without this the
+  // sort had to happen in memory over the whole table before `LIMIT` applied.
+  index("custom_exams_created_idx").on(table.createdAt.desc(), table.id.desc()),
+]);
 
 export const pointsLog = pgTable("points_log", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -148,7 +170,10 @@ export const reports = pgTable("reports", {
   description: text("description").notNull(),
   status: statusEnum("status").default("pending").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  // M13: `GET /api/profile/status` lists a user's own reports newest-first.
+  index("reports_user_created_idx").on(table.userId, table.createdAt.desc()),
+]);
 
 // ── Audit log (M12) ───────────────────────────────────────────────────────────
 // Siapa melakukan apa, terhadap apa. Tabel ini menjawab pertanyaan yang tidak

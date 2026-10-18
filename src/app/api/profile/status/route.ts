@@ -1,9 +1,27 @@
+// app/api/profile/status/route.ts
+// ─── Riwayat pengajuan & laporan milik pengguna yang sedang masuk ─────────────
+// Sebelum M13 route ini adalah N+1 klasik: satu query untuk pengajuan, lalu
+// **satu query lagi per pengajuan** (sampai 50) hanya untuk mengambil judulnya,
+// ditambah satu query per laporan. Empat puluh delapan pengajuan berarti ~50
+// perjalanan pulang-pergi ke Neon, masing-masing dengan latensi jaringan sendiri.
+//
+// Sekarang jumlahnya tetap: 1 pengguna + 2 daftar (paralel) + 2 pencarian judul
+// (paralel) = 5 query, berapa pun banyak pengajuannya.
+//
+// Perhatikan juga `columns` di setiap query. Versi lama memakai `findFirst` dan
+// `findMany` tanpa daftar kolom, sehingga mengambil **seluruh** baris modul
+// (termasuk `content_url`) dan seluruh baris soal (termasuk `answer_key`) hanya
+// untuk membaca satu judul. Kunci jawaban memang tidak pernah dirender di sini,
+// tetapi data yang tidak dibaca adalah data yang tidak bisa bocor.
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { submissions, modules, questions, users, reports } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, inArray } from "drizzle-orm";
 import { requestLogger } from "@/lib/logger";
+
+/** Berapa pengajuan & laporan terbaru yang ditampilkan. */
+const RECENT_LIMIT = 50;
 
 export async function GET(req: Request) {
   const log = requestLogger(req);
@@ -17,28 +35,71 @@ export async function GET(req: Request) {
     });
     if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-    // Fetch all submissions by this user
-    const userSubmissions = await db.query.submissions.findMany({
-      where: eq(submissions.submitterId, dbUser.id),
-      orderBy: [desc(submissions.submittedAt)],
-      limit: 50, // Recent 50
-    });
+    // Dua daftar ini tidak saling bergantung, jadi dikirim bersamaan.
+    const [userSubmissions, userReports] = await Promise.all([
+      db.query.submissions.findMany({
+        where: eq(submissions.submitterId, dbUser.id),
+        orderBy: [desc(submissions.submittedAt)],
+        limit: RECENT_LIMIT,
+        columns: {
+          id: true,
+          type: true,
+          refId: true,
+          status: true,
+          submittedAt: true,
+          feedback: true,
+        },
+      }),
+      db.query.reports.findMany({
+        where: eq(reports.userId, dbUser.id),
+        orderBy: [desc(reports.createdAt)],
+        limit: RECENT_LIMIT,
+        columns: {
+          id: true,
+          issueType: true,
+          description: true,
+          status: true,
+          createdAt: true,
+        },
+      }),
+    ]);
 
-    const userReports = await db.query.reports.findMany({
-      where: eq(reports.userId, dbUser.id),
-      orderBy: [desc(reports.createdAt)],
-      limit: 50,
-    });
+    // Satu pencarian per jenis konten, bukan satu per pengajuan.
+    const moduleIds = [...new Set(userSubmissions.filter((s) => s.type === "module").map((s) => s.refId))];
+    const questionIds = [
+      ...new Set(userSubmissions.filter((s) => s.type === "question").map((s) => s.refId)),
+    ];
 
-    // We can join or just query modules and questions
-    const enriched = await Promise.all(userSubmissions.map(async (sub) => {
+    const [moduleRows, questionRows] = await Promise.all([
+      moduleIds.length
+        ? db
+            .select({ id: modules.id, title: modules.title })
+            .from(modules)
+            .where(inArray(modules.id, moduleIds))
+        : Promise.resolve([]),
+      questionIds.length
+        ? db
+            .select({ id: questions.id, subject: questions.subject, category: questions.category })
+            .from(questions)
+            .where(inArray(questions.id, questionIds))
+        : Promise.resolve([]),
+    ]);
+
+    const moduleTitles = new Map(moduleRows.map((m) => [m.id, m.title]));
+    // `subject` dan `category` boleh NULL. Versi lama mencetak "null - null";
+    // sekarang bagian yang kosong dilewati saja.
+    const questionLabels = new Map(
+      questionRows.map((q) => [q.id, [q.subject, q.category].filter(Boolean).join(" - ") || "Tanpa kategori"]),
+    );
+
+    const enriched = userSubmissions.map((sub) => {
       let title = "Item Dihapus";
       if (sub.type === "module") {
-        const mod = await db.query.modules.findFirst({ where: eq(modules.id, sub.refId) });
-        if (mod) title = `Modul: ${mod.title}`;
+        const moduleTitle = moduleTitles.get(sub.refId);
+        if (moduleTitle) title = `Modul: ${moduleTitle}`;
       } else if (sub.type === "question") {
-        const q = await db.query.questions.findFirst({ where: eq(questions.id, sub.refId) });
-        if (q) title = `Soal: ${q.subject} - ${q.category}`;
+        const label = questionLabels.get(sub.refId);
+        if (label) title = `Soal: ${label}`;
       }
 
       return {
@@ -49,15 +110,15 @@ export async function GET(req: Request) {
         submittedAt: sub.submittedAt,
         feedback: sub.feedback,
       };
-    }));
+    });
 
-    const enrichedReports = userReports.map(r => ({
+    const enrichedReports = userReports.map((r) => ({
       id: r.id,
       type: "report",
-      title: `Laporan: ${r.issueType === 'bug' ? 'Bug Sistem' : r.issueType === 'content' ? 'Kesalahan Konten' : 'Lainnya'}`,
+      title: `Laporan: ${r.issueType === "bug" ? "Bug Sistem" : r.issueType === "content" ? "Kesalahan Konten" : "Lainnya"}`,
       status: r.status,
       submittedAt: r.createdAt,
-      feedback: r.description.slice(0, 100) + (r.description.length > 100 ? '...' : ''),
+      feedback: r.description.slice(0, 100) + (r.description.length > 100 ? "..." : ""),
     }));
 
     const combined = [...enriched, ...enrichedReports].sort((a, b) => {
@@ -67,7 +128,6 @@ export async function GET(req: Request) {
     });
 
     return NextResponse.json({ data: combined }, { status: 200 });
-
   } catch (error) {
     log.error("Fetch user status error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

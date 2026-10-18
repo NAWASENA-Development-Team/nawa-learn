@@ -14,9 +14,18 @@ import * as schema from "@/db/schema";
 export type TestDb = ReturnType<typeof drizzle<typeof schema>>;
 
 /** A brand-new database with the versioned migrations applied. */
-export async function createTestDb(): Promise<TestDb> {
+export async function createTestDb(
+  options: { onQuery?: (query: string) => void } = {},
+): Promise<TestDb> {
   const client = new PGlite();
-  const db = drizzle(client, { schema });
+  const db = drizzle(client, {
+    schema,
+    // Counting statements is the only honest way to pin an N+1 fix: the response
+    // body is byte-for-byte the same whether the handler ran 5 queries or 55.
+    ...(options.onQuery
+      ? { logger: { logQuery: (query: string) => options.onQuery?.(query) } }
+      : {}),
+  });
   await migrate(db, { migrationsFolder: "src/db/migrations" });
   return db;
 }
@@ -36,6 +45,7 @@ export async function seedUser(
     name: string;
     role: "guest" | "student" | "contributor" | "moderator" | "admin";
     points: number;
+    seasonPoints: number;
   }> = {},
 ) {
   const clerkId = overrides.clerkId ?? uniqueId("clerk");
@@ -47,6 +57,7 @@ export async function seedUser(
       email: `${clerkId}@example.test`,
       role: overrides.role ?? "student",
       points: overrides.points ?? 0,
+      ...(overrides.seasonPoints === undefined ? {} : { seasonPoints: overrides.seasonPoints }),
     })
     .returning();
   return row;

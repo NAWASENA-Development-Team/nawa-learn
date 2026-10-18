@@ -38,7 +38,7 @@ import {
   Flame,
   Target
 } from "lucide-react";
-import { BADGES, Badge, getDaysOldAccount, getRarityColor, getRarityTextColor, BadgeUnlockData, getSpecialtyBadge } from "@/lib/badges";
+import { BADGES, Badge, getDaysOldAccount, getRarityColor, getRarityTextColor, BadgeUnlockData, getSpecialtyBadge, SpecialtyStats } from "@/lib/badges";
 import { AVATAR_OPTIONS, AvatarOption } from "@/lib/avatars";
 import { ACCEPTED_AVATAR_TYPES, MAX_AVATAR_BYTES, uploadFile } from "@/lib/uploadClient";
 import { useToast } from "@/components/ui/Toast";
@@ -100,6 +100,17 @@ interface ProfileClientProps {
   userModules: UserModule[];
   userQuestions: UserQuestion[];
   pointLogs: PointLog[];
+  /**
+   * Enam angka lencana spesialis, dihitung SQL di server (`getSpecialtyStats`).
+   *
+   * Dulu angka-angka ini diturunkan di sini dari `pointLogs` — yang hanya berisi
+   * 20 baris terakhir, dan yang menyaring `action LIKE 'quiz_completed%'` padahal
+   * tidak ada penulis di seluruh `src/` yang pernah menulis aksi itu. Hasilnya
+   * `quizTotal` dan `hardQuizzes` selalu 0, sehingga tiga lencana mustahil
+   * terbuka. Sekarang server yang menghitung, dan halaman peringkat memakai
+   * fungsi yang sama — dua permukaan tidak bisa lagi berbeda pendapat.
+   */
+  specialtyStats: SpecialtyStats;
   isOwnProfile: boolean;
 }
 
@@ -119,6 +130,7 @@ export default function ProfileClient({
   userModules, 
   userQuestions, 
   pointLogs, 
+  specialtyStats,
   isOwnProfile 
 }: ProfileClientProps) {
   
@@ -319,14 +331,7 @@ export default function ProfileClient({
   const levelFrameStyle = getLevelFrameStyle(user.levelFrame);
 
   // Get specialty badge for Top 3 (based on contribution type)
-  const userSpecialtyBadge = getSpecialtyBadge({
-    hardQuizzes: pointLogs.filter(l => l.action === "quiz_completed_sulit" || l.action === "quiz_completed_sangat sulit").length,
-    approvedMods: userModules.filter(m => m.status === "approved").length,
-    quizTotal: pointLogs.filter(l => l.action.startsWith("quiz_completed")).length,
-    diverseSubjects: new Set(userModules.filter(m => m.status === "approved").map(m => m.subject)).size,
-    approvedQuestions: userQuestions ? userQuestions.filter(q => q.status === "approved").length : 0,
-    totalDownloads: userModules.reduce((a, m) => a + m.downloads, 0),
-  }, user.rank);
+  const userSpecialtyBadge = getSpecialtyBadge(specialtyStats, user.rank);
 
   const fetchStatus = async () => {
     setIsLoadingStatus(true);
@@ -368,19 +373,15 @@ export default function ProfileClient({
   // Get secret achievement for Top 100
   const getSecretAchievement = () => {
     if (user.rank > 100) return null;
-    const quizTotal = pointLogs.filter(l => l.action.startsWith("quiz_completed")).length;
-    const hardQuizzes = pointLogs.filter(l =>
-      l.action === "quiz_completed_sulit" || l.action === "quiz_completed_sangat sulit"
-    ).length;
-    const approvedMods = userModules.filter(m => m.status === "approved").length;
-    const diverseSubjects = new Set(userModules.filter(m => m.status === "approved").map(m => m.subject)).size;
-    const totalDownloads = userModules.reduce((a, m) => a + m.downloads, 0);
+    // Sumber yang sama dengan lencana spesialis di atas: SQL, bukan 20 baris
+    // log terakhir. `quizTotal`/`hardQuizzes` di sini berarti soal yang dijawab.
+    const { quizTotal, hardQuizzes, approvedMods, diverseSubjects, totalDownloads } = specialtyStats;
 
-    if (hardQuizzes >= 5) return { name: "Bane of Easy Mode", desc: "Menyelesaikan 5+ kuis sulit", icon: "💀", color: "text-red-400", bg: "bg-red-950/30 border-red-900/50" };
+    if (hardQuizzes >= 5) return { name: "Bane of Easy Mode", desc: "Menaklukkan 5+ soal sulit", icon: "💀", color: "text-red-400", bg: "bg-red-950/30 border-red-900/50" };
     if (approvedMods >= 5) return { name: "Living Library", desc: "5+ modul disetujui", icon: "🏛️", color: "text-purple-400", bg: "bg-purple-950/30 border-purple-900/50" };
     if (totalDownloads >= 100) return { name: "Viral Scholar", desc: "Modul diunduh 100+ kali", icon: "🌊", color: "text-cyan-400", bg: "bg-cyan-950/30 border-cyan-900/50" };
     if (diverseSubjects >= 4) return { name: "Polymath Prodigy", desc: "Kontribusi di 4+ mata pelajaran", icon: "🔬", color: "text-green-400", bg: "bg-green-950/30 border-green-900/50" };
-    if (quizTotal >= 10) return { name: "Eternal Student", desc: "Menyelesaikan 10+ kuis", icon: "🔄", color: "text-blue-400", bg: "bg-blue-950/30 border-blue-900/50" };
+    if (quizTotal >= 10) return { name: "Eternal Student", desc: "Menjawab 10+ soal", icon: "🔄", color: "text-blue-400", bg: "bg-blue-950/30 border-blue-900/50" };
     if (user.rank <= 10) return { name: "The Chosen Few", desc: "Masuk dalam 10 besar", icon: "🌟", color: "text-amber-400", bg: "bg-amber-950/30 border-amber-900/50" };
     if (user.rank <= 50) return { name: "Silent Powerhouse", desc: "Masuk dalam 50 besar", icon: "⚡", color: "text-indigo-400", bg: "bg-indigo-950/30 border-indigo-900/50" };
     return { name: "The Century Club", desc: "Masuk dalam 100 besar", icon: "🎖️", color: "text-zinc-300", bg: "bg-zinc-800/50 border-zinc-700/50" };

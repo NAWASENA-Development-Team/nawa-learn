@@ -168,4 +168,22 @@ describe("identity is blanked in exactly one place", () => {
     expect(webhook).toContain('evt.type === "user.deleted"');
     expect(webhook).toContain("anonymiseAccountByClerkId(");
   });
+
+  it("recognises the tombstone in exactly one reader", () => {
+    // The mirror of the test above. `IS_PARTICIPANT` in lib/participants.ts is
+    // the only place that may decide a row is a tombstone; every page asks it
+    // rather than spelling the prefix again. Two copies of the predicate is how
+    // the leaderboard and the profile ended up reporting different totals.
+    const predicates = TS_FILES.filter((file) =>
+      /notLike\(\s*users\.clerkId/.test(read(file)),
+    ).map(relative);
+
+    expect(predicates).toEqual(["lib/participants.ts"]);
+
+    const prefixDefinitions = TS_FILES.filter((file) =>
+      /DELETED_CLERK_PREFIX\s*=/.test(read(file)),
+    ).map(relative);
+
+    expect(prefixDefinitions).toEqual(["lib/participants.ts"]);
+  });
 });

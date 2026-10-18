@@ -116,6 +116,18 @@ Rare and unique achievements:
   - Total downloads
   - Modules by subject
   - Account age in days
+  - Answered questions (`quizTotal`) and answered *hard* questions (`hardQuizzes`)
+
+### The six specialty numbers come from SQL, not from a loaded row set
+- `src/lib/specialtyStats.ts` computes `approvedMods`, `approvedQuestions`, `totalDownloads`, `quizTotal`, `hardQuizzes` and the subject spread in **three aggregate queries**, returning a `Map` pre-filled for every requested id (`emptySpecialtyStats()` is the zero value).
+- Both the leaderboard page and `profile/[id]` call it. Never derive a badge number from rows already loaded for display — that is exactly how the leaderboard and the profile disagreed before M13.
+- `quizTotal` counts `quiz_answer` rows and `hardQuizzes` counts those whose `ref_id` joins `questions.difficulty = 'sulit'` (`leftJoin`, so a deleted question still counts). It must **never** go back to `action LIKE 'quiz_completed%'`: no writer has ever emitted that action, so those three badges were un-unlockable from the day they were written.
+- Badge copy says "soal" (questions), not "kuis": one correct answer is one `quiz_answer` row, not one quiz.
+
+### `src/lib/participants.ts` — a tombstone is not a student
+- Anonymised accounts stay as `users` rows on purpose (M11): `modules.uploader_id`, `questions.uploader_id` and `points_log.user_id` point there. But `clerk_id` becomes `deleted:<uuid>`, the name becomes "Anonim" and points become 0 — so they are **not** participants.
+- `IS_PARTICIPANT` is one shared SQL expression, used by the leaderboard (board, `totalStudents`, rank) **and** the public profile page (rank, `totalStudents`). Two pages computing "total siswa" with two definitions is how they end up showing "1 dari 6" and "1 dari 7" for the same data.
+- Never inline `notLike(users.clerkId, "deleted:%")` again — that is exactly the drift the module prevents. `DELETED_CLERK_PREFIX` is the one place the prefix literal lives (besides the writer in `lib/accountData.ts`).
 
 ### Badge Display
 - Organized by category in profile page
@@ -182,6 +194,34 @@ To add new badges, edit `src/lib/badges.ts`:
   - `modules.content_url` (via `modules/submit`) must be `http(s)`; `data:` is refused. Google Drive links remain valid.
 - `next.config.ts` — `images.remotePatterns` is a single explicit entry, `*.public.blob.vercel-storage.com`. Never widen it back to `**`: that makes the image optimizer an open proxy (SSRF).
 - The module reader (`ModulesLibraryClient`) renders own-blob PDFs/images directly and still supports the legacy `data:` PDF rows. Replacing a just-uploaded file before submitting leaves an orphaned blob; there is no garbage collector yet (tracked as future work).
+
+## Pagination & query cost
+
+### `src/lib/pagination.ts` is the only way a list is bounded
+- Keyset, never `offset`. `offset` is wrong twice over: page 20 still makes the database scan the first 20 pages, and a row inserted in the middle makes the next page skip or repeat. Keyset resumes from the last position.
+- `id` is always part of the key. `created_at` is **not unique** — in Postgres `now()` returns the *transaction start* time, so two rows written in sequence can share a timestamp exactly. Always `orderBy(desc(createdAt), desc(id))`.
+- `readLimit(req, { defaultValue, max })` — a non-numeric or `<1` limit **falls back to the default**, it is not a 400. `?limit=abc` is a typo, and the ceiling already bounds the query cost.
+- `readCursor(req)` returns `{ cursor, malformed }`. A malformed cursor is **400** + `cache-control: no-store`, never a silent restart at page 1: a client that stores cursors would otherwise loop over the first page forever and never see an error.
+- `encodeCursor`/`decodeCursor` are base64url with `|` as the separator (ISO-8601 already contains `.`), capped at `MAX_CURSOR_LENGTH = 200`, and the id must match a UUID shape.
+- `keysetBefore(createdAt, id, cursor)` is an explicit `OR`, not `ROW(...) < ROW(...)`, because that is the form an index on `(created_at DESC, id DESC)` can serve directly.
+- `pageSlice(rows, limit)` expects `limit + 1` rows. The extra row answers "is there another page?" without a second `COUNT(*)`, and it avoids a false `nextCursor` when the row count is an exact multiple of the limit.
+
+### Counting statements is the only honest proof of an N+1 fix
+- `createTestDb({ onQuery })` in `tests/helpers/harness.ts` receives every statement the drizzle instance sends. `tests/integration/query-count.test.ts` asserts the count is **constant** as rows grow (`getSpecialtyStats` = 3, `profile/status` = 5).
+- A response-body test cannot catch a regression here: 5 queries and 55 queries produce byte-identical JSON.
+
+### `src/lib/specialtyStats.ts` is shared, so the two pages cannot disagree
+- The six badge numbers are computed in **three** aggregate queries and returned as a pre-filled `Map`; `emptySpecialtyStats()` is the zero value for an id with no data.
+- Both the leaderboard page and `profile/[id]` call it. Never recompute a badge number from a loaded row set — that is how the leaderboard and the profile drifted apart before M13.
+- `quizTotal` / `hardQuizzes` derive from `quiz_answer` rows (the only thing actually written), **not** from an `action LIKE 'quiz_completed%'` that no writer ever emitted. `hardQuizzes` uses a `leftJoin` so a deleted question still counts as one the student answered.
+
+### Lists that are deliberately unbounded
+- A single user's own modules/questions on the profile page are display data with no pagination UI, and their stats no longer depend on the rows (SQL computes them). Do not cap them "for safety" — silently hiding a student's 21st module is worse than a 25-row query. Revisit only if one user can hold thousands.
+- The leaderboard is capped at 100 server-side (`LEADERBOARD_SIZE`); client-side search works on that set.
+
+### Caching is deferred, with a trigger
+- `unstable_cache` is **deprecated in Next 16** (replaced by `use cache`), and `use cache` needs `cacheComponents: true`. That flag is not set and is hostile to the nonce-CSP architecture: a nonce cannot be baked into HTML prerendered at build time, so every route is dynamic on purpose (M9).
+- Do not flip `cacheComponents` to make a page cacheable. Revisit when a read route actually exceeds its p95 budget on real traffic, or when Next stabilises the replacement API.
 
 ## Security headers, CSP & CSRF
 
