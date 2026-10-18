@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
-import { reports, users } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { reports } from "@/db/schema";
 import { z } from "zod";
+import { requireUser } from "@/lib/authz";
 import { requestLogger } from "@/lib/logger";
 import { rateLimit } from "@/lib/rateLimit";
 import { parseJsonBody, shortText } from "@/lib/validation";
@@ -19,14 +18,12 @@ const reportSchema = z
 export async function POST(req: Request) {
   const log = requestLogger(req);
   try {
-    const { userId: clerkId } = await auth();
-    if (!clerkId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    const dbUser = await db.query.users.findFirst({
-      where: eq(users.clerkId, clerkId),
-      columns: { id: true },
-    });
-    if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
+    // M14d: `requireUser()` replaces the hand-rolled auth + lookup, and answers
+    // 403 (not 404) for a session with no provisioned row — the same answer every
+    // other protected route gives for the same condition.
+    const authz = await requireUser();
+    if (!authz.ok) return authz.response;
+    const dbUser = authz.user;
 
     const limit = await rateLimit(req, "profile/report", dbUser.id);
     if (!limit.ok) return limit.response;

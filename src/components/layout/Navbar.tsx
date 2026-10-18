@@ -117,20 +117,14 @@ const NAV_ITEMS = [
 ];
 
 // ── Main Navbar ───────────────────────────────────────────────────────────────
-export default function Navbar() {
+// `isModerator` is a server prop, not a client fetch. The root layout resolves it
+// from `users.role` (see src/lib/currentUser.ts), which means the "Moderator" item
+// is in the first HTML the browser receives instead of appearing after hydration.
+// It is a boolean, never a clerk id or a name, so nothing identifying crosses the
+// server/client boundary.
+export default function Navbar({ isModerator = false }: { isModerator?: boolean }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [isModerator, setIsModerator] = useState(false);
-
-  useEffect(() => {
-    // The server decides: `users.role` is the single source of truth.
-    fetch("/api/moderator/auth-check")
-      .then(res => (res.ok ? res.json() : { isModerator: false }))
-      .then(data => {
-        if (data?.isModerator) setIsModerator(true);
-      })
-      .catch(() => {});
-  }, []);
 
   // Close mobile menu on route change
   useEffect(() => { setTimeout(() => setMobileOpen(false), 0); }, [pathname]);

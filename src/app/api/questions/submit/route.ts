@@ -1,10 +1,9 @@
 // app/api/questions/submit/route.ts
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { questions, submissions, users } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { questions, submissions } from "@/db/schema";
+import { requireUser } from "@/lib/authz";
 import { requestLogger } from "@/lib/logger";
 import { rateLimit } from "@/lib/rateLimit";
 import { optionalText, parseJsonBody, shortText } from "@/lib/validation";
@@ -32,14 +31,13 @@ const submitSchema = z
 export async function POST(req: Request) {
   const log = requestLogger(req);
   try {
-    const { userId: clerkId } = await auth();
-    if (!clerkId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // M14d: `requireUser()` replaces the hand-rolled auth + lookup. The role
+    // rule below is a real authorisation decision and stays — "signed in" is not
+    // the same thing as "allowed to upload".
+    const authz = await requireUser();
+    if (!authz.ok) return authz.response;
+    const dbUser = authz.user;
 
-    const dbUser = await db.query.users.findFirst({
-      where: eq(users.clerkId, clerkId),
-      columns: { id: true, role: true },
-    });
-    if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
     if (dbUser.role === "student") return NextResponse.json({ error: "Hanya kontributor yang dapat mengunggah soal" }, { status: 403 });
 
     const limit = await rateLimit(req, "questions/submit", dbUser.id);

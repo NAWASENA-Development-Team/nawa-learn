@@ -14,10 +14,10 @@
 // untuk membaca satu judul. Kunci jawaban memang tidak pernah dirender di sini,
 // tetapi data yang tidak dibaca adalah data yang tidak bisa bocor.
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
-import { submissions, modules, questions, users, reports } from "@/db/schema";
+import { submissions, modules, questions, reports } from "@/db/schema";
 import { eq, desc, inArray } from "drizzle-orm";
+import { requireUser } from "@/lib/authz";
 import { requestLogger } from "@/lib/logger";
 
 /** Berapa pengajuan & laporan terbaru yang ditampilkan. */
@@ -26,14 +26,14 @@ const RECENT_LIMIT = 50;
 export async function GET(req: Request) {
   const log = requestLogger(req);
   try {
-    const { userId: clerkId } = await auth();
-    if (!clerkId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    const dbUser = await db.query.users.findFirst({
-      where: eq(users.clerkId, clerkId),
-      columns: { id: true },
-    });
-    if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
+    // M14d: standardised on `requireUser()`. This route used to hand-roll the
+    // same two steps and answer **404** for a session with no provisioned row,
+    // while every other protected route answers 403 — the same condition
+    // reported as two different things. The query count is unchanged (one
+    // `findFirst`), which `tests/integration/query-count.test.ts` pins.
+    const authz = await requireUser();
+    if (!authz.ok) return authz.response;
+    const dbUser = authz.user;
 
     // Dua daftar ini tidak saling bergantung, jadi dikirim bersamaan.
     const [userSubmissions, userReports] = await Promise.all([

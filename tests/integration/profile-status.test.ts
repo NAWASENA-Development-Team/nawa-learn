@@ -91,10 +91,14 @@ describe("GET /api/profile/status", () => {
     expect(response.status).toBe(401);
   });
 
-  it("answers 404 when the session has no matching user row", async () => {
+  // M14d: this used to be 404. A caller who has a session but no provisioned row
+  // is authenticated, not missing — every other protected route answers 403 for
+  // exactly this condition, and the same state reported as two different codes is
+  // how a client ends up handling one of them and not the other.
+  it("answers 403 when the session has no matching user row", async () => {
     await signInAs(uniqueId("ghost"));
     const response = await call();
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(403);
   });
 
   it("answers with an empty list for a user who never submitted anything", async () => {

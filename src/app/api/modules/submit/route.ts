@@ -1,10 +1,9 @@
 // app/api/modules/submit/route.ts
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { modules, submissions, users } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { modules, submissions } from "@/db/schema";
+import { requireUser } from "@/lib/authz";
 import { requestLogger } from "@/lib/logger";
 import { rateLimit } from "@/lib/rateLimit";
 import { httpUrl, parseJsonBody, shortText } from "@/lib/validation";
@@ -27,40 +26,18 @@ const submitSchema = z
 export async function POST(req: Request) {
   const log = requestLogger(req);
   try {
-    // 1. Authenticate the request via Clerk
-    const { userId: clerkId } = await auth();
-    
-    if (!clerkId) {
-      log.error("Authentication failed: No clerkId");
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // 1. Authenticate and authorise. M14d replaced the hand-rolled auth + lookup
+    //    here; `requireUser()` answers 401 for no session and 403 for a session
+    //    with no provisioned row, the same as every other protected route.
+    //
+    //    Note the order: the body is parsed *after* the guard and the rate limit.
+    //    This route used to parse the body first, so an unauthenticated caller
+    //    could make the server parse and validate a payload before discovering it
+    //    had no business sending one.
+    const authz = await requireUser();
+    if (!authz.ok) return authz.response;
+    const dbUser = authz.user;
 
-    // 2. Parse and validate the request body
-    const parsed = await parseJsonBody(req, submitSchema, { message: "Invalid data" });
-    if (!parsed.ok) return parsed.response;
-    const validatedData = parsed.data;
-
-    // 3. Look up the internal Neon User ID using the Clerk ID
-    let dbUser;
-    try {
-      dbUser = await db.query.users.findFirst({
-        where: eq(users.clerkId, clerkId),
-        columns: { id: true, role: true }
-      });
-    } catch (dbError) {
-      log.error("Database query error:", dbError);
-      return NextResponse.json({ 
-        error: "Database connection error" 
-      }, { status: 503 });
-    }
-
-    if (!dbUser) {
-      log.error("authenticated user has no row in the users table", { clerkId });
-      return NextResponse.json({ 
-        error: "User profile not synced with database. Please try logging out and back in." 
-      }, { status: 404 });
-    }
-    
     if (dbUser.role === "student") {
       return NextResponse.json({ 
         error: "Hanya kontributor yang dapat mengunggah modul" 
@@ -70,7 +47,12 @@ export async function POST(req: Request) {
     const limit = await rateLimit(req, "modules/submit", dbUser.id);
     if (!limit.ok) return limit.response;
 
-    // 4. Insert module into database
+    // 2. Parse and validate the request body
+    const parsed = await parseJsonBody(req, submitSchema, { message: "Invalid data" });
+    if (!parsed.ok) return parsed.response;
+    const validatedData = parsed.data;
+
+    // 3. Insert module into database
     // Note: neon-http driver does not support transactions, use sequential inserts
     let newModule;
     try {
@@ -91,7 +73,7 @@ export async function POST(req: Request) {
       }, { status: 500 });
     }
 
-    // 5. Insert submission record for moderation queue
+    // 4. Insert submission record for moderation queue
     try {
       await db.insert(submissions).values({
         type: "module",

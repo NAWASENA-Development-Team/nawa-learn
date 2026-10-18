@@ -18,10 +18,10 @@
 // "X soal tersedia" di UI tetap terasa penuh untuk sekolah sebesar ini, tanpa
 // membuat responsnya tidak terbatas.
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { questions, users } from "@/db/schema";
 import { and, desc, eq } from "drizzle-orm";
+import { requireUser } from "@/lib/authz";
 import { requestLogger } from "@/lib/logger";
 import { keysetBefore, pageSlice, readCursor, readLimit } from "@/lib/pagination";
 
@@ -31,6 +31,17 @@ const MAX_LIMIT = 500;
 export async function GET(req: Request) {
   const log = requestLogger(req);
   try {
+    // M14d: this route used to tolerate an anonymous caller and answer
+    // `isOwnQuestion: false`. That branch was unreachable in production — the
+    // proxy denies anonymous /api/** — but it meant the only thing standing
+    // between an anonymous visitor and the whole approved question bank was a
+    // file that was dead from M1 to M9. The payload carries no answer key, so the
+    // leak would have been mild; "mild leak if the proxy fails" is exactly the
+    // reasoning H13 removed from three other routes. The guard is local now.
+    const authz = await requireUser();
+    if (!authz.ok) return authz.response;
+    const currentDbUserId = authz.user.id;
+
     const { cursor, malformed } = readCursor(req);
     if (malformed) {
       return NextResponse.json(
@@ -40,18 +51,6 @@ export async function GET(req: Request) {
     }
 
     const limit = readLimit(req, { defaultValue: DEFAULT_LIMIT, max: MAX_LIMIT });
-
-    const { userId: clerkId } = await auth();
-
-    // Determine current user's DB ID (null if unauthenticated)
-    let currentDbUserId: string | null = null;
-    if (clerkId) {
-      const dbUser = await db.query.users.findFirst({
-        where: eq(users.clerkId, clerkId),
-        columns: { id: true },
-      });
-      currentDbUserId = dbUser?.id ?? null;
-    }
 
     const rows = await db
       .select({
@@ -92,7 +91,7 @@ export async function GET(req: Request) {
       category: q.category,
       uploaderId: q.uploaderId,
       uploaderName: q.uploaderName,
-      isOwnQuestion: currentDbUserId ? q.uploaderId === currentDbUserId : false,
+      isOwnQuestion: q.uploaderId === currentDbUserId,
     }));
 
     return NextResponse.json(

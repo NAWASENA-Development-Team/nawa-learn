@@ -63,6 +63,14 @@ async function seedApproved(overrides: { createdAt: Date; status?: "approved" | 
 }
 
 describe("GET /api/questions/approved", () => {
+  // M14d: the route used to answer an anonymous caller. It now guards itself with
+  // `requireUser()`, so each case signs in as a plain reader. The pagination
+  // properties under test are unchanged.
+  beforeEach(async () => {
+    const reader = await seedUser(db, {});
+    authMock.mockResolvedValue({ userId: reader.clerkId } as never);
+  });
+
   it("returns one bounded page and a cursor for the rest", async () => {
     const stamps = [
       new Date("2026-05-05T00:00:00.000Z"),

@@ -17,24 +17,20 @@
 //
 // Yang *tidak* dijaga di sini: route `/api/**` (layout tidak berlaku untuk route
 // handler) dan halaman publik. Keduanya punya penjaganya sendiri.
-import { auth } from "@clerk/nextjs/server";
-import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
-import { db } from "@/db";
-import { users } from "@/db/schema";
+import { getCurrentUser, getSessionUserId } from "@/lib/currentUser";
 import { hasAcceptedCurrentPolicy } from "@/lib/policy";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { userId } = await auth();
+  const userId = await getSessionUserId();
 
   // Deny-by-default: src/proxy.ts sudah menolak permintaan tanpa sesi, tetapi
   // sebuah layout tidak boleh bergantung pada satu lapisan saja.
   if (!userId) redirect("/sign-in");
 
-  const user = await db.query.users.findFirst({
-    where: eq(users.clerkId, userId),
-    columns: { id: true, consentPolicyVersion: true },
-  });
+  // The row is shared with the root layout through React `cache`, so resolving
+  // `role` for the Navbar and `consentPolicyVersion` here costs one query, not two.
+  const user = await getCurrentUser();
 
   // Baris yang belum ada diperlakukan sama dengan baris yang belum setuju: akun
   // baru yang webhook-nya belum jalan juga belum pernah menyetujui apa pun, dan

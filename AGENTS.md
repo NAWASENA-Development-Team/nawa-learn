@@ -50,7 +50,9 @@ The profile page now features 22+ custom SVG avatars with fantasy and sci-fi the
 ### Moderator Panel Security
 - Moderator panel is hidden from public navigation unless the signed-in user has reviewer rights.
 - Access is **role-based**, not password-based: the panel opens only when `users.role` is `moderator` or `admin`.
-- `isModerator` is resolved server-side via `GET /api/moderator/auth-check`. There is no client-side password or `sessionStorage` flag.
+- `isModerator` is resolved **on the server** by `getCurrentUser()` (`src/lib/currentUser.ts`), which the root layout calls once per request (React `cache`) and passes to `Navbar` as a boolean prop. There is no client-side password, no `sessionStorage` flag, and no `/api/moderator/auth-check` round trip — that route was deleted in M14d because it had no callers left.
+- The panel itself is gated in `src/app/(dashboard)/moderator/page.tsx` (a server component) with `hasReviewerRole()`, which calls `notFound()` for anyone else. The UI lives in `src/components/moderator/ModeratorClient.tsx` and only ever mounts for a reviewer, so there is no client-side gate to skip by not running JavaScript.
+- `role` is read from `users.role` and nowhere else. Clerk `publicMetadata` is deliberately not consulted: a second copy of the role would drift from `npm run db:promote`.
 - All reviewer API routes are guarded by `requireModerator()` from `src/lib/authz.ts`.
 - To grant access, promote a user's role:
   `npm run db:promote -- someone@example.com moderator` (see `src/db/promote.ts`).
@@ -268,6 +270,15 @@ To add new badges, edit `src/lib/badges.ts`:
 - Use it for a route that needs *a* session but has no use for the user (`api/modules/count`, `api/modules/download`). The point is that "not worth an extra query on the hot path" is no longer a reason to skip an in-handler guard.
 - Every route must authorize in the handler. `src/proxy.ts` is defence in depth, **not** the only defence — it was dead code from M1 to M9 (see C6) and three routes silently lost their only gate. `api/exams/list`, `api/modules/count` and `api/modules/download` are now guarded locally.
 - Never hand `requireSession()`'s Clerk id to `rateLimit` or to an ownership check. Pass the **database** user id, or `null` when the identity is unknown — the IP bucket still applies.
+
+### One guard, one answer (M14d)
+- `requireUser()` is the default for **every** route that needs the row. Seven routes hand-rolled the same `auth()` + `findFirst` pair and disagreed about the answer: five said **404** for "session but no provisioned row", while `requireUser()` says **403** — the caller *is* authenticated, the account just is not provisioned. One condition, one status code. `api/profile/status`, `api/profile/report`, `api/questions/submit`, `api/modules/submit`, `api/exams/create` and `api/questions/approved` were converted; `api/moderator/auth-check` was **deleted** (its only two callers were the Navbar and the moderator page, both now server-resolved).
+- `api/questions/approved` used to tolerate an anonymous caller and answer `isOwnQuestion: false`. That branch was unreachable in production, but it meant the only thing between an anonymous visitor and the whole approved question bank was a file that was dead from M1 to M9. It now requires a session; `tests/integration/api-surface.test.ts` asserts the 401.
+- Order matters: **guard → rate limit → read the body**. `api/modules/submit` parsed and validated the payload *before* checking who was calling; it now follows the same order as every other mutating route.
+- A **role** rule is separate from a session rule. `api/questions/submit` and `api/modules/submit` still reject `role === "student"` with their own 403 after `requireUser()`: "signed in" is not "allowed to upload".
+- `api/exams/create` no longer accepts anonymous creation (**H3**). `custom_exams.author_id` stays nullable so rows written before the change remain valid; nothing writes `NULL` any more.
+- **Pages cannot use these helpers** — a page cannot return a `Response`. They use `getCurrentUser()` (`src/lib/currentUser.ts`) instead, which is React-`cache`d and shared between the root layout (Navbar's `isModerator`) and the `(dashboard)` layout (consent). A dashboard page therefore costs **one** user query, not two, and an anonymous visitor costs none. Do **not** route `requireUser()` through `cache()`: a route handler needs the 401/403 `Response`, and a cache that returns null cannot express it.
+- The `Moderator` nav item is a **server prop** now. It used to be a `fetch("/api/moderator/auth-check")` on every page load: an extra HTTP round trip, an extra query, a guaranteed 401 for anonymous visitors behind the deny-by-default proxy, and a link that popped in after hydration.
 
 ## Privacy & data governance (UU PDP)
 

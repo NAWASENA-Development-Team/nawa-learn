@@ -7,6 +7,8 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { ToastProvider } from "@/components/ui/Toast";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from "@/lib/site";
+import { getCurrentUser } from "@/lib/currentUser";
+import { hasReviewerRole } from "@/lib/authz";
 import Navbar from "@/components/layout/Navbar";
 import "./globals.css";
 
@@ -81,6 +83,18 @@ export default async function RootLayout({
   // per-page concern.
   const nonce = (await headers()).get("x-nonce") ?? undefined;
 
+  // Whether the "Moderator" nav item exists is decided here, on the server, from
+  // `users.role`. It used to be a `fetch("/api/moderator/auth-check")` inside the
+  // client Navbar: one extra HTTP request plus one database query on every page,
+  // and the link popped in after hydration — a visible layout shift that also
+  // told every visitor a hidden panel exists.
+  //
+  // `getCurrentUser()` is request-scoped (React `cache`), so the dashboard layout
+  // below shares this same query rather than paying for a second one. Anonymous
+  // visitors run no query at all.
+  const currentUser = await getCurrentUser();
+  const isModerator = hasReviewerRole(currentUser?.role ?? "guest");
+
   return (
     <ClerkProvider nonce={nonce}>
       {/* suppressHydrationWarning is required for next-themes to add the class without mismatch */}
@@ -88,7 +102,7 @@ export default async function RootLayout({
         <body className={`${inter.className} min-h-screen flex flex-col`}>
           <ThemeProvider nonce={nonce}>
             <ToastProvider>
-              <Navbar />
+              <Navbar isModerator={isModerator} />
               <main className="flex-1 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50">
                 {children}
               </main>

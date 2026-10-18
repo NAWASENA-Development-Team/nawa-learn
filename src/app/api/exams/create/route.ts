@@ -1,10 +1,9 @@
 // app/api/exams/create/route.ts
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { customExams, users } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { customExams } from "@/db/schema";
+import { requireUser } from "@/lib/authz";
 import { requestLogger } from "@/lib/logger";
 import { rateLimit } from "@/lib/rateLimit";
 import { optionalText, parseJsonBody, shortText } from "@/lib/validation";
@@ -47,27 +46,20 @@ const MAX_EXAM_BODY_BYTES = 256 * 1024;
 export async function POST(req: Request) {
   const log = requestLogger(req);
   try {
-    const { userId: clerkId } = await auth();
+    // H3: this route used to accept exam creation with no session at all, and
+    // stored `author_id = NULL` for anyone who did not have a provisioned row.
+    // A custom exam is stored content that other students can read back through
+    // /api/exams/list, so "anyone on the internet may write one" was a spam
+    // surface, not a feature. `requireUser()` closes it; `custom_exams.author_id`
+    // stays nullable so the rows written before this change remain valid.
+    //
+    // Resolving the author first also puts the rate-limit guard ahead of the
+    // (potentially 256 KB) payload instead of after it.
+    const authz = await requireUser();
+    if (!authz.ok) return authz.response;
+    const author = authz.user;
 
-    // Resolve the author before parsing the body, so the rate-limit guard can sit
-    // ahead of the (potentially large) payload instead of after it.
-    let authorId: string | null = null;
-    let authorName = "Siswa SMAN 2";
-
-    if (clerkId) {
-      const dbUser = await db.query.users.findFirst({
-        where: eq(users.clerkId, clerkId),
-        columns: { id: true, name: true },
-      });
-      if (dbUser) {
-        authorId = dbUser.id;
-        authorName = dbUser.name;
-      }
-    }
-
-    // Anonymous exam creation is still allowed (see H3), so `authorId` may be
-    // null and only the IP bucket applies.
-    const limit = await rateLimit(req, "exams/create", authorId);
+    const limit = await rateLimit(req, "exams/create", author.id);
     if (!limit.ok) return limit.response;
 
     const parsed = await parseJsonBody(req, createSchema, { maxBytes: MAX_EXAM_BODY_BYTES });
@@ -83,8 +75,8 @@ export async function POST(req: Request) {
         difficulty: data.difficulty,
         durationMinutes: data.durationMinutes,
         questions: data.questions,
-        authorId: authorId ?? undefined,
-        authorName,
+        authorId: author.id,
+        authorName: author.name,
       })
       .returning({ id: customExams.id });
 

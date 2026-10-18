@@ -12,7 +12,6 @@ vi.mock("@clerk/nextjs/server", () => ({ auth: vi.fn() }));
 
 import { auth } from "@clerk/nextjs/server";
 import { GET as getApproved } from "@/app/api/questions/approved/route";
-import { GET as getAuthCheck } from "@/app/api/moderator/auth-check/route";
 
 const authMock = vi.mocked(auth);
 
@@ -39,6 +38,15 @@ function signOut() {
 // only real if it holds at the HTTP boundary, so it is asserted against the raw
 // response text, not just against the fields we happen to think about.
 describe("GET /api/questions/approved", () => {
+  // M14d: the route used to tolerate an anonymous caller. It now guards itself
+  // with `requireUser()` — the proxy is defence in depth, not the only defence —
+  // so every case below signs in. The properties under test are unchanged.
+  it("refuses an anonymous caller", async () => {
+    signOut();
+    const response = await getApproved(apiRequest("/api/questions/approved"));
+    expect(response.status).toBe(401);
+  });
+
   it("never includes answerKey or explanation anywhere in the payload", async () => {
     const uploader = await seedUser(db, {});
     await seedQuestion(db, {
@@ -48,7 +56,8 @@ describe("GET /api/questions/approved", () => {
       status: "approved",
     });
 
-    signOut();
+    const reader = await seedUser(db, {});
+    signIn(reader.clerkId);
     const response = await getApproved(apiRequest("/api/questions/approved"));
     const raw = await response.text();
 
@@ -71,7 +80,8 @@ describe("GET /api/questions/approved", () => {
       status: "pending",
     });
 
-    signOut();
+    const reader = await seedUser(db, {});
+    signIn(reader.clerkId);
     const body = await (await getApproved(apiRequest("/api/questions/approved"))).json();
     const ids = body.data.map((q: { id: string }) => q.id);
 
@@ -96,36 +106,3 @@ describe("GET /api/questions/approved", () => {
   });
 });
 
-// M2 replaced the hardcoded password and the "top 3 by points" shortcut with a
-// single role check. These tests are the regression guard for that decision.
-describe("GET /api/moderator/auth-check", () => {
-  it("reports false for an anonymous visitor", async () => {
-    signOut();
-    const body = await (await getAuthCheck(apiRequest("/api/moderator/auth-check"))).json();
-    expect(body.isModerator).toBe(false);
-  });
-
-  it("reports false for a session with no provisioned user", async () => {
-    signIn("clerk-never-synced");
-    const body = await (await getAuthCheck(apiRequest("/api/moderator/auth-check"))).json();
-    expect(body.isModerator).toBe(false);
-  });
-
-  it("reports false for students and contributors", async () => {
-    for (const role of ["student", "contributor"] as const) {
-      const user = await seedUser(db, { role });
-      signIn(user.clerkId);
-      const body = await (await getAuthCheck(apiRequest("/api/moderator/auth-check"))).json();
-      expect(body.isModerator).toBe(false);
-    }
-  });
-
-  it("reports true for moderators and admins", async () => {
-    for (const role of ["moderator", "admin"] as const) {
-      const user = await seedUser(db, { role });
-      signIn(user.clerkId);
-      const body = await (await getAuthCheck(apiRequest("/api/moderator/auth-check"))).json();
-      expect(body.isModerator).toBe(true);
-    }
-  });
-});
