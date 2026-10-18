@@ -20,6 +20,7 @@
 // baris bisa muncul dua kali atau tidak sama sekali.
 
 import { and, eq, lt, or, sql, type AnyColumn, type SQL } from "drizzle-orm";
+import { isUuid } from "./ids";
 
 /** Posisi terakhir yang sudah dilihat pembaca. */
 export interface PageCursor {
@@ -39,7 +40,8 @@ const SEPARATOR = "|";
 /** Kursor yang wajar jauh di bawah ini; lebih panjang berarti sampah. */
 const MAX_CURSOR_LENGTH = 200;
 
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// Bentuk id berasal dari `./ids` — satu definisi untuk kursor di sini dan untuk
+// segmen URL di halaman profil publik.
 
 /**
  * `?limit=` dengan batas atas yang dipaksakan.
@@ -86,7 +88,7 @@ export function decodeCursor(raw: string): PageCursor | null {
   if (split < 1) return null;
 
   const id = decoded.slice(split + 1);
-  if (!UUID_PATTERN.test(id)) return null;
+  if (!isUuid(id)) return null;
 
   const createdAt = new Date(decoded.slice(0, split));
   if (Number.isNaN(createdAt.getTime())) return null;

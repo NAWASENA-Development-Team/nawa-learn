@@ -35,5 +35,16 @@ html {
 ::-webkit-scrollbar-thumb { background: oklch(50% 0 0 / 0.3); border-radius: 9999px; }
 ::-webkit-scrollbar-thumb:hover { background: oklch(50% 0 0 / 0.5); }
 
+/* -- Skeleton shimmer --
+   Dipakai oleh `animate-[shimmer_1.5s_infinite]` di `loading.tsx` milik profil.
+   Sampai M14c kelas itu menunjuk keyframes yang tidak pernah didefinisikan, jadi
+   skeleton-nya diam saja — animasi yang tidak ada terlihat sama seperti animasi
+   yang selesai, sehingga tidak ada yang menyadarinya. `from` sengaja tidak
+   ditulis: nilai awalnya datang dari `-translate-x-full` di elemennya, dan itu
+   yang membuat kilauannya melintas dari kiri ke kanan. */
+@keyframes shimmer {
+  to { transform: translateX(100%); }
+}
+
 
 

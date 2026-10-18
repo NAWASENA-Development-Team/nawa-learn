@@ -3,7 +3,9 @@ import { db } from "@/db";
 import { users, modules, questions, pointsLog } from "@/db/schema";
 import { eq, desc, count, sql, and } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
+import { notFound } from "next/navigation";
 import ProfileClient from "@/components/profile/ProfileClient";
+import { isUuid } from "@/lib/ids";
 import { logger } from "@/lib/logger";
 import { IS_PARTICIPANT } from "@/lib/participants";
 import { emptySpecialtyStats, getSpecialtyStats } from "@/lib/specialtyStats";
@@ -18,7 +20,18 @@ export default async function PublicProfilePage({ params }: PageProps) {
   // Await params for safe Next.js 16 compatibility
   const { id: profileUserId } = await params;
 
-  // 1. Fetch user by Neon Database UUID.
+  // 1. Bentuk id diperiksa **sebelum** menyentuh database.
+  //
+  // `users.id` bertipe `uuid`, jadi Postgres menolak `WHERE id = 'halo'` dengan
+  // galat `22P02`. Sebelum M14c galat itu ditangkap bersama galat database
+  // sungguhan, dan keduanya dirender sebagai "Siswa Tidak Ditemukan" — artinya
+  // database yang sedang mati terlihat persis seperti siswa yang tidak ada, dan
+  // satu-satunya tempat kedua kasus itu bisa dibedakan adalah baris log. Dengan
+  // pemeriksaan bentuk di sini, URL ngawur berhenti sebagai 404 dan gangguan
+  // database naik ke `src/app/error.tsx` sebagai galat yang jujur.
+  if (!isUuid(profileUserId)) notFound();
+
+  // 2. Fetch user by Neon Database UUID.
   //
   // Kolomnya disebut satu per satu (M12). Tanpa daftar kolom, `findFirst` membawa
   // **setiap** kolom `users` ke halaman yang bisa dibuka siapa saja yang punya
@@ -46,39 +59,23 @@ export default async function PublicProfilePage({ params }: PageProps) {
       },
     });
   } catch (err) {
-    // A malformed UUID in the URL and a database outage both land here, and both
-    // end up rendering the "not found" card below — so the log line is the only
-    // place the two can be told apart. The user id is deliberately not logged:
-    // it is a data-subject identifier and `logger` only redacts known key names.
+    // Gangguan database. Dicatat (dengan `requestId` dari `requestLogger`) lalu
+    // **dilempar ulang** supaya `src/app/error.tsx` yang menampilkannya. Menelan
+    // galat di sini akan mengubah gangguan sesaat menjadi halaman "tidak
+    // ditemukan" yang menyesatkan. User id sengaja tidak dicatat: itu
+    // pengenal subjek data, dan `logger` hanya menyensor nama kunci yang dikenal.
     logger.error("profile_fetch_failed", err);
+    throw err;
   }
 
-  // 2. Render user not found if user does not exist
-  if (!dbUser) {
-    return (
-      <div className="max-w-md mx-auto p-10 mt-16 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl text-center shadow-lg">
-        <span className="text-5xl">🧐</span>
-        <h2 className="text-xl font-bold mt-4 text-zinc-900 dark:text-white">Siswa Tidak Ditemukan</h2>
-        <p className="text-sm text-zinc-550 dark:text-zinc-400 mt-2">
-          Maaf, profil siswa dengan ID tersebut tidak ditemukan di SMAN 2 Jonggol atau tautan yang Anda ikuti sudah usang.
-        </p>
-        <div className="mt-6">
-          <a
-            href="/leaderboard"
-            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 text-xs font-bold transition-all shadow-md"
-          >
-            Lihat Papan Peringkat
-          </a>
-        </div>
-      </div>
-    );
-  }
+  // 3. Id sah tetapi barisnya tidak ada → 404 yang sama dengan URL ngawur.
+  if (!dbUser) notFound();
 
-  // 3. Determine if this profile belongs to the currently authenticated user
+  // 4. Determine if this profile belongs to the currently authenticated user
   const { userId: clerkId } = await auth();
   const isOwnProfile = clerkId ? dbUser.clerkId === clerkId : false;
 
-  // 4. Retrieve rank statistics & data concurrently for optimization
+  // 5. Retrieve rank statistics & data concurrently for optimization
   const modulesCondition = isOwnProfile 
     ? eq(modules.uploaderId, dbUser.id)
     : sql`${modules.uploaderId} = ${dbUser.id} AND ${modules.status} = 'approved'`;

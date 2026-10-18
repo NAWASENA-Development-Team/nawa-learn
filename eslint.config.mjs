@@ -52,6 +52,13 @@ const eslintConfig = defineConfig([
       // Client pages (`"use client"`), same reason.
       "src/app/(dashboard)/moderator/page.tsx",
       "src/app/(dashboard)/questions/practice/page.tsx",
+      // Error boundaries. They are client components by necessity, they run
+      // after a render has already failed, and the only sink available is the
+      // browser console — there is no `requestId` to bind and no client-side
+      // error backend (Sentry is deliberately not installed, see §8). `**`
+      // matches zero directories, so this also covers `src/app/error.tsx`.
+      "src/app/**/error.tsx",
+      "src/app/global-error.tsx",
     ],
     rules: {
       "no-console": "off",
