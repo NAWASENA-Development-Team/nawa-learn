@@ -30,7 +30,12 @@ import {
   ShieldCheck,
   Target
 } from "lucide-react";
-import { BADGES, getDaysOldAccount, getRarityColor, BadgeUnlockData, getSpecialtyBadge, SpecialtyStats } from "@/lib/badges";
+// M14e: hanya permukaan tampilan. `BADGES`/`unlockCondition` tidak lagi diimpor
+// di sini — katalognya berisi 85 fungsi kondisi (delapan di antaranya rahasia),
+// dan sebelum M14e seluruhnya ikut ke bundel browser. Sekarang server yang
+// mengevaluasi dan mengirim `BadgeDisplay[]` yang sudah selesai dihitung.
+import { BADGE_CATEGORY_ORDER, getRarityColor, getSpecialtyBadge } from "@/lib/badges";
+import type { BadgeCategory, BadgeDisplay, SpecialtyStats } from "@/lib/badges";
 import { AVATAR_OPTIONS, AvatarOption } from "@/lib/avatars";
 import { ACCEPTED_AVATAR_TYPES, MAX_AVATAR_BYTES, uploadFile } from "@/lib/uploadClient";
 import { useToast } from "@/components/ui/Toast";
@@ -39,6 +44,17 @@ import { useRouter } from "next/navigation";
 // Inline level helpers — linear scaling, safe for client bundle (no server deps)
 const calcLevel = (pts: number) => Math.floor((1 + Math.sqrt(1 + (4 * pts) / 25)) / 2);
 const calcLevelThreshold = (lvl: number) => 25 * lvl * (lvl - 1);
+
+/** Judul tampilan per kategori. `Record<BadgeCategory, …>` supaya kategori baru
+ *  tidak bisa ditambahkan tanpa judulnya. */
+const BADGE_CATEGORY_TITLES: Record<BadgeCategory, string> = {
+  contribution: "🎁 Lencana Kontribusi",
+  learning: "📚 Lencana Pembelajaran",
+  milestone: "🎯 Lencana Pencapaian",
+  social: "🤝 Lencana Sosial",
+  special: "⭐ Lencana Khusus",
+  hidden: "🔒 Lencana Tersembunyi",
+};
 
 interface UserProfile {
   id: string;
@@ -103,6 +119,16 @@ interface ProfileClientProps {
    * fungsi yang sama — dua permukaan tidak bisa lagi berbeda pendapat.
    */
   specialtyStats: SpecialtyStats;
+  /**
+   * Seluruh katalog lencana, sudah dievaluasi server.
+   *
+   * Setiap entri membawa `unlocked` dan `redacted` — keduanya diputuskan
+   * `toBadgeDisplays()` di `src/lib/badges/evaluate.ts`. Komponen ini tidak
+   * menghitung apa pun: dulu ia menyusun `badgeUnlockData` dari `userModules`
+   * dan `userQuestions`, sehingga `approvedModules` di sini dan `approvedMods`
+   * di `specialtyStats` berasal dari dua sumber berbeda untuk angka yang sama.
+   */
+  badgeDisplays: BadgeDisplay[];
   isOwnProfile: boolean;
 }
 
@@ -151,8 +177,9 @@ export default function ProfileClient({
   user, 
   userModules, 
   userQuestions, 
-  pointLogs, 
+  pointLogs,
   specialtyStats,
+  badgeDisplays,
   isOwnProfile 
 }: ProfileClientProps) {
   
@@ -506,33 +533,27 @@ export default function ProfileClient({
     return "Pemula Berbakat 🌱";
   };
 
-  // Calculate badge unlock data
-  const badgeUnlockData = useMemo<BadgeUnlockData>(() => {
-    const modulesBySubject: Record<string, number> = {};
-    userModules.forEach(m => {
-      if (m.status === "approved") {
-        modulesBySubject[m.subject] = (modulesBySubject[m.subject] || 0) + 1;
-      }
-    });
-
-    return {
-      points: user.points,
-      rank: user.rank,
-      totalStudents: user.totalStudents,
-      approvedModules: userModules.filter(m => m.status === "approved").length,
-      approvedQuestions: userQuestions.filter(q => q.status === "approved").length,
-      totalDownloads: userModules.reduce((acc, m) => acc + m.downloads, 0),
-      modulesBySubject,
-      questionsCreated: userQuestions.length,
-      accountAgeInDays: getDaysOldAccount(user.createdAt),
-      createdAt: user.createdAt
-    };
-  }, [user, userModules, userQuestions]);
-
-  // Evaluate which badges are unlocked
-  const unlockedBadges = useMemo(() => {
-    return BADGES.filter(badge => badge.unlockCondition(badgeUnlockData));
-  }, [badgeUnlockData]);
+  // Lencana: **tidak ada** evaluasi di sini.
+  //
+  // Sebelum M14e blok ini membangun `badgeUnlockData` dari `userModules` dan
+  // `userQuestions` lalu menjalankan `badge.unlockCondition(...)` untuk 85
+  // lencana di browser. Dua akibatnya:
+  //
+  //   1. `approvedModules`/`approvedQuestions`/`totalDownloads` di sini berasal
+  //      dari baris yang kebetulan dimuat halaman, sementara `approvedMods` di
+  //      `specialtyStats` berasal dari SQL. Untuk profil sendiri daftar barisnya
+  //      mencakup modul `pending` (disaring lagi di sini), untuk profil orang
+  //      lain tidak — satu angka, dua definisi.
+  //   2. Seluruh katalog, termasuk delapan `unlockCondition` lencana rahasia,
+  //      ikut ke bundel browser. Syarat yang seharusnya dirahasiakan bisa dibaca
+  //      dari DevTools.
+  //
+  // Sekarang server mengirim daftar yang sudah selesai; yang tersisa hanya
+  // penyaringan untuk tampilan.
+  const unlockedBadges = useMemo(
+    () => badgeDisplays.filter((badge) => badge.unlocked),
+    [badgeDisplays],
+  );
 
   const unlockedCount = unlockedBadges.length;
 
@@ -784,7 +805,7 @@ export default function ProfileClient({
               <div className="text-right">
                 <p className="text-[9px] text-zinc-400 font-bold uppercase">LENCANA</p>
                 <p className="text-xs font-extrabold text-zinc-200 mt-0.5 text-indigo-300">
-                  🏆 {unlockedCount} / {BADGES.length}
+                  🏆 {unlockedCount} / {badgeDisplays.length}
                 </p>
               </div>
             </div>
@@ -932,102 +953,89 @@ export default function ProfileClient({
                   </p>
                 </div>
                 <span className="bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 text-xs px-3 py-1.5 rounded-xl font-bold border border-indigo-100 dark:border-indigo-950">
-                  {unlockedCount} / {BADGES.length} Terbuka
+                  {unlockedCount} / {badgeDisplays.length} Terbuka
                 </span>
               </div>
 
               {/* Badge Categories */}
               <div className="space-y-8">
-                {(["contribution", "learning", "milestone", "social", "special", "hidden"] as const).map((category) => {
-                  const isMod = user.role === "moderator" || user.role === "admin";
-                  const categoryBadges = BADGES.filter(b => b.category === category);
-                  // For non-moderators, hidden category badges are always shown as locked mystery slots
-                  const categoryUnlocked = unlockedBadges.filter(b => b.category === category);
-
-                  const categoryTitles: Record<typeof category, string> = {
-                    contribution: "🎁 Lencana Kontribusi",
-                    learning: "📚 Lencana Pembelajaran",
-                    milestone: "🎯 Lencana Pencapaian",
-                    social: "🤝 Lencana Sosial",
-                    special: "⭐ Lencana Khusus",
-                    hidden: "🔒 Lencana Tersembunyi",
-                  };
+                {BADGE_CATEGORY_ORDER.map((category) => {
+                  const categoryBadges = badgeDisplays.filter(b => b.category === category);
+                  const categoryUnlocked = categoryBadges.filter(b => b.unlocked);
+                  // Lencana rahasia yang belum dibuka tiba di sini dalam bentuk
+                  // yang sudah diperah server (judul "???", ikon "❓", syarat
+                  // "???"), jadi tampilan ini tidak perlu tahu peran siapa pun.
+                  // Dulu keputusannya memakai `user.role` — peran **pemilik
+                  // profil**, bukan penontonnya — sehingga seorang siswa yang
+                  // membuka profil moderator melihat syarat rahasia itu.
+                  const categoryHasMystery = categoryBadges.some(b => b.redacted);
 
                   return (
                     <div key={category}>
                       <div className="mb-4 flex items-center justify-between">
                         <h3 className="text-base font-extrabold text-zinc-900 dark:text-white">
-                          {categoryTitles[category]}
-                          {category === "hidden" && !isMod && (
+                          {BADGE_CATEGORY_TITLES[category]}
+                          {categoryHasMystery && (
                             <span className="ml-2 text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-lg">Rahasia</span>
                           )}
                         </h3>
                         <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
-                          {isMod ? `${categoryUnlocked.length} / ${categoryBadges.length}` : (
-                            category === "hidden" ? `? / ${categoryBadges.length}` : `${categoryUnlocked.length} / ${categoryBadges.length}`
-                          )}
+                          {categoryUnlocked.length} / {categoryBadges.length}
                         </span>
                       </div>
-                      
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {categoryBadges.map((badge) => {
-                          const isUnlocked = unlockedBadges.some(b => b.id === badge.id);
-                          // For hidden badges: non-moderators see a mystery slot ONLY if they haven't unlocked it yet!
-                          const isHiddenFromUser = badge.hidden && !isMod && !isUnlocked;
-                          const showAsUnlocked = isUnlocked;
-
-                          return (
-                            <div
-                              key={badge.id}
-                              className={`p-4 rounded-2xl border transition-all duration-300 relative group flex gap-3 items-start ${
-                                showAsUnlocked
-                                  ? `bg-gradient-to-br ${getRarityColor(badge.rarity)} border-opacity-50 border-white shadow-md hover:shadow-lg`
-                                  : isHiddenFromUser
-                                    ? "bg-zinc-900/80 dark:bg-zinc-950 border-zinc-700 dark:border-zinc-800"
-                                    : "bg-zinc-50/50 dark:bg-zinc-950/40 border-zinc-150 dark:border-zinc-850 opacity-60"
-                              }`}
-                              title={isHiddenFromUser ? "Lencana misterius — cara membukanya hanya diketahui moderator" : badge.description}
-                            >
-                              <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 flex-none ${
-                                showAsUnlocked
-                                  ? "bg-white/20 text-white shadow-sm"
-                                  : isHiddenFromUser
-                                    ? "bg-zinc-800 text-zinc-600"
-                                    : "bg-zinc-200 dark:bg-zinc-800 text-zinc-400"
-                              }`}>
-                                {showAsUnlocked ? badge.icon : isHiddenFromUser ? "❓" : <Lock className="h-5 w-5 text-zinc-400 dark:text-zinc-500" />}
-                              </div>
-
-                              <div className="text-left flex-1 min-w-0">
-                                <h4 className={`font-extrabold text-sm flex items-center gap-1.5 ${
-                                  showAsUnlocked
-                                    ? "text-white"
-                                    : isHiddenFromUser
-                                      ? "text-zinc-500 dark:text-zinc-600"
-                                      : "text-zinc-950 dark:text-zinc-100"
-                                }`}>
-                                  {isHiddenFromUser ? "???" : badge.title}
-                                  {showAsUnlocked && <span className="text-xs">✓</span>}
-                                </h4>
-                                <p className={`text-[11px] mt-0.5 leading-snug ${
-                                  showAsUnlocked
-                                    ? "text-white/80"
-                                    : isHiddenFromUser
-                                      ? "text-zinc-600 dark:text-zinc-700"
-                                      : "text-zinc-500 dark:text-zinc-400"
-                                }`}>
-                                  {isHiddenFromUser ? "Cara membuka lencana ini hanya diketahui moderator." : badge.description}
-                                </p>
-                                
-                                {!showAsUnlocked && !isHiddenFromUser && (
-                                  <div className="mt-2 text-[10px] text-zinc-600 dark:text-zinc-400 font-semibold bg-zinc-100/60 dark:bg-zinc-800/60 px-2 py-0.5 rounded-lg inline-block">
-                                    {badge.howToUnlock}
-                                  </div>
-                                )}
-                              </div>
+                        {categoryBadges.map((badge) => (
+                          <div
+                            key={badge.id}
+                            className={`p-4 rounded-2xl border transition-all duration-300 relative group flex gap-3 items-start ${
+                              badge.unlocked
+                                ? `bg-gradient-to-br ${getRarityColor(badge.rarity)} border-opacity-50 border-white shadow-md hover:shadow-lg`
+                                : badge.redacted
+                                  ? "bg-zinc-900/80 dark:bg-zinc-950 border-zinc-700 dark:border-zinc-800"
+                                  : "bg-zinc-50/50 dark:bg-zinc-950/40 border-zinc-150 dark:border-zinc-850 opacity-60"
+                            }`}
+                            title={badge.description}
+                          >
+                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 flex-none ${
+                              badge.unlocked
+                                ? "bg-white/20 text-white shadow-sm"
+                                : badge.redacted
+                                  ? "bg-zinc-800 text-zinc-600"
+                                  : "bg-zinc-200 dark:bg-zinc-800 text-zinc-400"
+                            }`}>
+                              {badge.unlocked ? badge.icon : badge.redacted ? "❓" : <Lock className="h-5 w-5 text-zinc-400 dark:text-zinc-500" />}
                             </div>
-                          );
-                        })}
+
+                            <div className="text-left flex-1 min-w-0">
+                              <h4 className={`font-extrabold text-sm flex items-center gap-1.5 ${
+                                badge.unlocked
+                                  ? "text-white"
+                                  : badge.redacted
+                                    ? "text-zinc-500 dark:text-zinc-600"
+                                    : "text-zinc-950 dark:text-zinc-100"
+                              }`}>
+                                {badge.title}
+                                {badge.unlocked && <span className="text-xs">✓</span>}
+                              </h4>
+                              <p className={`text-[11px] mt-0.5 leading-snug ${
+                                badge.unlocked
+                                  ? "text-white/80"
+                                  : badge.redacted
+                                    ? "text-zinc-600 dark:text-zinc-700"
+                                    : "text-zinc-500 dark:text-zinc-400"
+                              }`}>
+                                {badge.description}
+                              </p>
+
+                              {!badge.unlocked && !badge.redacted && (
+                                <div className="mt-2 text-[10px] text-zinc-600 dark:text-zinc-400 font-semibold bg-zinc-100/60 dark:bg-zinc-800/60 px-2 py-0.5 rounded-lg inline-block">
+                                  {badge.howToUnlock}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
 
                     </div>
@@ -1089,7 +1097,7 @@ export default function ProfileClient({
                     </div>
                   </div>
                   <span className="font-black text-sm text-zinc-900 dark:text-white bg-white dark:bg-zinc-900 px-3 py-1 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-sm">
-                    {userModules.reduce((acc, m) => acc + m.downloads, 0)} <span className="text-[10px] text-zinc-400 font-semibold uppercase">Kali</span>
+                    {specialtyStats.totalDownloads} <span className="text-[10px] text-zinc-400 font-semibold uppercase">Kali</span>
                   </span>
                 </div>
 

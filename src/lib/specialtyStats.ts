@@ -28,7 +28,7 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import * as schema from "@/db/schema";
 import type { AppDb } from "@/db/types";
-import type { SpecialtyStats } from "@/lib/badges";
+import type { SpecialtyStats } from "@/lib/badges/types";
 
 /** Nilai netral untuk pengguna yang belum punya satu pun baris terkait. */
 export function emptySpecialtyStats(): SpecialtyStats {
@@ -132,4 +132,51 @@ export async function getSpecialtyStats(
   }
 
   return stats;
+}
+
+/**
+ * Jumlah modul **disetujui** per mata pelajaran, untuk sekumpulan pengguna.
+ *
+ * Satu query agregat, terpisah dari `getSpecialtyStats`, karena bentuknya
+ * berbeda: `getSpecialtyStats` mengembalikan enam skalar, sedangkan ini peta yang
+ * lebarnya bergantung pada isi database. Menggabungkannya akan membuat "tiga
+ * query tetap" berubah menjadi "tiga query ditambah satu baris per subjek", dan
+ * angka tiga itu dipegang `tests/integration/query-count.test.ts` justru karena
+ * ia satu-satunya bukti N+1 tidak kembali.
+ *
+ * Dipakai lencana yang menyebut mata pelajaran tertentu (Matematika, sains,
+ * bahasa, sejarah) dan lencana "N mata pelajaran berbeda". Sebelum M14e peta ini
+ * dibangun di browser dari daftar modul halaman itu — sumber kedua untuk angka
+ * yang sama.
+ */
+export async function getSubjectBreakdown(
+  db: AppDb,
+  userIds: string[],
+): Promise<Map<string, Record<string, number>>> {
+  const breakdown = new Map<string, Record<string, number>>();
+  if (userIds.length === 0) return breakdown;
+  for (const id of userIds) breakdown.set(id, {});
+
+  const rows = await db
+    .select({
+      userId: schema.modules.uploaderId,
+      subject: schema.modules.subject,
+      count: sql<number>`count(*)`.mapWith(Number),
+    })
+    .from(schema.modules)
+    .where(
+      and(
+        inArray(schema.modules.uploaderId, userIds),
+        eq(schema.modules.status, "approved"),
+      ),
+    )
+    .groupBy(schema.modules.uploaderId, schema.modules.subject);
+
+  for (const row of rows) {
+    const entry = breakdown.get(row.userId);
+    if (!entry) continue;
+    entry[row.subject] = row.count;
+  }
+
+  return breakdown;
 }

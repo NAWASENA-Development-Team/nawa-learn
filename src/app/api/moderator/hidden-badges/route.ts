@@ -1,49 +1,112 @@
 // app/api/moderator/hidden-badges/route.ts
-// Returns all users with aggregated stats so the moderator dashboard can
-// evaluate which hidden badges each user has unlocked (client-side via BADGES).
+// ─── Siapa yang memegang lencana rahasia ──────────────────────────────────────
+//
+// Sebelum M14e rute ini mengirim angka mentah setiap pengguna ke browser, dan
+// panel moderator **mengevaluasi sendiri** kedelapan kondisi rahasia dengan
+// `BADGES.filter(...)`. Akibatnya seluruh katalog — termasuk kedelapan fungsi
+// `unlockCondition` yang seharusnya dirahasiakan — ikut ke bundel browser.
+// Siapa pun yang membuka panel itu, atau sekadar mengunduh chunk-nya, bisa
+// membaca syarat lencana "rahasia" dari DevTools.
+//
+// Sekarang evaluasinya di sini. Jawabannya `BadgeDisplay[]` — judul, ikon, dan
+// `requirement` yang ditulis di katalog server — ditambah peta pemegang per id
+// lencana. Komponen klien tidak lagi memiliki satu pun fungsi kondisi.
 import { NextResponse } from "next/server";
+import { desc } from "drizzle-orm";
 import { db } from "@/db";
-import { sql } from "drizzle-orm";
+import { users } from "@/db/schema";
 import { requireModerator } from "@/lib/authz";
 import { requestLogger } from "@/lib/logger";
+import { IS_PARTICIPANT } from "@/lib/participants";
+import { emptySpecialtyStats, getSpecialtyStats, getSubjectBreakdown } from "@/lib/specialtyStats";
+import {
+  buildBadgeUnlockData,
+  evaluateBadges,
+  getHiddenBadgeDisplays,
+} from "@/lib/badges/evaluate";
+
+/**
+ * Batas jumlah akun yang dievaluasi dalam satu permintaan.
+ *
+ * Panel ini menampilkan pemegang lencana, bukan papan peringkat. Tanpa batas,
+ * biayanya tumbuh sebanding dengan seluruh populasi sekolah setiap kali tab
+ * dibuka — dan karena `getSpecialtyStats` mengagregasi di database, batas ini
+ * menjaga ukuran payload, bukan jumlah query (tetap tiga).
+ */
+const MAX_MONITORED_USERS = 500;
+
+interface HiddenBadgeHolder {
+  id: string;
+  name: string;
+  points: number;
+  approvedModules: number;
+  approvedQuestions: number;
+}
 
 export async function GET(req: Request) {
   const log = requestLogger(req);
-  // Exposes per-student stats, so moderators/admins only.
+  // Memuat statistik per siswa, jadi moderator/admin saja.
   const authz = await requireModerator();
   if (!authz.ok) return authz.response;
 
   try {
-    // Subquery-based aggregation to avoid cartesian product from multi-join
-    const rows = await db.execute(sql`
-      SELECT
-        u.id,
-        u.name,
-        u.points,
-        u.created_at      AS "createdAt",
-        COALESCE(m.approved_modules,   0)::int AS "approvedModules",
-        COALESCE(m.total_downloads,    0)::int AS "totalDownloads",
-        COALESCE(q.approved_questions, 0)::int AS "approvedQuestions"
-      FROM users u
-      LEFT JOIN (
-        SELECT uploader_id,
-               COUNT(*) FILTER (WHERE status = 'approved')       AS approved_modules,
-               SUM(downloads) FILTER (WHERE status = 'approved') AS total_downloads
-        FROM modules
-        GROUP BY uploader_id
-      ) m ON m.uploader_id = u.id
-      LEFT JOIN (
-        SELECT uploader_id,
-               COUNT(*) FILTER (WHERE status = 'approved') AS approved_questions
-        FROM questions
-        GROUP BY uploader_id
-      ) q ON q.uploader_id = u.id
-      ORDER BY u.points DESC
-    `);
+    // Daftar kolom eksplisit: `select()` polos akan ikut membawa `email` dan dua
+    // kolom persetujuan UU PDP ke panel yang hanya butuh nama dan angka.
+    // `IS_PARTICIPANT` menyaring akun yang sudah dianonimkan — tombstone bukan
+    // siswa, dan lencana bukan sesuatu yang bisa dipegang akun yang sudah dihapus.
+    const rows = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        points: users.points,
+        createdAt: users.createdAt,
+      })
+      .from(users)
+      .where(IS_PARTICIPANT)
+      .orderBy(desc(users.points), desc(users.id))
+      .limit(MAX_MONITORED_USERS);
 
-    return NextResponse.json({ success: true, users: rows.rows }, { status: 200 });
+    const ids = rows.map((row) => row.id);
+    const [specialty, subjects] = await Promise.all([
+      getSpecialtyStats(db, ids),
+      getSubjectBreakdown(db, ids),
+    ]);
+
+    const badges = getHiddenBadgeDisplays();
+    const holders: Record<string, HiddenBadgeHolder[]> = {};
+    for (const badge of badges) holders[badge.id] = [];
+
+    for (const row of rows) {
+      const stats = specialty.get(row.id) ?? emptySpecialtyStats();
+      const unlocked = evaluateBadges(
+        buildBadgeUnlockData({
+          points: row.points,
+          // Tidak satu pun dari delapan kondisi rahasia membaca peringkat, jadi
+          // nol adalah nilai yang jujur di sini — bukan tebakan yang kebetulan
+          // tidak berpengaruh.
+          rank: 0,
+          specialty: stats,
+          modulesBySubject: subjects.get(row.id) ?? {},
+          createdAt: row.createdAt,
+        }),
+      );
+
+      for (const badgeId of unlocked) {
+        const list = holders[badgeId];
+        if (!list) continue;
+        list.push({
+          id: row.id,
+          name: row.name,
+          points: row.points,
+          approvedModules: stats.approvedMods,
+          approvedQuestions: stats.approvedQuestions,
+        });
+      }
+    }
+
+    return NextResponse.json({ success: true, badges, holders }, { status: 200 });
   } catch (error) {
-    log.error("Hidden badges API error:", error);
+    log.error("hidden_badges_failed", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

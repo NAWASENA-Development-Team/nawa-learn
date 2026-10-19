@@ -23,8 +23,8 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { BADGES, getDaysOldAccount, getRarityColor } from "@/lib/badges";
-import type { BadgeUnlockData } from "@/lib/badges";
+import { getRarityColor } from "@/lib/badges";
+import type { BadgeDisplay } from "@/lib/badges";
 import { useToast } from "@/components/ui/Toast";
 
 type PendingSubmission = {
@@ -52,18 +52,13 @@ type PendingQuestion = {
 };
 
 // User stats returned from /api/moderator/hidden-badges
-type UserStats = {
+type HiddenBadgeHolder = {
   id: string;
   name: string;
   points: number;
-  createdAt: string;
   approvedModules: number;
-  totalDownloads: number;
   approvedQuestions: number;
 };
-
-// Pre-compute the hidden badges list once
-const HIDDEN_BADGES = BADGES.filter((b) => b.hidden);
 
 export default function ModeratorClient() {
   const { success, error: toastError, info } = useToast();
@@ -80,7 +75,14 @@ export default function ModeratorClient() {
   const [processingQuestionId, setProcessingQuestionId] = useState<string | null>(null);
 
   // Hidden Badges State
-  const [userStats, setUserStats] = useState<UserStats[]>([]);
+  //
+  // `badges` sudah dievaluasi server (`GET /api/moderator/hidden-badges`):
+  // `requirement` ditulis di katalog server dan hanya dikirim ke moderator. Dulu
+  // komponen ini yang memegang katalognya dan menjalankan `unlockCondition`
+  // untuk setiap siswa — yang berarti kedelapan syarat rahasia ikut ke bundel
+  // browser.
+  const [hiddenBadges, setHiddenBadges] = useState<BadgeDisplay[]>([]);
+  const [badgeHolders, setBadgeHolders] = useState<Record<string, HiddenBadgeHolder[]>>({});
   const [isLoadingBadges, setIsLoadingBadges] = useState(false);
   const [expandedBadge, setExpandedBadge] = useState<string | null>(null);
 
@@ -126,8 +128,9 @@ export default function ModeratorClient() {
     try {
       const res = await fetch("/api/moderator/hidden-badges");
       if (res.ok) {
-        const { users } = await res.json();
-        setUserStats(users);
+        const { badges, holders } = await res.json();
+        setHiddenBadges(badges);
+        setBadgeHolders(holders);
       }
     } catch (error) {
       console.error("Gagal mengambil data badge tersembunyi:", error);
@@ -390,7 +393,7 @@ export default function ModeratorClient() {
                 : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-650 dark:text-zinc-355 hover:bg-zinc-50"
             }`}
           >
-            <Eye className="h-4 w-4" /> Lencana Tersembunyi ({HIDDEN_BADGES.length})
+            <Eye className="h-4 w-4" /> Lencana Tersembunyi ({hiddenBadges.length})
           </button>
 
           <button
@@ -523,23 +526,10 @@ export default function ModeratorClient() {
             </div>
           ) : (
             <div className="space-y-4">
-              {HIDDEN_BADGES.map((badge) => {
-                // Compute holders client-side using the same unlock logic
-                const holders = userStats.filter((u) => {
-                  const data: BadgeUnlockData = {
-                    points: u.points,
-                    rank: 0,
-                    totalStudents: userStats.length,
-                    approvedModules: Number(u.approvedModules),
-                    approvedQuestions: Number(u.approvedQuestions),
-                    totalDownloads: Number(u.totalDownloads),
-                    modulesBySubject: {},
-                    questionsCreated: 0,
-                    accountAgeInDays: getDaysOldAccount(u.createdAt),
-                    createdAt: u.createdAt,
-                  };
-                  return badge.unlockCondition(data);
-                });
+              {hiddenBadges.map((badge) => {
+                // Pemegangnya sudah dihitung server. Komponen ini tidak punya
+                // `unlockCondition` untuk dijalankan — dan itu tujuannya.
+                const holders = badgeHolders[badge.id] ?? [];
 
                 const isExpanded = expandedBadge === badge.id;
 
@@ -568,7 +558,7 @@ export default function ModeratorClient() {
                         </div>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 leading-snug">{badge.description}</p>
                         <p className="text-[10px] text-amber-600 dark:text-amber-500 font-semibold mt-1">
-                          Syarat rahasia: {badge.unlockCondition.toString().replace(/.*=> /, "").replace("data\.", "").trim()}
+                          Syarat rahasia: {badge.requirement ?? "—"}
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-1 shrink-0 pr-1">
@@ -596,7 +586,7 @@ export default function ModeratorClient() {
                                 <div className="flex-1 min-w-0">
                                   <p className="text-xs font-extrabold text-zinc-900 dark:text-white truncate">{u.name}</p>
                                   <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-semibold">
-                                    {u.points} VP · {Number(u.approvedModules)} modul · {Number(u.approvedQuestions)} soal
+                                    {u.points} VP · {u.approvedModules} modul · {u.approvedQuestions} soal
                                   </p>
                                 </div>
                                 <a

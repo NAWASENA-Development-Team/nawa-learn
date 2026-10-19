@@ -19,6 +19,7 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { withoutComments } from "../helpers/source";
 
 const ROOT = process.cwd();
 const SRC_DIR = path.join(ROOT, "src");
@@ -68,23 +69,6 @@ function walk(dir: string, prefix = ""): string[] {
     found.push(path.join(prefix, entry));
   }
   return found;
-}
-
-/**
- * Membuang komentar sebelum memeriksa teks yang tampil.
- *
- * Tanpa ini, sebuah komentar yang *menjelaskan* bug lama akan dihitung sebagai
- * bug itu sendiri — dan cara termudah membuat tes hijau adalah menghapus
- * penjelasannya, yang justru kebalikan dari yang diinginkan. Penyapu ini hanya
- * mengenali tiga bentuk yang dipakai repo ini (`//`, `/* *\/`, dan `{/* *\/}`
- * di JSX); ia bukan parser, dan itu cukup karena yang diperiksa hanyalah
- * keberadaan sebuah frasa, bukan struktur.
- */
-function withoutComments(source: string): string {
-  return source
-    .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^\s*\/\/.*$/gm, "");
 }
 
 describe("root boundaries exist", () => {

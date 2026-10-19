@@ -109,8 +109,8 @@ Rare and unique achievements:
 - **Legendary** (Gold): Extremely difficult achievements
 
 ### Implementation Details
-- Location: `src/lib/badges.ts`
-- Badge evaluation in: `src/components/profile/ProfileClient.tsx`
+- Location: `src/lib/badges/` (a directory since M14e; `src/lib/badges.ts` is gone)
+- Badge evaluation runs **on the server**: `profile/[id]/page.tsx` and `GET /api/moderator/hidden-badges` call `evaluateBadges()`. `ProfileClient` receives the answer as a `badgeDisplays` prop and evaluates nothing.
 - Dynamic unlock conditions based on:
   - Points accumulated
   - Leaderboard rank
@@ -119,6 +119,12 @@ Rare and unique achievements:
   - Modules by subject
   - Account age in days
   - Answered questions (`quizTotal`) and answered *hard* questions (`hardQuizzes`)
+
+### The catalogue is server-only, and the split is load-bearing
+- `src/lib/badges/catalog.ts` holds the 85 definitions **including the eight hidden `unlockCondition` functions**. `src/lib/badges/evaluate.ts` runs them. `src/lib/badges/index.ts` is the barrel, and it deliberately exports **only** `display.ts` plus the types — never `catalog` or `evaluate`. `tests/unit/badges.test.ts` fails if that changes, and separately scans `src/components/**` for `@/lib/badges/(catalog|evaluate)`, `BADGE_DEFINITIONS` and `unlockCondition`.
+- Before M14e the whole catalogue shipped in the browser bundle, so `unlockCondition.toString()` in DevTools revealed every "secret" requirement. Now the conditions never leave the server, and `toBadgeDisplays()` **rebuilds** each entry (it does not spread the definition) so no field can slip through.
+- Hidden badges are replaced by `MYSTERY_TITLE = "???"` / `MYSTERY_ICON = "❓"` until they are unlocked **or the viewer is a moderator**. The viewer's role is the gate, not the profile owner's — the old code used the owner's role, which meant a student opening a moderator's profile saw that moderator's hidden-badge details.
+- `BadgeDisplay.requirement` is written by hand in `catalog.ts` for the eight hidden badges and is only filled when **both** `includeRequirement` and `isModerator` are true. It is **not** derived from `unlockCondition.toString()`: `toString()` reads the *compiled* function, so `3000` arrives as `3e3` and production minification renames the parameter to `e`, which made the panel print `e.points>=3e3`. The trade-off is honest: a written string can go stale if a condition changes — that is a stale hint in a moderator-only panel, never a leak or a wrong count, because `unlockCondition` stays the single source of truth.
 
 ### The six specialty numbers come from SQL, not from a loaded row set
 - `src/lib/specialtyStats.ts` computes `approvedMods`, `approvedQuestions`, `totalDownloads`, `quizTotal`, `hardQuizzes` and the subject spread in **three aggregate queries**, returning a `Map` pre-filled for every requested id (`emptySpecialtyStats()` is the zero value).
@@ -139,11 +145,12 @@ Rare and unique achievements:
 - Hover effects and smooth transitions
 
 ### Adding New Badges
-To add new badges, edit `src/lib/badges.ts`:
-1. Add badge object to `BADGES` array
-2. Define unlock condition function
+To add new badges, edit `src/lib/badges/catalog.ts`:
+1. Add the badge object to `BADGE_DEFINITIONS`
+2. Define the `unlockCondition` function (server-only — it is never serialised)
 3. Set category, rarity, icon, and description
-4. Badges automatically appear in profile
+4. If `hidden: true`, also write `requirement` — the human-readable condition the moderator panel shows
+5. Badges automatically appear in the profile; `BADGE_TOTAL` and the category counts follow the array
 
 ## Observability
 
@@ -330,6 +337,7 @@ To add new badges, edit `src/lib/badges.ts`:
 - It caught a real leak on its first run: `app/(dashboard)/profile/[id]/page.tsx` called `db.query.users.findFirst({ where })` with **no column list**, so `email` and both UU PDP consent columns were fetched for every profile a visitor opened; it serialised `clerkId` to a client component that printed its last four characters on a public certificate; and it called `db.select().from(questions)`, pulling `answer_key` into a public page. None of that showed in the HTML — `email` was blanked before serialisation and the answer key was never rendered — which is exactly why it survived nine milestones. Gate the **source**, not the output.
 - `clerkId` may be **fetched** on a page (the profile page compares it with the session to decide "is this mine") but must never be **serialised** into a client prop. Fetch what a decision needs; send what the UI renders.
 - If a new tripwire assertion fails, fix the code or narrow the assertion with a written reason. Do not add a file to an allowlist to make it green — a dead exemption is an unreviewed blind spot (same rule as `.gitleaks.toml` and the audit gate).
+- **Every source tripwire strips comments first**, through `withoutComments()` in `tests/helpers/source.ts` — shared by `pii-surface`, `badges` and `route-boundaries`. Without it, a comment that *explains* why a column is not selected reads as a violation of the rule about that column (this happened in M14e, in `api/moderator/hidden-badges/route.ts`), and the cheapest way to go green becomes deleting the explanation. Stripping is not a weakening: the scan still covers the code, and code that genuinely reads `email` still fails.
 
 ### Deliberate non-goals, with reasons
 - **No application-level column encryption.** Neon encrypts the volume (AES-256) and every connection is TLS; the key is never on the app server. Encrypting `users.email` in the app would need a key store *and* a deterministic blind index, because that column is `ensureUser()`'s lookup key — two representations of every address, kept in sync forever. The threat it closes (a direct reader of the database contents) is not worth that for a school platform. Minimisation, deny-by-default, retention and audit are the controls that actually shrink the surface.

@@ -2,13 +2,19 @@
 import { db } from "@/db";
 import { users, modules, questions, pointsLog } from "@/db/schema";
 import { eq, desc, count, sql, and } from "drizzle-orm";
-import { auth } from "@clerk/nextjs/server";
 import { notFound } from "next/navigation";
 import ProfileClient from "@/components/profile/ProfileClient";
 import { isUuid } from "@/lib/ids";
 import { logger } from "@/lib/logger";
 import { IS_PARTICIPANT } from "@/lib/participants";
-import { emptySpecialtyStats, getSpecialtyStats } from "@/lib/specialtyStats";
+import { getCurrentUser, getSessionUserId } from "@/lib/currentUser";
+import { hasReviewerRole } from "@/lib/authz";
+import { emptySpecialtyStats, getSpecialtyStats, getSubjectBreakdown } from "@/lib/specialtyStats";
+import {
+  buildBadgeUnlockData,
+  evaluateBadges,
+  toBadgeDisplays,
+} from "@/lib/badges/evaluate";
 
 export const dynamic = "force-dynamic";
 
@@ -71,9 +77,24 @@ export default async function PublicProfilePage({ params }: PageProps) {
   // 3. Id sah tetapi barisnya tidak ada → 404 yang sama dengan URL ngawur.
   if (!dbUser) notFound();
 
-  // 4. Determine if this profile belongs to the currently authenticated user
-  const { userId: clerkId } = await auth();
+  // 4. Siapa yang melihat.
+  //
+  // Dua hal diputuskan di sini, dan keduanya tentang **penonton**, bukan pemilik
+  // profil: apakah ini profil sendiri, dan apakah penontonnya moderator. Yang
+  // kedua baru benar sejak M14e — versi lama memakai `user.role` (peran pemilik
+  // profil) untuk memutuskan apakah lencana rahasia boleh diperlihatkan, sehingga
+  // seorang siswa yang membuka profil seorang moderator melihat kedelapan syarat
+  // rahasia itu.
+  //
+  // `getSessionUserId()`/`getCurrentUser()` adalah `cache()` React, dan root
+  // layout sudah memanggil `getCurrentUser()` untuk Navbar, jadi keduanya tidak
+  // menambah query dalam request ini.
+  const [clerkId, viewer] = await Promise.all([
+    getSessionUserId(),
+    getCurrentUser(),
+  ]);
   const isOwnProfile = clerkId ? dbUser.clerkId === clerkId : false;
+  const viewerIsModerator = viewer ? hasReviewerRole(viewer.role) : false;
 
   // 5. Retrieve rank statistics & data concurrently for optimization
   const modulesCondition = isOwnProfile 
@@ -90,7 +111,8 @@ export default async function PublicProfilePage({ params }: PageProps) {
     fetchedModules,
     fetchedQuestions,
     fetchedPointLogs,
-    specialtyStatsById
+    specialtyStatsById,
+    subjectBreakdownById
   ] = await Promise.all([
     // Peringkat dan "total siswa" memakai definisi peserta yang **sama** dengan
     // papan peringkat (`IS_PARTICIPANT`). Akun yang sudah dianonimkan tetap berupa
@@ -149,10 +171,36 @@ export default async function PublicProfilePage({ params }: PageProps) {
     // pencapaian seumur akun, dan disaring dengan nama aksi yang tidak pernah
     // ditulis (`quiz_completed*`), sehingga selalu nol.
     getSpecialtyStats(db, [dbUser.id]),
+    // Peta "jumlah modul disetujui per mata pelajaran", juga SQL. Lencana yang
+    // menyebut Matematika/sains/bahasa/sejarah membacanya; sebelum M14e peta ini
+    // dibangun di browser dari daftar modul halaman ini.
+    getSubjectBreakdown(db, [dbUser.id]),
   ]);
 
   const rank = (higherPointsResult[0]?.value || 0) + 1;
   const totalStudents = totalStudentsResult[0]?.value || 1;
+  const specialtyStats = specialtyStatsById.get(dbUser.id) ?? emptySpecialtyStats();
+
+  // Lencana dievaluasi di server, sekali.
+  //
+  // Yang menyeberang ke komponen klien hanya `BadgeDisplay[]` — judul, ikon dan
+  // status terbuka. `unlockCondition` tidak pernah ikut: versi lama mengirim
+  // seluruh katalog ke browser, jadi delapan syarat rahasia bisa dibaca dengan
+  // `unlockCondition.toString()` dari DevTools.
+  const unlockedBadgeIds = evaluateBadges(
+    buildBadgeUnlockData({
+      points: dbUser.points,
+      rank,
+      specialty: specialtyStats,
+      modulesBySubject: subjectBreakdownById.get(dbUser.id) ?? {},
+      createdAt: dbUser.createdAt,
+    }),
+  );
+
+  const badgeDisplays = toBadgeDisplays({
+    unlockedIds: unlockedBadgeIds,
+    isModerator: viewerIsModerator,
+  });
 
   const serializedModules = fetchedModules.map((m) => ({
     id: m.id,
@@ -213,7 +261,8 @@ export default async function PublicProfilePage({ params }: PageProps) {
       userModules={serializedModules}
       userQuestions={serializedQuestions}
       pointLogs={serializedPointLogs}
-      specialtyStats={specialtyStatsById.get(dbUser.id) ?? emptySpecialtyStats()}
+      specialtyStats={specialtyStats}
+      badgeDisplays={badgeDisplays}
       isOwnProfile={isOwnProfile}
     />
   );

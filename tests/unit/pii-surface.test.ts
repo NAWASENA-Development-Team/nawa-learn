@@ -21,6 +21,7 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { withoutComments } from "../helpers/source";
 
 const SRC = path.resolve(process.cwd(), "src");
 
@@ -40,6 +41,18 @@ function walk(dir: string, extensions: string[]): string[] {
 const relative = (file: string) => path.relative(SRC, file).replace(/\\/g, "/");
 const read = (file: string) => readFileSync(file, "utf8");
 
+/**
+ * Kode saja, tanpa komentar.
+ *
+ * Tripwire di berkas ini memeriksa **apa yang dilakukan kode**, bukan apa yang
+ * ditulis tentangnya. M14e membuktikan bedanya: komentar di
+ * `api/moderator/hidden-badges/route.ts` menyebut kolom `email` justru untuk
+ * menerangkan kenapa kolom itu tidak dipilih, dan versi lama test ini memerah
+ * karenanya. Tanpa penyapu ini, satu-satunya cara membuatnya hijau adalah
+ * menghapus penjelasannya — kebalikan dari yang diinginkan.
+ */
+const readCode = (file: string) => withoutComments(read(file));
+
 const TS_FILES = walk(SRC, [".ts", ".tsx"]);
 const API_FILES = TS_FILES.filter((file) => relative(file).startsWith("app/api/"));
 
@@ -49,7 +62,7 @@ const EMAIL_INGEST_ALLOWED = new Set(["app/api/webhooks/clerk/route.ts"]);
 describe("email addresses stay inside the webhook", () => {
   it("is referenced by exactly one API route", () => {
     const offenders = API_FILES.filter(
-      (file) => /\bemail\b/i.test(read(file)) && !EMAIL_INGEST_ALLOWED.has(relative(file)),
+      (file) => /\bemail\b/i.test(readCode(file)) && !EMAIL_INGEST_ALLOWED.has(relative(file)),
     ).map(relative);
 
     expect(offenders).toEqual([]);
@@ -61,7 +74,7 @@ describe("email addresses stay inside the webhook", () => {
     // `email_address` field into the database.
     const offenders = API_FILES.filter((file) => {
       if (EMAIL_INGEST_ALLOWED.has(relative(file))) return false;
-      return /\bemail\s*:/i.test(read(file));
+      return /\bemail\s*:/i.test(readCode(file));
     }).map(relative);
 
     expect(offenders).toEqual([]);
@@ -74,7 +87,7 @@ describe("email addresses stay inside the webhook", () => {
 
     expect(moderatorFiles.length).toBeGreaterThan(0);
     for (const file of moderatorFiles) {
-      expect(read(file)).not.toMatch(/\bemail\b/i);
+      expect(readCode(file)).not.toMatch(/\bemail\b/i);
     }
   });
 });
@@ -83,7 +96,7 @@ describe("no unbounded column selection", () => {
   it("never calls db.select() without an explicit column list", () => {
     // `db.select().from(users)` returns every column the table has *today*. The
     // column added tomorrow is the one that leaks.
-    const offenders = TS_FILES.filter((file) => /\.select\(\)/.test(read(file))).map(relative);
+    const offenders = TS_FILES.filter((file) => /\.select\(\)/.test(readCode(file))).map(relative);
 
     expect(offenders).toEqual([]);
   });
@@ -102,7 +115,7 @@ describe("the public profile page ships no identity", () => {
   it("does not touch the email column at all", () => {
     // Kode, bukan prosa: komentar di berkas ini justru menyebut kolomnya untuk
     // menjelaskan mengapa ia tidak dibaca.
-    const page = read(path.join(SRC, PAGE));
+    const page = readCode(path.join(SRC, PAGE));
 
     expect(page).not.toMatch(/dbUser\.email/);
     expect(page).not.toMatch(/\bemail\s*:/);
@@ -110,11 +123,11 @@ describe("the public profile page ships no identity", () => {
   });
 
   it("does not hand the Clerk id to the client component", () => {
-    expect(read(path.join(SRC, PAGE))).not.toMatch(/clerkId:\s*dbUser\.clerkId/);
+    expect(readCode(path.join(SRC, PAGE))).not.toMatch(/clerkId:\s*dbUser\.clerkId/);
   });
 
   it("does not accept email or clerkId as client props", () => {
-    const client = read(path.join(SRC, "components/profile/ProfileClient.tsx"));
+    const client = readCode(path.join(SRC, "components/profile/ProfileClient.tsx"));
 
     expect(client).not.toMatch(/^\s*clerkId: string;$/m);
     expect(client).not.toMatch(/^\s*email: string;$/m);
