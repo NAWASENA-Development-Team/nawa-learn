@@ -134,7 +134,16 @@ export async function listAuditEntries(db: AppDb, options: AuditListOptions = {}
       after: true,
       createdAt: true,
     },
-    orderBy: (table, { desc }) => [desc(table.createdAt)],
+    // Urutan ini harus deterministik. `desc(createdAt)` saja tidak cukup:
+    // `clock_timestamp()` memiliki resolusi milidetik di PGlite dan timestamp
+    // Postgres sendiri hanya mikrodetik, jadi dua baris yang ditulis cepat
+    // bisa berbagi stempel waktu yang persis sama — dan saat itu terjadi,
+    // "terbaru lebih dulu" menjadi lemparan koin. `id` menjadi pemutus seri,
+    // sama seperti di `src/lib/pagination.ts`. Catatan: ini urutan *sisipan*
+    // yang kasat mata, bukan urutan logis; jika dua baris benar-benar menempati
+    // mikrodetik yang sama, tidak ada yang bisa membedakan mana yang "terbaru"
+    // sebenarnya, jadi apa pun yang konsisten lebih baik daripada yang acak.
+    orderBy: (table, { desc }) => [desc(table.createdAt), desc(table.id)],
     limit,
   });
 }

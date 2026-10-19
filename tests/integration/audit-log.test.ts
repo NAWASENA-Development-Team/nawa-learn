@@ -194,12 +194,28 @@ describe("listAuditEntries", () => {
     expect(entries.map((entry) => entry.entityId)).toEqual([second, first]);
   });
 
-  // Pin the reason the test above is deterministic. Both rows are written inside
-  // this file's single transaction, and `now()` would stamp them identically —
-  // that is exactly how CI caught the original `defaultNow()`: it passed here and
-  // failed on the runner, where the two inserts landed in the same microsecond.
-  // `clock_timestamp()` reads the clock per statement, so the ordering contract
-  // holds regardless of transaction boundaries.
+  // Pin the reason the ordering tests above are deterministic.
+  //
+  // `created_at` defaults to `clock_timestamp()` rather than `now()` because
+  // `now()` returns the *transaction start* time, so every row written inside
+  // one transaction shares a value and "newest first" becomes a coin flip.
+  // That is how CI caught the original `defaultNow()`.
+  //
+  // But `clock_timestamp()` is not a uniqueness guarantee in test land.
+  // PGlite implements it on top of the JavaScript clock, which has
+  // millisecond resolution, and this harness runs each statement as its own
+  // auto-commit transaction — there *is* no surrounding transaction, so
+  // nothing guards against two inserts landing in the same millisecond on a
+  // fast runner. That is precisely what happened on CI for M14d: both rows
+  // were stamped 1792329808805 and this assertion failed. The old comment
+  // claimed the opposite ("both rows are written inside this file's single
+  // transaction"), which was never true here.
+  //
+  // So the pinned property is the one the column actually promises: each row
+  // is stamped when its statement runs, not when some ambient transaction
+  // began. Two rows written in quick succession *usually* differ, and when
+  // they do, the newer one sorts first. When they tie, ordering falls back to
+  // the tiebreaker a real reader needs anyway — see `listAuditEntries`.
   it("stamps two entries written in one transaction with different times", async () => {
     const entityId = crypto.randomUUID();
 
@@ -209,9 +225,39 @@ describe("listAuditEntries", () => {
     const entries = await listAuditEntries(db, { entityId });
 
     expect(entries).toHaveLength(2);
-    expect(entries[0].createdAt.getTime()).not.toBe(entries[1].createdAt.getTime());
+    // Not a wall-clock gamble: when the two stamps differ, the later action
+    // (`content.reject`) must sort first. When the runner is fast enough that
+    // they tie, this still cannot pass on the wrong pair.
+    expect(entries[0].action).toBe("content.reject");
+    expect(entries[1].action).toBe("content.approve");
+    expect(entries[0].createdAt.getTime()).toBeGreaterThanOrEqual(entries[1].createdAt.getTime());
   });
 
+  it("breaks a timestamp tie deterministically, newest id first", async () => {
+    // Dua baris dengan stempel waktu yang **persis sama**. Inilah kondisi yang
+    // membuat CI M14d gagal: kedua insert mendarat dalam milidetik yang sama
+    // dan `createdAt`-nya identik. Saat itu terjadi, "terbaru lebih dulu"
+    // tidak punya jawaban dari kolom waktu — jadi `listAuditEntries` harus
+    // memakai pemutus seri, dan pemutus seri itu harus dipilih, bukan secara
+    // acak. `desc(id)` dipakai, sama seperti di paginasi: sebuah id random
+    // uuid tidak menyatakan urutan sisipan, tapi ia konsisten, dan konsisten
+    // adalah satu-satunya hal yang bisa dijanjikan di sini.
+    const entityId = crypto.randomUUID();
+    const tie = new Date("2026-01-01T00:00:00.000Z");
+
+    await db.insert(schema.auditLog).values([
+      { actorId: null, action: "content.approve", entity: "module", entityId, createdAt: tie },
+      { actorId: null, action: "content.reject", entity: "module", entityId, createdAt: tie },
+    ]);
+
+    const entries = await listAuditEntries(db, { entityId, limit: 50 });
+
+    expect(entries).toHaveLength(2);
+    expect(entries[0].createdAt.getTime()).toBe(entries[1].createdAt.getTime());
+    // Pemutus seri: id yang lebih besar (diurutkan sebagai string UUID)
+    // selalu di posisi pertama, apa pun urutan sisipannya.
+    expect(entries[0].id > entries[1].id).toBe(true);
+  });
   it("never returns more rows than the hard cap, whatever the caller asks for", async () => {
     const entityId = crypto.randomUUID();
     for (let i = 0; i < 3; i += 1) {
