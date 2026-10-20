@@ -11,7 +11,8 @@
 // `/api/questions/approved`.
 "use client";
 
-import { Check, X, HelpCircle } from "lucide-react";
+import { Check, X, HelpCircle, Key } from "lucide-react";
+import { LatexRenderer } from "@/components/ui/LatexRenderer";
 import {
   difficultyBadgeClass, difficultyLabel, difficultyPoints,
 } from "./types";
@@ -73,9 +74,9 @@ export function SubmissionsQuestionsTab({
 
               {/* Question text */}
               <div>
-                <h4 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-150 leading-relaxed mb-3">
-                  {q.questionText}
-                </h4>
+                <div className="text-sm font-extrabold text-zinc-950 dark:text-zinc-150 leading-relaxed mb-3">
+                  <LatexRenderer text={q.questionText} />
+                </div>
 
                 {/* Options list */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
@@ -93,7 +94,7 @@ export function SubmissionsQuestionsTab({
                       }`}>
                         {key}
                       </span>
-                      <span className="truncate">{val}</span>
+                      <span className="truncate"><LatexRenderer text={val} /></span>
                     </div>
                   ))}
                 </div>
@@ -101,15 +102,17 @@ export function SubmissionsQuestionsTab({
 
               {/* Footer tools */}
               <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 pt-3 border-t border-zinc-100 dark:border-zinc-800/80">
-                <div className="text-xs text-zinc-450 dark:text-zinc-500 font-semibold">
-                  🔑 Kunci Jawaban: <span className="text-emerald-600 dark:text-emerald-400 font-black text-sm uppercase">Opsi {q.answerKey}</span>
+                <div className="text-xs text-zinc-500 dark:text-zinc-400 font-semibold flex items-center gap-1.5">
+                  <Key className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Kunci Jawaban:</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-extrabold text-sm uppercase">Opsi {q.answerKey}</span>
                 </div>
 
                 <div className="flex gap-2">
                   <button
                     onClick={() => onRejectQuestion(q)}
                     disabled={processingQuestionId === q.questionId}
-                    className="inline-flex h-9 items-center justify-center rounded-xl border border-red-200 dark:border-red-950 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400 font-bold px-4 text-xs transition-colors cursor-pointer disabled:opacity-50"
+                    className="inline-flex h-9 items-center justify-center rounded-xl border border-red-200 dark:border-red-950 hover:bg-red-50 dark:hover:bg-red-950/30 active:scale-[0.98] text-red-600 dark:text-red-400 font-bold px-4 text-xs transition-colors cursor-pointer disabled:opacity-50"
                   >
                     <X className="h-4 w-4 mr-1" /> Tolak
                   </button>
@@ -117,7 +120,7 @@ export function SubmissionsQuestionsTab({
                   <button
                     onClick={() => onApproveQuestion(q)}
                     disabled={processingQuestionId === q.questionId}
-                    className="inline-flex h-9 items-center justify-center rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-4 text-xs transition-all shadow-md shadow-emerald-600/10 cursor-pointer disabled:opacity-50"
+                    className="inline-flex h-9 items-center justify-center rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-extrabold px-4 text-xs transition-all shadow-sm cursor-pointer disabled:opacity-50"
                   >
                     <Check className="h-4 w-4 mr-1" /> {processingQuestionId === q.questionId ? "Memproses..." : "Setujui & Publikasikan"}
                   </button>

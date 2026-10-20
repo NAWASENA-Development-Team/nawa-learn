@@ -13,7 +13,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, CheckCircle2, Award, Check } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import {
   DIFFICULTY_OPTIONS, CATEGORY_OPTIONS, EMPTY_DRAFT, getDifficultyStyle,
@@ -247,16 +247,14 @@ export function CreateExamModal({ onClose, onExamCreated }: CreateExamModalProps
               </div>
             </div>
 
-            {/* V-Point info */}
+            {/* Poin XP info */}
             <div className={`p-3.5 rounded-2xl border flex items-center gap-3 text-xs ${getDifficultyStyle(examMeta.difficulty)}`}>
-              <span className="text-lg shrink-0">
-                {examMeta.difficulty === "Mudah" ? "⭐" : examMeta.difficulty === "Sedang" ? "⭐⭐" : examMeta.difficulty === "Sulit" ? "⭐⭐⭐" : "💜"}
-              </span>
+              <Award className="h-5 w-5 shrink-0 text-amber-500" />
               <div>
-                <p className="font-bold">Reward ujian ini:</p>
+                <p className="font-bold">Hadiah Poin XP ujian ini:</p>
                 <p>
-                  {examMeta.difficulty === "Mudah" ? "+15" : examMeta.difficulty === "Sedang" ? "+25" : examMeta.difficulty === "Sulit" ? "+45" : "+100"} V-Point saat selesai (pertama kali)
-                  &nbsp;· penalti <span className="font-bold">-10%</span> total V-Point per jawaban salah
+                  {examMeta.difficulty === "Mudah" ? "+15" : examMeta.difficulty === "Sedang" ? "+25" : examMeta.difficulty === "Sulit" ? "+45" : "+100"} Poin XP saat selesai (pertama kali)
+                  &nbsp;· penalti <span className="font-bold">-10%</span> total Poin per jawaban salah
                 </p>
               </div>
             </div>
@@ -264,13 +262,13 @@ export function CreateExamModal({ onClose, onExamCreated }: CreateExamModalProps
             <div className="pt-2 flex gap-3">
               <button
                 onClick={onClose}
-                className="flex-1 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-bold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+                className="flex-1 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 text-sm font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all cursor-pointer"
               >
                 Batal
               </button>
               <button
                 onClick={handleMetaNext}
-                className="flex-[2] py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold transition-all shadow-md cursor-pointer flex items-center justify-center gap-2"
+                className="flex-[2] py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white text-sm font-bold transition-all shadow-sm cursor-pointer flex items-center justify-center gap-2"
               >
                 Lanjut: Isi Soal <ChevronRight className="h-4 w-4" />
               </button>
@@ -327,23 +325,24 @@ export function CreateExamModal({ onClose, onExamCreated }: CreateExamModalProps
                     />
                     <button
                       onClick={() => updateDraft("answerKey", key)}
-                      className={`shrink-0 text-[10px] font-black px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                      className={`shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer active:scale-[0.98] flex items-center gap-1 ${
                         examDrafts[examQIdx]?.answerKey === key
                           ? "bg-indigo-600 text-white border-indigo-600"
-                          : "bg-white dark:bg-zinc-900 text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-indigo-400 hover:text-indigo-600"
+                          : "bg-white dark:bg-zinc-900 text-zinc-500 border-zinc-200 dark:border-zinc-800 hover:border-indigo-400 hover:text-indigo-600"
                       }`}
                       title={`Jadikan opsi ${key} sebagai kunci jawaban`}
                     >
-                      ✓ KUNCI
+                      {examDrafts[examQIdx]?.answerKey === key && <Check className="h-3 w-3" />}
+                      Kunci Jawaban
                     </button>
                   </div>
                 );
               })}
             </div>
 
-            <p className="text-[11px] text-zinc-400">
-              Klik tombol <span className="font-bold text-indigo-500">✓ KUNCI</span> di samping opsi yang benar.
-              Kunci jawaban: <span className="font-black text-indigo-600">{examDrafts[examQIdx]?.answerKey}</span>
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+              Pilih tombol <span className="font-bold text-indigo-500">Kunci Jawaban</span> di samping opsi yang benar.
+              Kunci aktif: <span className="font-black text-indigo-600 dark:text-indigo-400">Opsi {examDrafts[examQIdx]?.answerKey}</span>
             </p>
 
             {/* Explanation text */}
@@ -363,7 +362,7 @@ export function CreateExamModal({ onClose, onExamCreated }: CreateExamModalProps
               <button
                 onClick={() => saveDraftAndGo("prev")}
                 disabled={examQIdx === 0}
-                className="flex-1 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-bold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-40 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                className="flex-1 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 text-sm font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] disabled:opacity-40 transition-all cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <ChevronLeft className="h-4 w-4" /> Soal Sebelumnya
               </button>
@@ -371,7 +370,7 @@ export function CreateExamModal({ onClose, onExamCreated }: CreateExamModalProps
               {examQIdx < examDrafts.length - 1 ? (
                 <button
                   onClick={() => saveDraftAndGo("next")}
-                  className="flex-[2] py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold transition-all shadow-md cursor-pointer flex items-center justify-center gap-1.5"
+                  className="flex-[2] py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white text-sm font-bold transition-all shadow-sm cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   Soal Berikutnya <ChevronRight className="h-4 w-4" />
                 </button>
@@ -379,12 +378,12 @@ export function CreateExamModal({ onClose, onExamCreated }: CreateExamModalProps
                 <button
                   onClick={handleSaveExam}
                   disabled={isSavingExam}
-                  className="flex-[2] py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-sm font-bold transition-all shadow-md cursor-pointer flex items-center justify-center gap-1.5"
+                  className="flex-[2] py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] disabled:opacity-60 text-white text-sm font-bold transition-all shadow-sm cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   {isSavingExam ? (
                     <><div className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" /> Menyimpan...</>
                   ) : (
-                    <><CheckCircle2 className="h-4 w-4" /> Simpan & Bagikan Ujian</>
+                    <><CheckCircle2 className="h-4 w-4" /> Simpan &amp; Bagikan Ujian</>
                   )}
                 </button>
               )}

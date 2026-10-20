@@ -7,6 +7,7 @@
 "use client";
 
 import { Zap, Plus, Trash2 } from "lucide-react";
+import { LatexRenderer } from "@/components/ui/LatexRenderer";
 import { dailyDifficultyClass } from "./types";
 import type { DailyQuestion, Difficulty } from "./types";
 
@@ -43,7 +44,7 @@ export function DailyQuizTab({
         <Zap className="h-4 w-4 shrink-0 mt-0.5" />
         <span>
           Buat soal untuk <strong>Kuis Harian</strong>. Soal yang dibuat di sini langsung aktif tanpa perlu persetujuan.
-          Siswa yang menyelesaikan kuis harian mendapat <strong>+25 V-Points</strong> (1x per hari, reset 03:00 WIB).
+          Siswa yang menyelesaikan kuis harian mendapat <strong>+25 Poin XP</strong> (1x per hari, reset 03:00 WIB).
           Variasikan tingkat kesulitannya!
         </span>
       </div>
@@ -145,7 +146,7 @@ export function DailyQuizTab({
           <button
             type="submit"
             disabled={isSubmittingDaily}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3 rounded-xl transition-all shadow-md shadow-emerald-600/10 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-extrabold py-3 rounded-xl transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
           >
             {isSubmittingDaily ? (
               <><div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Menyimpan...</>
@@ -177,7 +178,9 @@ export function DailyQuizTab({
               <div key={q.id} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 flex gap-4 items-start text-left">
                 <span className="text-xs font-black text-zinc-400 mt-1 shrink-0 w-6 text-center">{idx + 1}</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200 leading-relaxed">{q.questionText}</p>
+                  <div className="text-sm font-bold text-zinc-800 dark:text-zinc-200 leading-relaxed">
+                    <LatexRenderer text={q.questionText} />
+                  </div>
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${dailyDifficultyClass(q.difficulty)}`}>{q.difficulty}</span>
                     {q.subject && <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400">{q.subject}</span>}
@@ -186,7 +189,7 @@ export function DailyQuizTab({
                 </div>
                 <button
                   onClick={() => onDeleteQuestion(q.id)}
-                  className="shrink-0 h-8 w-8 rounded-lg border border-red-200 dark:border-red-900 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center justify-center transition-colors cursor-pointer"
+                  className="shrink-0 h-8 w-8 rounded-lg border border-red-200 dark:border-red-900 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 active:scale-[0.98] flex items-center justify-center transition-colors cursor-pointer"
                   title="Hapus soal ini"
                 >
                   <Trash2 className="h-4 w-4" />

@@ -14,7 +14,7 @@
 
 import { useState, useEffect } from "react";
 import {
-  BookOpen, BookMarked, Eye, Zap,
+  BookOpen, BookMarked, Eye, Zap, ShieldCheck,
 } from "lucide-react";
 import type { BadgeDisplay } from "@/lib/badges";
 import { useToast } from "@/components/ui/Toast";
@@ -310,25 +310,29 @@ export default function ModeratorClient() {
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 mt-4 text-left">
       {/* Header Panel */}
-      <div className="mb-8 border-b border-zinc-200 dark:border-zinc-800 pb-6 relative overflow-hidden bg-gradient-to-br from-indigo-500/[0.03] to-transparent p-6 rounded-3xl border border-zinc-150">
-        <div className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 text-[10px] px-2.5 py-0.5 rounded-md font-bold mb-3 border border-indigo-100/40 uppercase tracking-wider w-fit">
-          🛡️ Ruang Panel Moderasi SMAN 2
+      <div className="mb-8 pb-6 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 p-6 sm:p-7 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm">
+        <div className="flex items-start gap-4">
+          <div className="h-11 w-11 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5">
+            <ShieldCheck className="h-6 w-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 dark:text-white tracking-tight">
+              Dasbor Pengawasan &amp; Persetujuan
+            </h1>
+            <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1 max-w-2xl leading-relaxed">
+              Tinjau kontribusi modul catatan belajar dan draf usulan soal latihan CBT yang diajukan oleh siswa agar perpustakaan NAWA-LEARN tetap bersih dan akurat.
+            </p>
+          </div>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 dark:text-white tracking-tight">
-          Dasbor Pengawasan & Persetujuan
-        </h1>
-        <p className="text-xs sm:text-sm text-zinc-500 mt-1 max-w-2xl leading-relaxed">
-          Tinjau kontribusi modul catatan belajar dan draf usulan soal latihan CBT yang diajukan oleh siswa agar perpustakaan NAWA-LEARN tetap bersih dan akurat.
-        </p>
 
         {/* Double Tabs Selector */}
-        <div className="flex gap-2.5 mt-6 border-t border-zinc-150 dark:border-zinc-800/80 pt-6">
+        <div className="flex flex-wrap gap-2.5 mt-6 border-t border-zinc-100 dark:border-zinc-800/80 pt-6">
           <button
             onClick={() => setActiveTab("modules")}
-            className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center gap-2 active:scale-[0.98] ${
               activeTab === "modules"
-                ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/10"
-                : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-650 dark:text-zinc-350 hover:bg-zinc-50"
+                ? "bg-indigo-600 border-indigo-600 text-white shadow-sm"
+                : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
             }`}
           >
             <BookOpen className="h-4 w-4" /> Draf Modul Catatan ({submissions.length})
@@ -336,10 +340,10 @@ export default function ModeratorClient() {
 
           <button
             onClick={() => setActiveTab("questions")}
-            className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center gap-2 active:scale-[0.98] ${
               activeTab === "questions"
-                ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/10"
-                : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-650 dark:text-zinc-355 hover:bg-zinc-50"
+                ? "bg-indigo-600 border-indigo-600 text-white shadow-sm"
+                : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
             }`}
           >
             <BookMarked className="h-4 w-4" /> Draf Soal Latihan CBT ({pendingQuestions.length})
@@ -347,10 +351,10 @@ export default function ModeratorClient() {
 
           <button
             onClick={() => setActiveTab("badges")}
-            className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center gap-2 active:scale-[0.98] ${
               activeTab === "badges"
-                ? "bg-amber-500 border-amber-500 text-white shadow-md shadow-amber-500/10"
-                : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-650 dark:text-zinc-355 hover:bg-zinc-50"
+                ? "bg-amber-500 border-amber-500 text-white shadow-sm"
+                : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
             }`}
           >
             <Eye className="h-4 w-4" /> Lencana Tersembunyi ({hiddenBadges.length})
@@ -358,10 +362,10 @@ export default function ModeratorClient() {
 
           <button
             onClick={() => setActiveTab("daily")}
-            className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center gap-2 active:scale-[0.98] ${
               activeTab === "daily"
-                ? "bg-emerald-600 border-emerald-600 text-white shadow-md shadow-emerald-600/10"
-                : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-650 dark:text-zinc-355 hover:bg-zinc-50"
+                ? "bg-emerald-600 border-emerald-600 text-white shadow-sm"
+                : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
             }`}
           >
             <Zap className="h-4 w-4" /> Kuis Harian ({dailyQuestions.length})

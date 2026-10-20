@@ -8,7 +8,7 @@
 "use client";
 
 import {
-  Clock, User, CheckCircle2,
+  Clock, User, CheckCircle2, ExternalLink,
 } from "lucide-react";
 import type { PendingSubmission } from "./types";
 
@@ -100,7 +100,7 @@ export function SubmissionsModulesTab({
                     }}
                     className="inline-flex items-center text-xs font-bold text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
                   >
-                    Buka Dokumen Modul ↗
+                    Buka Dokumen Modul <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
                   </button>
                 </div>
               </div>
@@ -109,7 +109,7 @@ export function SubmissionsModulesTab({
                 <button
                   onClick={() => onApproveModule(sub)}
                   disabled={processingModuleId === sub.submissionId}
-                  className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-xl text-xs font-extrabold transition-all shadow-md shadow-indigo-600/10 cursor-pointer h-9 disabled:opacity-50"
+                  className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer h-9 disabled:opacity-50"
                 >
                   {processingModuleId === sub.submissionId ? "Memproses..." : "Setujui Modul"}
                 </button>

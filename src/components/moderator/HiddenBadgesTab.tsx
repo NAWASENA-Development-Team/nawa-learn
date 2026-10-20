@@ -8,7 +8,7 @@
 // browser (M14e).
 "use client";
 
-import { Eye, ChevronDown } from "lucide-react";
+import { Eye, ChevronDown, ExternalLink } from "lucide-react";
 import { getRarityColor } from "@/lib/badges";
 import type { BadgeDisplay } from "@/lib/badges";
 import type { HiddenBadgeHolder } from "./types";
@@ -102,16 +102,16 @@ export function HiddenBadgesTab({
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-extrabold text-zinc-900 dark:text-white truncate">{u.name}</p>
                               <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-semibold">
-                                {u.points} VP · {u.approvedModules} modul · {u.approvedQuestions} soal
+                                {u.points} Poin · {u.approvedModules} modul · {u.approvedQuestions} soal
                               </p>
                             </div>
                             <a
                               href={`/profile/${u.id}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline shrink-0"
+                              className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline shrink-0 inline-flex items-center gap-0.5"
                             >
-                              Profil ↗
+                              Profil <ExternalLink className="h-3 w-3" />
                             </a>
                           </div>
                         ))}
