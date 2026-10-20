@@ -22,12 +22,12 @@ export default function NotFound() {
           <Compass className="h-7 w-7 text-indigo-600 dark:text-indigo-400" aria-hidden />
         </div>
 
-        <p className="mt-5 text-[11px] font-bold uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-400">
-          404
-        </p>
-        <h1 className="mt-1 text-2xl font-extrabold text-zinc-900 dark:text-white">
+        <h1 className="mt-5 text-2xl font-extrabold text-zinc-900 dark:text-white">
           Halaman Tidak Ditemukan
         </h1>
+        <p className="mt-1 text-xs font-bold text-indigo-600 dark:text-indigo-400">
+          Galat 404
+        </p>
         <p className="mt-3 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
           Alamat yang kamu buka tidak ada, atau tautannya sudah usang. Mungkin
           salah ketik sedikit?
@@ -36,7 +36,7 @@ export default function NotFound() {
         <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
           <Link
             href="/"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-bold text-white shadow-md transition-all hover:bg-indigo-700"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-bold text-white shadow-sm transition-all hover:bg-indigo-700 active:scale-[0.98]"
           >
             <House className="h-4 w-4" aria-hidden />
             Ke beranda
@@ -47,7 +47,7 @@ export default function NotFound() {
               struktur route tidak bocor ke publik. */}
           <Link
             href="/modules"
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-200 px-5 py-2.5 text-xs font-bold text-zinc-700 transition-all hover:border-indigo-300 hover:text-indigo-600 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-indigo-700 dark:hover:text-indigo-400"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-5 py-2.5 text-xs font-bold text-zinc-700 dark:text-zinc-300 transition-all hover:bg-zinc-50 dark:hover:bg-zinc-800 active:scale-[0.98]"
           >
             Jelajahi modul
           </Link>

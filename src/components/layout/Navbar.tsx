@@ -152,8 +152,8 @@ export default function Navbar({ isModerator = false }: { isModerator?: boolean 
             <Link href="/" className="flex items-center gap-2 shrink-0 group">
               <div className="flex items-center gap-1.5">
                 {/* NAWA icon — inline SVG, no extra HTTP request */}
-                <NawaIcon className="h-8 w-8 rounded-lg shadow-md shadow-indigo-500/20 transition-transform duration-200 group-hover:scale-105" />
-                <span className="font-black text-lg tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400 bg-clip-text text-transparent">
+                <NawaIcon className="h-8 w-8 rounded-lg shadow-sm transition-transform duration-200 group-hover:scale-105" />
+                <span className="font-black text-lg tracking-tight text-zinc-900 dark:text-white">
                   NAWA-LEARN
                 </span>
               </div>
@@ -191,14 +191,14 @@ export default function Navbar({ isModerator = false }: { isModerator?: boolean 
               <Show when="signed-out">
                 <Link
                   href="/sign-in"
-                  className="hidden sm:inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-sm font-bold text-white shadow-md shadow-indigo-500/20 transition-all hover:from-indigo-700 hover:to-violet-700 hover:shadow-indigo-500/30 active:scale-[0.98]"
+                  className="hidden sm:inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-indigo-700 active:scale-[0.98]"
                 >
                   Masuk / Daftar
                 </Link>
                 {/* Mobile: icon-only sign-in button */}
                 <Link
                   href="/sign-in"
-                  className="sm:hidden inline-flex items-center justify-center h-9 w-9 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/20"
+                  className="sm:hidden inline-flex items-center justify-center h-9 w-9 rounded-xl bg-indigo-600 text-white shadow-sm active:scale-[0.98]"
                 >
                   <User className="h-4 w-4" />
                 </Link>
@@ -257,7 +257,7 @@ export default function Navbar({ isModerator = false }: { isModerator?: boolean 
                     style={{ transitionDelay: mobileOpen ? `${idx * 25}ms` : "0ms" }}
                     className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-150 active:scale-[0.97]
                       ${active
-                        ? "bg-gradient-to-r from-indigo-50 to-violet-50 text-indigo-700 border border-indigo-100 dark:from-indigo-500/10 dark:to-violet-500/10 dark:text-indigo-400 dark:border-indigo-900/50"
+                        ? "bg-indigo-50 text-indigo-700 border border-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-900/50"
                         : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/60 dark:hover:text-zinc-100"
                       }`}
                   >
