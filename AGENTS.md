@@ -42,7 +42,7 @@ The profile page now features 22+ custom SVG avatars with fantasy and sci-fi the
 
 ### Avatar Implementation
 - Location: `public/avatars/*.svg`
-- Avatar picker in `src/components/profile/ProfileClient.tsx`
+- Avatar picker in `src/components/profile/ProfileModals.tsx` (moved out of `ProfileClient` in M14f; the header only renders the selected avatar and the picker-open button)
 - Users can select avatars from the profile page
 - Selected avatar is saved to localStorage
 - Each avatar has a unique gradient background color
@@ -51,7 +51,7 @@ The profile page now features 22+ custom SVG avatars with fantasy and sci-fi the
 - Moderator panel is hidden from public navigation unless the signed-in user has reviewer rights.
 - Access is **role-based**, not password-based: the panel opens only when `users.role` is `moderator` or `admin`.
 - `isModerator` is resolved **on the server** by `getCurrentUser()` (`src/lib/currentUser.ts`), which the root layout calls once per request (React `cache`) and passes to `Navbar` as a boolean prop. There is no client-side password, no `sessionStorage` flag, and no `/api/moderator/auth-check` round trip — that route was deleted in M14d because it had no callers left.
-- The panel itself is gated in `src/app/(dashboard)/moderator/page.tsx` (a server component) with `hasReviewerRole()`, which calls `notFound()` for anyone else. The UI lives in `src/components/moderator/ModeratorClient.tsx` and only ever mounts for a reviewer, so there is no client-side gate to skip by not running JavaScript.
+- The panel itself is gated in `src/app/(dashboard)/moderator/page.tsx` (a server component) with `hasReviewerRole()`, which calls `notFound()` for anyone else. The UI lives in `src/components/moderator/ModeratorClient.tsx` (a thin shell that loads the four queues on mount; the tabs themselves are `SubmissionsModulesTab`, `SubmissionsQuestionsTab`, `HiddenBadgesTab`, `DailyQuizTab`) and only ever mounts for a reviewer, so there is no client-side gate to skip by not running JavaScript.
 - `role` is read from `users.role` and nowhere else. Clerk `publicMetadata` is deliberately not consulted: a second copy of the role would drift from `npm run db:promote`.
 - All reviewer API routes are guarded by `requireModerator()` from `src/lib/authz.ts`.
 - To grant access, promote a user's role:
@@ -110,7 +110,7 @@ Rare and unique achievements:
 
 ### Implementation Details
 - Location: `src/lib/badges/` (a directory since M14e; `src/lib/badges.ts` is gone)
-- Badge evaluation runs **on the server**: `profile/[id]/page.tsx` and `GET /api/moderator/hidden-badges` call `evaluateBadges()`. `ProfileClient` receives the answer as a `badgeDisplays` prop and evaluates nothing.
+- Badge evaluation runs **on the server**: `profile/[id]/page.tsx` and `GET /api/moderator/hidden-badges` call `evaluateBadges()`. `ProfileClient` receives the answer as a `badgeDisplays` prop and evaluates nothing — and since M14f the panels (`ProfileBadges`, `ProfileStatsGrid`, the summary/moduls/questions/points-log panels and the five modals) are separate components that receive it as plain props and evaluate nothing either.
 - Dynamic unlock conditions based on:
   - Points accumulated
   - Leaderboard rank
@@ -236,7 +236,7 @@ To add new badges, edit `src/lib/badges/catalog.ts`:
 
 ### One module owns the header set
 - `src/lib/securityHeaders.ts` has **zero imports** on purpose: `next.config.ts` is loaded outside the app's module graph and `src/proxy.ts` runs on the Edge, so anything Node- or Clerk-specific in here would break one of them. It exports `CSP_DIRECTIVES` (a plain `Record<string, string[]>`), `SECURITY_HEADERS`, `HSTS_HEADER`, `CSP_REPORT_PATH` and `staticSecurityHeaders(isProduction)`.
-- `next.config.ts` `headers()` sends the request-independent set to `/(.*)`: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: DENY`, `Permissions-Policy` (deny-all except `camera=(self)`, which `SubmitClient` needs for note capture), and `Cross-Origin-Opener-Policy: same-origin-allow-popups` (the popup-safe value for Clerk's OAuth — `same-origin` would sever `window.opener` and break "Masuk dengan Google").
+- `next.config.ts` `headers()` sends the request-independent set to `/(.*)`: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: DENY`, `Permissions-Policy` (deny-all except `camera=(self)`, which `ModuleUploadTabs` on the submit page needs for note capture), and `Cross-Origin-Opener-Policy: same-origin-allow-popups` (the popup-safe value for Clerk's OAuth — `same-origin` would sever `window.opener` and break "Masuk dengan Google").
 - HSTS is only sent when `NODE_ENV === "production"`, with `includeSubDomains` and **without** `preload` (a one-way door that needs a separate, deliberate decision).
 
 ### The CSP is nonce-based and lives in `src/proxy.ts`
