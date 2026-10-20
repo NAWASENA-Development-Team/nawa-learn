@@ -14,7 +14,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  CheckCircle2, Sparkles, Loader2,
+  CheckCircle2, Sparkles, Loader2, Clock,
 } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { SUBJECTS } from "./types";
@@ -151,11 +151,11 @@ export function QuestionSubmitForm() {
 
             {/* Pending notice */}
             <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-xl p-3 mb-4 text-left flex gap-2.5 items-start">
-              <span className="text-amber-500 text-base shrink-0">⏳</span>
+              <Clock className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
               <div>
                 <p className="text-[11px] font-extrabold text-amber-800 dark:text-amber-300">Menunggu persetujuan moderator</p>
                 <p className="text-[10px] text-amber-700 dark:text-amber-400 mt-0.5 leading-snug">
-                  V-Point baru diberikan <strong>setelah moderator menyetujui</strong> soal ini. Soal sudah muncul di tab <em>Soal Saya</em> pada profilmu dengan status <em>verifikasi</em>.
+                  Poin XP baru diberikan <strong>setelah moderator menyetujui</strong> soal ini. Soal sudah muncul di tab <em>Soal Saya</em> pada profilmu dengan status <em>verifikasi</em>.
                 </p>
               </div>
             </div>
@@ -164,7 +164,7 @@ export function QuestionSubmitForm() {
               <div>
                 <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium">POIN SAAT DISETUJUI</p>
                 <p className="text-base font-bold text-indigo-650 dark:text-indigo-400">
-                  {questionDifficulty === "mudah" ? "+15" : questionDifficulty === "sulit" ? "+40" : "+25"} V-Point
+                  {questionDifficulty === "mudah" ? "+15" : questionDifficulty === "sulit" ? "+40" : "+25"} Poin XP
                 </p>
               </div>
               <div className={`text-xs px-2.5 py-1 rounded-md font-semibold border ${
@@ -276,12 +276,12 @@ export function QuestionSubmitForm() {
               >
                 <span className="text-lg">{d.emoji}</span>
                 <span className="text-xs font-bold">{d.label}</span>
-                <span className="text-[10px] font-semibold opacity-80">+{d.pts} VP</span>
+                <span className="text-[10px] font-semibold opacity-80">+{d.pts} XP</span>
               </button>
             ))}
           </div>
           <p className="mt-2 text-[11px] text-zinc-400 dark:text-zinc-500">
-            Poin diberikan ke akunmu saat soal disetujui moderator. Soal lebih sulit = lebih banyak V-Point!
+            Poin diberikan ke akunmu saat soal disetujui moderator. Soal lebih sulit = lebih banyak Poin XP!
           </p>
         </div>
 

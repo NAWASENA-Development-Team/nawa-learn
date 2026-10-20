@@ -105,7 +105,7 @@ export function EditProfileModal({ bio, motto, onClose }: EditProfileModalProps)
                 onClick={() => setEditBio(PLAYFUL_BIOS[Math.floor(Math.random() * PLAYFUL_BIOS.length)])}
                 className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold hover:underline cursor-pointer"
               >
-                🎲 Acak Bio Lucu
+                Acak Bio
               </button>
             </div>
             <textarea
@@ -154,7 +154,7 @@ export function AvatarPickerModal({ selectedAvatar, onSelect, onClose }: AvatarP
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
       <div className="max-w-md w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-2xl p-6 relative animate-in zoom-in-95 duration-200 text-center">
         <h3 className="text-lg font-black text-zinc-900 dark:text-white mb-2">
-          Pilih Lencana Avatar Kamu 🏷️
+          Pilih Lencana Avatar Kamu
         </h3>
         <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-6">
           Lencana avatar lucu mencerminkan semangat belajarmu di SMAN 2 Jonggol!
@@ -317,9 +317,9 @@ export function ReportModal({ onClose }: { onClose: () => void }) {
               onChange={(e) => setReportType(e.target.value)}
               className="w-full bg-zinc-800 border border-zinc-700 text-sm text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500/50"
             >
-              <option value="bug">🐛 Bug Sistem / Error</option>
-              <option value="content">📝 Kesalahan Konten (Modul/Soal)</option>
-              <option value="other">💡 Lainnya / Saran</option>
+              <option value="bug">Bug Sistem / Error</option>
+              <option value="content">Kesalahan Konten (Modul/Soal)</option>
+              <option value="other">Lainnya / Saran</option>
             </select>
           </div>
 

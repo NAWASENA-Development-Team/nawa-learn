@@ -14,8 +14,8 @@ export function ProfileModulesPanel({ modules }: { modules: UserModule[] }) {
     <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-sm">
       <div className="flex items-center justify-between mb-6 pb-4 border-b border-zinc-150 dark:border-zinc-850">
         <div>
-          <h3 className="text-lg font-extrabold text-zinc-900 dark:text-white">
-            📚 Modul Yang Kamu Unggah
+          <h3 className="text-lg font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
+            <BookOpen className="h-5 w-5 text-indigo-500" /> Modul Yang Kamu Unggah
           </h3>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
             Daftar lengkap catatan pelajaran, rangkuman, dan modul yang telah kamu kontribusikan.
@@ -31,10 +31,10 @@ export function ProfileModulesPanel({ modules }: { modules: UserModule[] }) {
 
       {modules.length === 0 ? (
         <div className="text-center py-16 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl">
-          <span className="text-4xl">📚</span>
+          <BookOpen className="h-10 w-10 text-zinc-300 dark:text-zinc-600 mx-auto mb-3" />
           <h4 className="text-base font-extrabold text-zinc-900 dark:text-white mt-3">Belum ada modul yang diunggah</h4>
           <p className="text-xs text-zinc-500 mt-1 max-w-xs mx-auto">
-            Bagikan modul pelajaranmu sekarang dan dapatkan V-Point dari komunitas NAWA-LEARN.
+            Bagikan modul pelajaranmu sekarang dan dapatkan Poin XP dari komunitas NAWA-LEARN.
           </p>
           <Link
             href="/submit"

@@ -18,7 +18,7 @@
 //
 // Sekarang server mengirim daftar yang sudah selesai; yang tersisa hanya
 // penyaringan untuk tampilan.
-import { Lock } from "lucide-react";
+import { Lock, Award } from "lucide-react";
 import { BADGE_CATEGORY_ORDER, getRarityColor } from "@/lib/badges";
 import type { BadgeDisplay } from "@/lib/badges";
 import { BADGE_CATEGORY_TITLES } from "./types";
@@ -31,7 +31,7 @@ export function ProfileBadges({ badgeDisplays }: { badgeDisplays: BadgeDisplay[]
       <div className="flex items-center justify-between mb-6">
         <div>
           <h3 className="text-lg font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-            🎖️ Lencana Pencapaian
+            <Award className="h-5 w-5 text-indigo-500" /> Lencana Pencapaian
           </h3>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
             Buka lencana khusus dengan aktif berkontribusi di komunitas SMAN 2 Jonggol.

@@ -9,7 +9,11 @@ import {
   Sparkles, 
   Crown, 
   Smile,
-  ArrowRight
+  ArrowRight,
+  Trophy,
+  Flame,
+  Medal,
+  Award
 } from "lucide-react";
 import { AVATAR_OPTIONS, AvatarOption } from "@/lib/avatars";
 import { getSpecialtyBadge, SpecialtyStats } from "@/lib/badges";
@@ -114,22 +118,25 @@ export default function LeaderboardClient({
     
     if (loggedInUser.seasonPoints === 0) {
       return {
-        text: "Kamu belum terdaftar di papan peringkat musim ini karena belum mengumpulkan poin. Mulai selesaikan kuis harian atau bagikan modul pertamamu untuk unjuk gigi! 🚀",
-        emoji: "🌱"
+        text: "Kamu belum terdaftar di papan peringkat musim ini karena belum mengumpulkan poin. Mulai selesaikan kuis harian atau bagikan modul pertamamu untuk unjuk gigi!",
+        icon: Sparkles,
+        iconBg: "bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400"
       };
     }
     
     if (loggedInUser.rank === 1) {
       return {
-        text: "Luar biasa! Kamu memegang takhta tertinggi di SMAN 2 Jonggol! Pertahankan prestasimu dan terus bantu teman-teman belajar! 👑🔥",
-        emoji: "👑"
+        text: "Luar biasa! Kamu memegang takhta peringkat tertinggi di SMAN 2 Jonggol! Pertahankan prestasimu dan terus bantu teman-teman belajar!",
+        icon: Crown,
+        iconBg: "bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400"
       };
     }
     
     if (isTop10) {
       return {
-        text: `Keren! Kamu mantap berada di peringkat 10 besar (#${loggedInUser.rank} sekolah). Sedikit usaha lagi untuk merebut podium teratas! 🌟⚡`,
-        emoji: "🏆"
+        text: `Keren! Kamu mantap berada di peringkat 10 besar (#${loggedInUser.rank} sekolah). Sedikit usaha lagi untuk merebut podium teratas!`,
+        icon: Trophy,
+        iconBg: "bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400"
       };
     }
 
@@ -138,35 +145,29 @@ export default function LeaderboardClient({
     const pointsNeeded = personAhead ? (personAhead.seasonPoints - loggedInUser.seasonPoints) + 1 : 10;
 
     return {
-      text: `Kamu berada di peringkat #${loggedInUser.rank} dari ${totalStudents} siswa. Hanya butuh sekitar +${pointsNeeded} poin lagi untuk menyalip peringkat di atasmu! Semangat kontribusi! 💪🚀`,
-      emoji: "🔥"
+      text: `Kamu berada di peringkat #${loggedInUser.rank} dari ${totalStudents} siswa. Hanya butuh sekitar +${pointsNeeded} poin lagi untuk menyalip peringkat di atasmu! Semangat berkontribusi!`,
+      icon: Flame,
+      iconBg: "bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400"
     };
   }, [loggedInUser, topUsers, totalStudents]);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
       
-      {/* 🚀 Playful Banner Header */}
-      <div className="mb-10 text-center relative overflow-hidden bg-gradient-to-r from-amber-500/10 via-yellow-500/5 to-transparent p-8 sm:p-10 border border-amber-100/50 dark:border-zinc-800/80 rounded-3xl">
-        {/* Glow circles backgrounds */}
-        <div className="absolute top-0 right-0 w-48 h-48 bg-yellow-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-        
-        <div className="text-center mb-10 md:mb-14 relative z-10 animate-in slide-in-from-bottom-4 duration-700">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-900/50 border border-indigo-100 dark:border-indigo-800 text-indigo-700 dark:text-indigo-400 text-sm font-bold mb-4">
-          <Sparkles className="w-4 h-4" /> 
-          {seasonLabel}
+      {/* Banner Header */}
+      <div className="mb-10 text-center relative overflow-hidden bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-900/80 dark:to-zinc-950 p-8 sm:p-10 border border-zinc-200/80 dark:border-zinc-800/80 rounded-3xl">
+        <div className="text-center max-w-3xl mx-auto relative z-10 animate-in slide-in-from-bottom-4 duration-700">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-zinc-900 dark:text-white tracking-tight leading-tight">
+            Papan Peringkat Siswa
+          </h1>
+          <div className="mt-3 inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/60 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 text-xs font-bold">
+            <Sparkles className="w-3.5 h-3.5" /> 
+            {seasonLabel}
+          </div>
+          <p className="mt-4 text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
+            Berkompetisilah untuk menjadi kontributor terbaik di musim ini! Juara podium mendapatkan akses spesial Moderator. Poin musim ini tidak memengaruhi total Poin XP yang sudah kamu kumpulkan.
+          </p>
         </div>
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-zinc-900 dark:text-white tracking-tight leading-tight">
-          Papan Peringkat <br className="hidden sm:block" />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400">
-            Musiman
-          </span>
-        </h1>
-        <p className="mt-4 text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto text-lg leading-relaxed">
-          Berkompetisilah untuk menjadi yang terbaik di season ini! Juara podium mendapatkan akses spesial Moderator. Poin musim ini tidak menghilangkan total V-Points yang sudah kamu kumpulkan.
-        </p>
-      </div>
       </div>
 
       {/* 🏆 Juara Podium — Profile-style avatar + frame + specialty badge */}
@@ -184,8 +185,8 @@ export default function LeaderboardClient({
               <div className="order-2 md:order-1 flex flex-col items-center gap-3 group">
 
                 {/* Floating rank label */}
-                <div className="bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-widest shadow">
-                  🥈 Peringkat 2
+                <div className="bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-bold text-[10px] px-3 py-1 rounded-full uppercase tracking-wider border border-zinc-200 dark:border-zinc-700">
+                  Peringkat 2
                 </div>
 
                 {/* Avatar with spinning profile frame */}
@@ -222,10 +223,10 @@ export default function LeaderboardClient({
                   <p className="text-[9px] text-zinc-400 font-medium mt-1">{getPlayfulTitle(u.points)}</p>
                   <div className="mt-2 flex items-baseline gap-1">
                     <span className="text-2xl font-black text-zinc-700 dark:text-zinc-300">{u.seasonPoints}</span>
-                    <span className="text-xs font-bold text-zinc-500">VP</span>
+                    <span className="text-xs font-bold text-zinc-500">XP</span>
                   </div>
                   <div className="mt-1 text-[10px] text-zinc-400 font-medium">
-                    Total: {u.points} VP
+                    Total: {u.points} XP
                   </div>
                 </div>
               </div>
@@ -243,12 +244,12 @@ export default function LeaderboardClient({
 
                 {/* Floating crown */}
                 <div className="animate-bounce mb-0">
-                  <Crown className="h-8 w-8 text-yellow-500 drop-shadow-lg" />
+                  <Crown className="h-8 w-8 text-amber-500 drop-shadow-md" />
                 </div>
 
                 {/* Rank label */}
-                <div className="bg-gradient-to-r from-amber-500 to-yellow-500 text-zinc-900 font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-widest shadow border border-yellow-400 animate-pulse">
-                  👑 CHAMPION
+                <div className="bg-amber-500 text-zinc-950 font-black text-[10px] px-3.5 py-1 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1 border border-amber-400">
+                  <Crown className="h-3 w-3" /> Juara 1
                 </div>
 
                 {/* Avatar with spinning amber frame */}
@@ -261,8 +262,8 @@ export default function LeaderboardClient({
                     }
                   </div>
                   {/* #1 badge overlaid */}
-                  <div className="absolute -top-2 -right-2 bg-gradient-to-r from-amber-500 to-yellow-400 text-zinc-900 font-black text-[9px] px-2 py-0.5 rounded-lg border border-yellow-300 shadow-md z-20 uppercase tracking-wide">
-                    #1 🏆
+                  <div className="absolute -top-2 -right-2 bg-amber-500 text-zinc-950 font-black text-[9px] px-2 py-0.5 rounded-md border border-amber-300 shadow-md z-20 uppercase tracking-wide">
+                    #1
                   </div>
                 </div>
 
@@ -290,10 +291,10 @@ export default function LeaderboardClient({
                   <p className="text-[9px] text-amber-800 dark:text-amber-500 font-bold mt-1">{getPlayfulTitle(u.points)}</p>
                   <div className="mt-2 flex items-baseline gap-1">
                     <span className="text-3xl font-black text-amber-600 dark:text-yellow-500">{u.seasonPoints}</span>
-                    <span className="text-sm font-bold text-amber-600/70 dark:text-yellow-500/70">VP</span>
+                    <span className="text-sm font-bold text-amber-600/70 dark:text-yellow-500/70">XP</span>
                   </div>
                   <div className="mt-1 text-[10px] text-amber-700/60 dark:text-amber-400/60 font-medium">
-                    Total: {u.points} VP
+                    Total: {u.points} XP
                   </div>
                 </div>
               </div>
@@ -310,8 +311,8 @@ export default function LeaderboardClient({
               <div className="order-3 flex flex-col items-center gap-3 group">
 
                 {/* Floating rank label */}
-                <div className="bg-orange-100 dark:bg-orange-950/50 text-orange-900 dark:text-orange-300 font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-widest shadow border border-orange-200/60 dark:border-orange-900/40">
-                  🥉 Peringkat 3
+                <div className="bg-orange-50 dark:bg-orange-950/40 text-orange-900 dark:text-orange-300 font-bold text-[10px] px-3 py-1 rounded-full uppercase tracking-wider border border-orange-200/60 dark:border-orange-900/40">
+                  Peringkat 3
                 </div>
 
                 {/* Avatar with amber frame */}
@@ -348,10 +349,10 @@ export default function LeaderboardClient({
                   <p className="text-[9px] text-zinc-400 font-medium mt-1">{getPlayfulTitle(u.points)}</p>
                   <div className="mt-2 flex items-baseline gap-1">
                     <span className="text-2xl font-black text-orange-700 dark:text-orange-400">{u.seasonPoints}</span>
-                    <span className="text-xs font-bold text-orange-600/70 dark:text-orange-400/70">VP</span>
+                    <span className="text-xs font-bold text-orange-600/70 dark:text-orange-400/70">XP</span>
                   </div>
                   <div className="mt-1 text-[10px] text-orange-800/50 dark:text-orange-300/60 font-medium">
-                    Total: {u.points} VP
+                    Total: {u.points} XP
                   </div>
                 </div>
               </div>
@@ -406,12 +407,12 @@ export default function LeaderboardClient({
                 : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300"
             }`}
           >
-            Juara Podium 🏆
+            Juara Podium
           </button>
         </div>
       </div>
 
-      {/* 📋 Dynamic Leaderboard List (Rank 4+) */}
+      {/* Dynamic Leaderboard List (Rank 4+) */}
       <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden mb-8">
         <div className="divide-y divide-zinc-100 dark:divide-zinc-800 text-left">
           
@@ -419,7 +420,7 @@ export default function LeaderboardClient({
           <div className="grid grid-cols-12 p-4 bg-zinc-50 dark:bg-zinc-900/50 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-zinc-400">
             <div className="col-span-2 sm:col-span-1 text-center">POSISI</div>
             <div className="col-span-7 sm:col-span-8 pl-2">KONTRIBUTOR</div>
-            <div className="col-span-3 text-right pr-4">V-POINT</div>
+            <div className="col-span-3 text-right pr-4">POIN XP</div>
           </div>
 
           {filteredUsers.map((user, index) => {
@@ -521,10 +522,10 @@ export default function LeaderboardClient({
                           ? "text-cyan-600 dark:text-cyan-400"
                           : "text-indigo-600 dark:text-indigo-500 group-hover:scale-105 transition-transform"
                   } flex items-center gap-1.5`}>
-                    {user.seasonPoints} <span className="text-[10px] sm:text-xs font-bold text-inherit opacity-70">VP</span>
+                    {user.seasonPoints} <span className="text-[10px] sm:text-xs font-bold text-inherit opacity-70">XP</span>
                   </div>
                   <div className="text-[10px] text-zinc-400 font-medium mt-0.5">
-                    Total: {user.points} VP
+                    Total: {user.points} XP
                   </div>
                 </div>
 
@@ -541,33 +542,34 @@ export default function LeaderboardClient({
         </div>
       </div>
 
-      {/* 🔔 Gamified rule card / encouragement banner */}
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 relative overflow-hidden shadow-lg shadow-indigo-500/10 mb-12">
-        <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+      {/* Gamified encouragement banner */}
+      <div className="bg-gradient-to-r from-indigo-900 to-zinc-900 text-white rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 relative overflow-hidden border border-indigo-500/20 shadow-xl mb-12">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
         <div className="text-center sm:text-left relative z-10">
-          <span className="bg-white/20 text-white font-bold text-[10px] px-2.5 py-1 rounded-full uppercase border border-white/10 tracking-widest">INGIN MASUK PODIUM?</span>
-          <h4 className="text-xl sm:text-2xl font-black mt-3">Tulis & Bagikan Modul Belajarmu!</h4>
-          <p className="text-xs text-indigo-100 mt-1 max-w-sm sm:max-w-md leading-relaxed">
+          <h4 className="text-xl sm:text-2xl font-black">Tulis & Bagikan Modul Belajarmu!</h4>
+          <p className="text-xs text-zinc-300 mt-1 max-w-sm sm:max-w-md leading-relaxed">
             Dapatkan poin dari setiap modul atau soal yang disetujui reviewer. Modul sains dan materi UTBK sangat disukai teman-temanmu!
           </p>
         </div>
         <Link 
           href="/submit"
-          className="shrink-0 bg-white hover:bg-zinc-100 text-indigo-700 font-black text-xs px-5 py-3.5 rounded-2xl shadow-md transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5"
+          className="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-5 py-3.5 rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-1.5 border border-indigo-500 cursor-pointer"
         >
           Unggah Karya Sekarang <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
 
-      {/* 🚨 4. Personalized Logged-in User Info Overlay Banner (Sticky / Float at the bottom if logged in) */}
+      {/* Personalized Logged-in User Info Overlay Banner */}
       {userRankMessage && (
         <div className="sticky bottom-6 left-0 right-0 max-w-4xl mx-auto z-40 px-4">
-          <div className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border border-amber-300 dark:border-amber-900/40 p-4 sm:p-5 rounded-3xl shadow-xl flex flex-col sm:flex-row items-center gap-4 justify-between animate-in slide-in-from-bottom-10 duration-500">
+          <div className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5 rounded-2xl shadow-xl flex flex-col sm:flex-row items-center gap-4 justify-between animate-in slide-in-from-bottom-10 duration-500">
             <div className="flex items-center gap-3.5 text-center sm:text-left">
-              <span className="text-3xl shrink-0">{userRankMessage.emoji}</span>
+              <div className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 ${userRankMessage.iconBg}`}>
+                <userRankMessage.icon className="h-6 w-6" />
+              </div>
               <div>
-                <h4 className="font-extrabold text-xs text-zinc-500 uppercase tracking-widest">Kabar Peringkat Kamu</h4>
-                <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200 mt-1 leading-normal sm:leading-relaxed">
+                <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Status Peringkat Anda</p>
+                <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mt-0.5 leading-normal sm:leading-relaxed">
                   {userRankMessage.text}
                 </p>
               </div>
@@ -576,7 +578,7 @@ export default function LeaderboardClient({
             <div className="flex gap-2 w-full sm:w-auto shrink-0">
               <Link
                 href="/profile"
-                className="w-full sm:w-auto text-center bg-amber-500 hover:bg-amber-600 text-zinc-950 font-black text-xs px-4 py-2.5 rounded-xl transition-all shadow-md active:scale-95 whitespace-nowrap"
+                className="w-full sm:w-auto text-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md active:scale-95 whitespace-nowrap cursor-pointer"
               >
                 Lihat Profil Saya
               </Link>

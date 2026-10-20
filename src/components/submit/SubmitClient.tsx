@@ -13,6 +13,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   Sparkles, ShieldCheck, FileUp, FolderOpen, HelpCircle, BookOpen, Loader2, ArrowRight,
 } from "lucide-react";
@@ -51,15 +52,12 @@ export default function SubmitClient() {
         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl" />
 
         <div className="max-w-3xl relative z-10">
-          <div className="inline-flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 text-xs px-3 py-1 rounded-full font-semibold mb-4 border border-indigo-100 dark:border-indigo-900/40">
-            <Sparkles className="h-3.5 w-3.5" /> Berbagi Catatan & Dapatkan Poin
-          </div>
           <h2 className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white sm:text-4xl">
             {submitType === "module" ? "Kontribusi Modul Pembelajaran" : "Kontribusi Kuis Latihan CBT"}
           </h2>
           <p className="mt-3 text-base text-zinc-600 dark:text-zinc-400 leading-relaxed">
             {submitType === "module"
-              ? "Unggah materi pembelajaran terbaikmu—baik itu ringkasan rumus matematika, rangkuman sosiologi, latihan soal olimpiade, atau catatan lainnya. Bantu teman-teman SMAN 2 Jonggol belajar lebih cepat dan kumpulkan V-Point-mu!"
+              ? "Unggah materi pembelajaran terbaikmu—baik itu ringkasan rumus matematika, rangkuman sosiologi, latihan soal olimpiade, atau catatan lainnya. Bantu teman-teman SMAN 2 Jonggol belajar lebih cepat dan kumpulkan poin XP-mu!"
               : "Buat soal latihan buatanmu sendiri! Pertanyaan kuis yang Anda ajukan akan masuk antrean moderasi pengurus OSIS. Setelah disetujui, soal akan diterbitkan secara instan di halaman latihan."}
           </p>
         </div>
@@ -95,7 +93,7 @@ export default function SubmitClient() {
               : "bg-white dark:bg-zinc-900 border-zinc-250 dark:border-zinc-800 text-zinc-650 dark:text-zinc-350 hover:bg-zinc-50"
           }`}
         >
-          <FolderOpen className="h-4 w-4" /> 📁 Kontribusi Modul Catatan
+          <FolderOpen className="h-4 w-4" /> Kontribusi Modul Catatan
         </button>
         <button
           type="button"
@@ -106,7 +104,7 @@ export default function SubmitClient() {
               : "bg-white dark:bg-zinc-900 border-zinc-250 dark:border-zinc-800 text-zinc-655 dark:text-zinc-350 hover:bg-zinc-50"
           }`}
         >
-          <HelpCircle className="h-4 w-4" /> ❓ Buat Soal Latihan CBT
+          <HelpCircle className="h-4 w-4" /> Buat Soal Latihan CBT
         </button>
       </div>
 
@@ -164,12 +162,12 @@ export default function SubmitClient() {
             <p className="text-xs text-indigo-200 leading-relaxed mb-4">
               Jadilah siswa paling berpengaruh di SMAN 2 Jonggol! Modulmu akan di-download oleh teman satu angkatan. Poinmu akan diakumulasikan ke papan peringkat utama sekolah.
             </p>
-            <a
+            <Link
               href="/leaderboard"
-              className="inline-flex items-center gap-1 bg-white hover:bg-zinc-100 text-indigo-900 text-xs px-3.5 py-1.5 rounded-lg font-bold transition-all"
+              className="inline-flex items-center gap-1 bg-white hover:bg-zinc-100 text-indigo-900 text-xs px-3.5 py-1.5 rounded-lg font-bold transition-all cursor-pointer"
             >
               Cek Papan Peringkat <ArrowRight className="h-3.5 w-3.5" />
-            </a>
+            </Link>
           </div>
         </div>
 

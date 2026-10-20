@@ -266,8 +266,8 @@ export function ProfileHeader({
 
           {/* Rank indicator badge */}
           {user.rank <= 3 && (
-            <span className="absolute -top-3 -left-3 bg-gradient-to-r from-amber-400 to-yellow-500 text-zinc-900 px-2 py-0.5 rounded-lg text-[10px] font-black tracking-wider uppercase border border-amber-300 shadow-md shadow-amber-500/30">
-              #{user.rank} 🏆
+            <span className="absolute -top-3 -left-3 bg-amber-500 text-zinc-950 px-2.5 py-0.5 rounded-lg text-[10px] font-black tracking-wider uppercase border border-amber-300 shadow-md">
+              #{user.rank}
             </span>
           )}
         </div>
@@ -433,8 +433,8 @@ export function ProfileHeader({
             </div>
             <p className="text-[11px] text-zinc-400 mt-2 font-medium">
               {user.points >= 500
-                ? "Kamu telah mencapai puncak ilmu tertinggi! 👑"
-                : `Butuh ${pointsNeededForNext} poin lagi untuk naik ke Level ${level + 1} 🚀`
+                ? "Kamu telah mencapai puncak ilmu tertinggi!"
+                : `Butuh ${pointsNeededForNext} poin lagi untuk naik ke Level ${level + 1}`
               }
             </p>
           </div>
@@ -449,8 +449,9 @@ export function ProfileHeader({
             </div>
             <div className="text-right">
               <p className="text-[9px] text-zinc-400 font-bold uppercase">LENCANA</p>
-              <p className="text-xs font-extrabold text-zinc-200 mt-0.5 text-indigo-300">
-                🏆 {badgeCount.unlocked} / {badgeCount.total}
+              <p className="text-xs font-extrabold text-zinc-200 mt-0.5 text-indigo-300 flex items-center justify-end gap-1">
+                <Award className="h-3.5 w-3.5 text-indigo-400" />
+                {badgeCount.unlocked} / {badgeCount.total}
               </p>
             </div>
           </div>

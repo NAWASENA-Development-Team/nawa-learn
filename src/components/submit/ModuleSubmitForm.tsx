@@ -10,6 +10,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   CheckCircle2, Sparkles, Loader2, AlertCircle, ArrowRight,
 } from "lucide-react";
@@ -141,7 +142,7 @@ export function ModuleSubmitForm() {
             <div className="bg-zinc-50 dark:bg-zinc-950 p-4 border border-zinc-200 dark:border-zinc-800 rounded-xl mb-6 flex items-center justify-between text-left">
               <div>
                 <p className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">POTENSI HADIAH</p>
-                <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400">+50 V-Point</p>
+                <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400">+50 Poin XP</p>
               </div>
               <div className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 text-xs px-2.5 py-1 rounded-md font-semibold border border-indigo-100 dark:border-indigo-950">
                 Peringkat Siswa
@@ -152,16 +153,16 @@ export function ModuleSubmitForm() {
               <button
                 type="button"
                 onClick={() => setShowCelebration(false)}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-xl transition-all duration-200 shadow-md shadow-indigo-600/10 hover:shadow-lg hover:scale-[1.01]"
+                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-xl transition-all duration-200 shadow-md shadow-indigo-600/10 hover:shadow-lg hover:scale-[1.01] cursor-pointer"
               >
                 Kirim Modul Lain
               </button>
-              <a
+              <Link
                 href="/leaderboard"
-                className="w-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 font-semibold py-2.5 rounded-xl transition-all duration-200 inline-flex items-center justify-center gap-1.5"
+                className="w-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 font-semibold py-2.5 rounded-xl transition-all duration-200 inline-flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 Lihat Peringkat <ArrowRight className="h-4 w-4" />
-              </a>
+              </Link>
             </div>
           </div>
         </div>

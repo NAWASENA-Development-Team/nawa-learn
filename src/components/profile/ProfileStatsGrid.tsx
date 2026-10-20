@@ -26,7 +26,7 @@ export function ProfileStatsGrid({ user, userModules, userQuestions }: ProfileSt
           <div className="h-10 w-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-inner font-bold">
             <Trophy className="h-5 w-5" />
           </div>
-          <span className="text-xs font-bold text-zinc-550 dark:text-zinc-450 uppercase tracking-wider">V-Point</span>
+          <span className="text-xs font-bold text-zinc-550 dark:text-zinc-450 uppercase tracking-wider">Poin XP</span>
         </div>
         <p className="text-3xl sm:text-4xl font-black text-amber-600 dark:text-amber-400 group-hover:scale-105 transition-transform duration-200">
           {user.points}

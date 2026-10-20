@@ -12,8 +12,8 @@ export function ProfileQuestionsPanel({ questions }: { questions: UserQuestion[]
     <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-sm">
       <div className="flex items-center justify-between mb-6 pb-4 border-b border-zinc-150 dark:border-zinc-850">
         <div>
-          <h3 className="text-lg font-extrabold text-zinc-900 dark:text-white">
-            📝 Soal Latihan Yang Kamu Buat
+          <h3 className="text-lg font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
+            <HelpCircle className="h-5 w-5 text-emerald-500" /> Soal Latihan Yang Kamu Buat
           </h3>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
             Daftar pertanyaan dan soal latihan ujian yang telah kamu tambahkan ke bank soal sekolah.
@@ -29,7 +29,7 @@ export function ProfileQuestionsPanel({ questions }: { questions: UserQuestion[]
 
       {questions.length === 0 ? (
         <div className="text-center py-16 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl">
-          <span className="text-4xl">📝</span>
+          <HelpCircle className="h-10 w-10 text-zinc-300 dark:text-zinc-600 mx-auto mb-3" />
           <h4 className="text-base font-extrabold text-zinc-900 dark:text-white mt-3">Belum ada soal yang dibuat</h4>
           <p className="text-xs text-zinc-500 mt-1 max-w-xs mx-auto">
             Bantu teman-teman berlatih materi dengan membuat pertanyaan pilihan ganda yang bermutu tinggi.

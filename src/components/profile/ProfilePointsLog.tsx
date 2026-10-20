@@ -21,14 +21,14 @@ export function ProfilePointsLog({ logs }: { logs: PointLog[] }) {
             Jejak Petualanganmu
           </h3>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
-            Riwayat lengkap bagaimana kamu mengumpulkan V-Point di NAWA-LEARN.
+            Riwayat lengkap bagaimana kamu mengumpulkan Poin XP di NAWA-LEARN.
           </p>
         </div>
       </div>
 
       {logs.length === 0 ? (
         <div className="text-center py-16 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl bg-zinc-50/50 dark:bg-zinc-950/50">
-          <span className="text-5xl block animate-bounce">⏱️</span>
+          <Clock className="h-12 w-12 text-zinc-400 mx-auto mb-3" />
           <h4 className="text-base font-extrabold text-zinc-900 dark:text-white mt-4">Belum ada riwayat perolehan poin</h4>
           <p className="text-xs text-zinc-500 mt-2 max-w-xs mx-auto">
             Unggah modul belajar perdana untuk mengklaim poin pertamamu senilai 50 poin!
