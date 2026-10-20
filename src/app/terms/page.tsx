@@ -60,7 +60,7 @@ export default function TermsPage() {
       <LegalSection number={4} title="Cara kerja poin dan peringkat">
         <LegalList
           items={[
-            <>Poin (V-Point) diberikan untuk kontribusi dan latihan yang sah, dihitung di server.</>,
+            <>Poin XP diberikan untuk kontribusi dan latihan yang sah, dihitung di server.</>,
             <>Soal kuis dinilai di server dan hanya boleh dijawab sekali per soal; mengakali sistem ini adalah pelanggaran.</>,
             <>Ujian yang kamu buat sendiri <strong>tidak</strong> menghasilkan poin, supaya kamu tidak bisa memberi poin kepada dirimu sendiri.</>,
             <>Peringkat diperbarui berkala. Poin dapat dibatalkan bila terbukti diperoleh dengan cara curang.</>,

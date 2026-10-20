@@ -21,19 +21,19 @@ export function LegalPage({
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
       <header className="mb-10">
-        <p className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-          NAWA-LEARN · SMAN 2 Jonggol
-        </p>
-        <h1 className="mt-2 text-3xl sm:text-4xl font-black tracking-tight text-zinc-900 dark:text-white">
+        <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-zinc-900 dark:text-white">
           {title}
         </h1>
-        <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">{intro}</p>
+        <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">{intro}</p>
 
         <div className="mt-5 flex flex-wrap items-center gap-2 text-xs">
-          <span className="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-1.5 font-bold text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/50 dark:text-indigo-300">
+          <span className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800/60 px-3 py-1 font-bold text-zinc-700 dark:text-zinc-300">
+            NAWA-LEARN SMAN 2 Jonggol
+          </span>
+          <span className="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-1 font-bold text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/50 dark:text-indigo-300">
             Versi {POLICY_VERSION}
           </span>
-          <span className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-1.5 font-semibold text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
+          <span className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-1 font-semibold text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
             Berlaku sejak {POLICY_EFFECTIVE_DATE}
           </span>
         </div>

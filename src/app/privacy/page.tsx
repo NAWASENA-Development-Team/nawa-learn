@@ -41,7 +41,7 @@ export default function PrivacyPage() {
             <><strong>Identitas akun</strong> — nama tampilan, alamat surel, dan ID akun dari layanan masuk (Clerk). Surel dipakai untuk masuk dan untuk menghubungimu soal akun.</>,
             <><strong>Profil yang kamu isi sendiri</strong> — foto profil, bio, motto, dan pilihan avatar. Semuanya opsional.</>,
             <><strong>Karya yang kamu unggah</strong> — judul, mata pelajaran, kelas, dan tautan berkas modul; teks soal, pilihan jawaban, kunci jawaban, dan pembahasan.</>,
-            <><strong>Aktivitas belajar</strong> — jawaban kuis, nilai ujian buatanmu, dan riwayat poin (V-Point).</>,
+            <><strong>Aktivitas belajar</strong> — jawaban kuis, nilai ujian buatanmu, dan riwayat Poin XP.</>,
             <><strong>Laporan yang kamu kirim</strong> — jenis masalah dan uraiannya, kalau kamu melaporkan bug atau konten.</>,
             <><strong>Catatan teknis</strong> — waktu kamu menyetujui kebijakan ini, dan ID permintaan di log server saat terjadi error.</>,
           ]}

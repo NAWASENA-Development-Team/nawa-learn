@@ -167,7 +167,7 @@ export default function PrivacyClient({
     <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:py-12">
       {/* ── Kepala ─────────────────────────────────────────────────────────── */}
       <div className="flex items-start gap-3">
-        <div className="h-11 w-11 shrink-0 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md shadow-indigo-500/30">
+        <div className="h-11 w-11 shrink-0 rounded-2xl bg-indigo-600 dark:bg-indigo-500 flex items-center justify-center shadow-sm">
           <ShieldCheck className="h-5 w-5 text-white" />
         </div>
         <div>
@@ -265,7 +265,7 @@ export default function PrivacyClient({
             type="button"
             onClick={() => handleExport("json")}
             disabled={downloading !== null}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-wait text-white px-4 py-3 text-sm font-extrabold shadow-lg shadow-indigo-500/25 transition-all active:scale-[0.99] cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-wait text-white px-4 py-3 text-sm font-bold shadow-sm transition-all active:scale-[0.98] cursor-pointer"
           >
             {downloading === "json" ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -279,7 +279,7 @@ export default function PrivacyClient({
             type="button"
             onClick={() => handleExport("csv")}
             disabled={downloading !== null}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-60 disabled:cursor-wait text-zinc-700 dark:text-zinc-200 px-4 py-3 text-sm font-extrabold transition-all active:scale-[0.99] cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-60 disabled:cursor-wait text-zinc-700 dark:text-zinc-200 px-4 py-3 text-sm font-bold transition-all active:scale-[0.98] cursor-pointer"
           >
             {downloading === "csv" ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -344,7 +344,7 @@ export default function PrivacyClient({
             <button
               type="button"
               onClick={() => setStep("confirm")}
-              className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-red-300 dark:border-red-800 bg-white dark:bg-zinc-950 hover:bg-red-50 dark:hover:bg-red-950/40 text-red-600 dark:text-red-400 px-4 py-2.5 text-sm font-extrabold transition-all cursor-pointer"
+              className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-red-200 dark:border-red-900/60 bg-white dark:bg-zinc-950 hover:bg-red-50 dark:hover:bg-red-950/40 active:scale-[0.98] text-red-600 dark:text-red-400 px-4 py-2.5 text-sm font-bold transition-all cursor-pointer"
             >
               <Trash2 className="h-4 w-4" /> Saya ingin menghapus akun
             </button>
@@ -378,7 +378,7 @@ export default function PrivacyClient({
                 type="button"
                 onClick={handleDelete}
                 disabled={!confirmationMatches || deleting}
-                className="inline-flex items-center gap-2 rounded-2xl bg-red-600 hover:bg-red-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-800 disabled:cursor-not-allowed text-white px-4 py-2.5 text-sm font-extrabold shadow-lg shadow-red-500/25 transition-all active:scale-[0.99] cursor-pointer"
+                className="inline-flex items-center gap-2 rounded-2xl bg-red-600 hover:bg-red-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-800 disabled:cursor-not-allowed text-white px-4 py-2.5 text-sm font-bold shadow-sm transition-all active:scale-[0.98] cursor-pointer"
               >
                 {deleting ? (
                   <>

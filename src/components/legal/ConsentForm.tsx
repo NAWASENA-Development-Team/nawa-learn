@@ -59,10 +59,10 @@ export default function ConsentForm() {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-zinc-950 dark:via-indigo-950/20 dark:to-purple-950/20 px-4 py-10">
-      <div className="w-full max-w-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-xl p-6 sm:p-8">
+    <div className="min-h-screen w-full flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4 py-10">
+      <div className="w-full max-w-xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl shadow-xl p-6 sm:p-8">
         <div className="flex items-center gap-3">
-          <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md shadow-indigo-500/30 shrink-0">
+          <div className="h-11 w-11 rounded-2xl bg-indigo-600 dark:bg-indigo-500 flex items-center justify-center shadow-sm shrink-0">
             <ShieldCheck className="h-5 w-5 text-white" />
           </div>
           <div>
@@ -125,7 +125,7 @@ export default function ConsentForm() {
           <button
             type="submit"
             disabled={!checked || isSubmitting}
-            className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-800 disabled:cursor-not-allowed text-white px-5 py-3 text-sm font-extrabold shadow-lg shadow-indigo-500/25 transition-all active:scale-[0.99]"
+            className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-800 disabled:cursor-not-allowed text-white px-5 py-3 text-sm font-extrabold shadow-sm transition-all active:scale-[0.98] cursor-pointer"
           >
             {isSubmitting ? (
               <>
