@@ -1,6 +1,7 @@
 // components/modules/ModulesLibraryClient.tsx
 "use client";
 
+import Link from "next/link";
 import { useState, useMemo, useEffect } from "react";
 import { 
   Search, 
@@ -224,19 +225,22 @@ export default function ModulesLibraryClient({
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-8 text-center sm:text-left relative overflow-hidden bg-gradient-to-r from-indigo-500/10 via-purple-500/5 to-transparent p-6 sm:p-8 border border-indigo-100/50 dark:border-zinc-800/80 rounded-3xl flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="max-w-3xl relative z-10">
-          <div className="inline-flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 text-xs px-3 py-1 rounded-full font-semibold mb-4 border border-indigo-100/60 dark:border-indigo-900/40">
-            <Sparkles className="h-3.5 w-3.5" /> Perpustakaan Modul SMAN 2 Jonggol
-          </div>
-          <h2 className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white sm:text-4xl">
-            Pusat Modul & Catatan Belajar
-          </h2>
+          <h1 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-white sm:text-4xl">
+            Perpustakaan Modul &amp; Catatan Belajar SMAN 2 Jonggol
+          </h1>
+          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400 max-w-xl leading-relaxed">
+            Koleksi materi pelajaran terkurasi, ringkasan rumus, dan catatan sebaya untuk persiapan PTS, PAS, dan UTBK-SNBT.
+          </p>
         </div>
         <div className="shrink-0 relative z-10 flex justify-center md:justify-end">
-          <a href="/submit" className="inline-flex items-center gap-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 text-sm font-bold shadow-md hover:scale-105 transition-all">
+          <Link
+            href="/submit"
+            className="inline-flex items-center gap-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white px-5 py-3 text-sm font-bold shadow-md shadow-indigo-500/20 hover:-translate-y-0.5 active:scale-[0.98] transition-all"
+          >
             Kontribusi Modul <ArrowRight className="h-4.5 w-4.5" />
-          </a>
+          </Link>
         </div>
       </div>
 
@@ -345,12 +349,14 @@ export default function ModulesLibraryClient({
         </div>
       </div>
 
-      {/* 📚 Modules Grid */}
+      {/* Modules Grid */}
       {filteredAndSortedModules.length === 0 ? (
         <div className="text-center py-20 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl bg-white dark:bg-zinc-900 shadow-sm max-w-2xl mx-auto">
-          <span className="text-5xl">📚</span>
-          <h3 className="mt-4 text-xl font-bold text-zinc-900 dark:text-white">Tidak ada modul ditemukan</h3>
-          <p className="mt-2 text-sm text-zinc-500 max-w-sm mx-auto">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/40">
+            <BookOpen className="h-7 w-7" />
+          </div>
+          <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Tidak ada modul ditemukan</h3>
+          <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto">
             Coba ubah kata kunci pencarian Anda atau bersihkan filter kelas dan kategori untuk menemukan materi belajar.
           </p>
           <button 
@@ -358,8 +364,9 @@ export default function ModulesLibraryClient({
               setSearchQuery("");
               setSelectedCategory("Semua");
               setSelectedGrade("Semua");
+              setShowBookmarksOnly(false);
             }}
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-indigo-500 transition-colors"
+            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all cursor-pointer"
           >
             Reset Semua Pencarian
           </button>

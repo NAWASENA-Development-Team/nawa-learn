@@ -8,7 +8,7 @@
 "use client";
 
 import {
-  Clock, ArrowLeft, ArrowRight, Check, CheckCircle2, GraduationCap,
+  Clock, ArrowLeft, ArrowRight, Check, CheckCircle2, GraduationCap, Shuffle, AlertTriangle,
 } from "lucide-react";
 import { LatexRenderer } from "@/components/ui/LatexRenderer";
 import type { Quiz, Question } from "./types";
@@ -40,11 +40,8 @@ export function QuizSessionScreen({
       {/* Header */}
       <div className="mb-6 flex flex-col sm:flex-row justify-between sm:items-center gap-4 pb-5 border-b border-zinc-200 dark:border-zinc-800/80">
         <div className="text-left">
-          <div className="inline-flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 text-xs px-2.5 py-0.5 rounded-md font-bold mb-2">
-            <GraduationCap className="h-3.5 w-3.5" /> Ruang CBT Latihan Soal
-          </div>
           <h2 className="text-2xl font-extrabold text-zinc-900 dark:text-white tracking-tight">{quiz.title}</h2>
-          <p className="text-xs text-zinc-550 mt-0.5">
+          <p className="text-xs text-zinc-550 mt-1">
             Kerjakan soal pilihan ganda di bawah ini secara teliti untuk menguji kesiapan UTBK dan Olimpiade Anda.
           </p>
         </div>
@@ -220,10 +217,10 @@ export function QuizSessionScreen({
                 <p className="text-[10px] text-zinc-400 font-medium mt-0.5">Siswa SMAN 2 Jonggol</p>
               </div>
             </div>
-            <div className="border-t border-zinc-100 dark:border-zinc-800/80 mt-4 pt-3 space-y-1.5 text-[10px] text-zinc-500">
-              <p>⏱️ <b>Durasi:</b> {quiz.durationMinutes} Menit Maksimal</p>
-              <p>🔀 <b>Acak Soal:</b> Aktif (CBT Mode)</p>
-              <p>⚠️ <b>Penalti:</b> -10% / Jawaban Salah</p>
+            <div className="border-t border-zinc-100 dark:border-zinc-800/80 mt-4 pt-3 space-y-2 text-[10px] text-zinc-500">
+              <p className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-zinc-400 shrink-0" /> <b>Durasi:</b> {quiz.durationMinutes} Menit Maksimal</p>
+              <p className="flex items-center gap-1.5"><Shuffle className="h-3.5 w-3.5 text-zinc-400 shrink-0" /> <b>Acak Soal:</b> Aktif (CBT Mode)</p>
+              <p className="flex items-center gap-1.5"><AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" /> <b>Penalti:</b> -10% / Jawaban Salah</p>
             </div>
           </div>
         </div>

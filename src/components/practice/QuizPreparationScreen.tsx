@@ -28,9 +28,6 @@ export function QuizPreparationScreen({
 
         <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-850 p-6 sm:p-10 text-white relative">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-md text-white text-[10px] px-3 py-1 rounded-full font-bold mb-3 border border-white/10 uppercase tracking-widest">
-            <Sparkles className="h-3.5 w-3.5 text-amber-300" /> RUANGGURU QUIZ FORMAT
-          </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-tight">
             {quiz.title}
           </h2>
@@ -151,14 +148,14 @@ export function QuizPreparationScreen({
             </button>
             {blockedByAntiCheat ? (
               <div className="flex-[2] inline-flex items-center justify-center gap-2 rounded-xl bg-amber-100 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 font-bold py-3.5 px-6 text-xs sm:text-sm cursor-not-allowed">
-                ⚠️ Semua soal ini Anda buat — tidak bisa mengikuti kuis sendiri
+                Semua soal ini Anda buat — tidak bisa mengikuti kuis sendiri
               </div>
             ) : (
               <button
                 onClick={onStart}
-                className="flex-[2] inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-3.5 px-6 text-xs sm:text-sm transition-all shadow-md shadow-indigo-600/10 hover:shadow-lg hover:shadow-indigo-600/20 active:scale-[0.98] cursor-pointer border border-indigo-700"
+                className="flex-[2] inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-extrabold py-3.5 px-6 text-xs sm:text-sm transition-all shadow-md shadow-indigo-500/25 hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer"
               >
-                Mulai Ujian Sekarang 🚀
+                Mulai Ujian Sekarang
               </button>
             )}
           </div>

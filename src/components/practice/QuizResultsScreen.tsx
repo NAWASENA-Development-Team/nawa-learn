@@ -13,7 +13,7 @@
 "use client";
 
 import {
-  Award, AlertCircle, Sparkles, Minus, RotateCcw, BookOpen,
+  Award, AlertCircle, Sparkles, Minus, RotateCcw, BookOpen, Info, Lock, Gift, CheckCircle,
 } from "lucide-react";
 import { LatexRenderer } from "@/components/ui/LatexRenderer";
 import type { Question } from "./types";
@@ -93,30 +93,34 @@ export function QuizResultsScreen({
           </div>
         </div>
 
-        {/* V-Point result section */}
+        {/* Poin XP result section */}
         <div className="max-w-2xl mx-auto mb-6 space-y-3">
           {pointsLoading ? (
             <div className="p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/30 flex items-center gap-3">
               <div className="h-5 w-5 rounded-full border-2 border-indigo-300 border-t-indigo-600 animate-spin shrink-0" />
-              <p className="text-sm font-bold text-indigo-700 dark:text-indigo-300">Menghitung V-Point kamu...</p>
+              <p className="text-sm font-bold text-indigo-700 dark:text-indigo-300">Menghitung Poin kamu...</p>
             </div>
           ) : notRewardable ? (
-            <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-lg shrink-0">ℹ️</div>
+            <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 shrink-0">
+                <Info className="h-5 w-5" />
+              </div>
               <div className="text-left">
-                <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Latihan Tanpa V-Point</p>
+                <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Latihan Tanpa Poin XP</p>
                 <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mt-0.5">
-                  Kuis ini tetap dinilai, tetapi tidak memberi V-Point — kuis contoh dan ujian buatan siswa tidak dapat diverifikasi, jadi tidak ada poin yang ditambahkan. Kuis hasil kontribusi siswa dan Kuis Harian tetap memberi poin.
+                  Kuis ini tetap dinilai, tetapi tidak memberi poin — kuis contoh dan ujian buatan siswa tidak dapat diverifikasi, jadi tidak ada poin yang ditambahkan. Kuis hasil kontribusi siswa dan Kuis Harian tetap memberi poin.
                 </p>
               </div>
             </div>
           ) : alreadyCompleted ? (
-            <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-lg shrink-0">🔒</div>
+            <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 shrink-0">
+                <Lock className="h-5 w-5" />
+              </div>
               <div className="text-left">
-                <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">V-Point Tidak Diberikan</p>
+                <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Poin Tidak Diberikan</p>
                 <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mt-0.5">
-                  Kamu sudah pernah menyelesaikan ujian ini sebelumnya. V-Point hanya diberikan untuk penyelesaian <span className="font-bold">pertama kali</span>.
+                  Kamu sudah pernah menyelesaikan ujian ini sebelumnya. Poin XP hanya diberikan untuk penyelesaian <span className="font-bold">pertama kali</span>.
                 </p>
               </div>
             </div>
@@ -125,7 +129,9 @@ export function QuizResultsScreen({
               {/* Reward row */}
               <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/30 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-amber-100 dark:bg-amber-950/50 text-amber-600 flex items-center justify-center text-lg shrink-0">⭐</div>
+                  <div className="h-10 w-10 rounded-xl bg-amber-100 dark:bg-amber-950/50 text-amber-600 flex items-center justify-center shrink-0">
+                    <Sparkles className="h-5 w-5" />
+                  </div>
                   <div className="text-left">
                     <p className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">Reward Selesai Kuis</p>
                     <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">
@@ -146,7 +152,7 @@ export function QuizResultsScreen({
                     <div className="text-left">
                       <p className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">Penalti Jawaban Salah</p>
                       <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">
-                        {wrongCount} salah × 10% dari reward dasar ({pointsAwarded} VP)
+                        {wrongCount} salah × 10% dari reward dasar ({pointsAwarded} XP)
                       </p>
                     </div>
                   </div>
@@ -161,7 +167,7 @@ export function QuizResultsScreen({
                   : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900/30"
               }`}>
                 <p className={`text-sm font-extrabold ${netPoints >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}`}>
-                  {netPoints >= 0 ? "Net V-Point Diterima" : "Net V-Point Berkurang"}
+                  {netPoints >= 0 ? "Net Poin Diterima" : "Net Poin Berkurang"}
                 </p>
                 <span className={`text-2xl font-black shrink-0 ${netPoints >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
                   {netPoints >= 0 ? `+${netPoints}` : netPoints}
@@ -173,8 +179,10 @@ export function QuizResultsScreen({
 
         {/* Level reward banner */}
         {levelRewardsGranted.length > 0 && (
-          <div className="max-w-2xl mx-auto mb-4 p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/30 border border-amber-200 dark:border-amber-800 text-left flex gap-3 items-start animate-in fade-in duration-300">
-            <span className="text-2xl shrink-0">🎁</span>
+          <div className="max-w-2xl mx-auto mb-4 p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-left flex gap-3 items-start animate-in fade-in duration-300">
+            <div className="h-9 w-9 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 flex items-center justify-center shrink-0">
+              <Gift className="h-5 w-5" />
+            </div>
             <div>
               <p className="font-extrabold text-amber-800 dark:text-amber-300 text-sm">Level Reward Baru!</p>
               <ul className="mt-1 space-y-0.5">
@@ -191,7 +199,7 @@ export function QuizResultsScreen({
           <AlertCircle className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
           <div>
             <p className="font-extrabold text-zinc-900 dark:text-white">
-              {finalScore >= 70 ? "🎉 Luar Biasa! Kesiapan Ujian Sangat Tinggi" : "📚 Terus Berjuang & Pelajari Rangkuman"}
+              {finalScore >= 70 ? "Kesiapan Ujian Sangat Tinggi" : "Terus Berjuang & Pelajari Rangkuman"}
             </p>
             <p className="text-zinc-500 text-xs mt-1 leading-relaxed">
               {finalScore >= 70

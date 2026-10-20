@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import confetti from "canvas-confetti";
+import { LatexRenderer } from "@/components/ui/LatexRenderer";
 
 interface Question {
   id: string;
@@ -155,8 +156,8 @@ export default function DailyQuizClient({ initialQuestions }: DailyQuizClientPro
   if (isFinished) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-20 text-center animate-in zoom-in duration-500">
-        <Trophy className="h-24 w-24 text-yellow-500 mx-auto mb-6 drop-shadow-xl" />
-        <h2 className="text-4xl font-black text-zinc-900 dark:text-white mb-4">Sesi Selesai! 🎉</h2>
+        <Trophy className="h-24 w-24 text-amber-500 mx-auto mb-6 drop-shadow-xl" />
+        <h2 className="text-4xl font-black text-zinc-900 dark:text-white mb-4">Sesi Kuis Selesai!</h2>
         <p className="text-lg text-zinc-600 dark:text-zinc-400 mb-6 max-w-lg mx-auto">
           Luar biasa! Kamu telah menguasai {totalQuestions} soal di sesi ini. Otakmu makin tajam!
         </p>
@@ -238,8 +239,8 @@ export default function DailyQuizClient({ initialQuestions }: DailyQuizClientPro
 
           <div className="p-6 sm:p-8">
             <div className="min-h-[120px] mb-8">
-              <h3 className="text-lg sm:text-xl font-bold text-zinc-800 dark:text-zinc-100 leading-relaxed whitespace-pre-wrap">
-                {currentQ.questionText}
+              <h3 className="text-lg sm:text-xl font-bold text-zinc-800 dark:text-zinc-100 leading-relaxed">
+                <LatexRenderer text={currentQ.questionText} />
               </h3>
             </div>
 
@@ -248,21 +249,21 @@ export default function DailyQuizClient({ initialQuestions }: DailyQuizClientPro
                 const isSelected = selectedOption === key;
                 const isCorrectAnswer = key === revealed?.correctKey;
                 
-                let btnClass = "border-zinc-200 dark:border-zinc-700 hover:border-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20";
+                let btnClass = "border-zinc-200 dark:border-zinc-800 hover:border-indigo-300 dark:hover:border-indigo-900/60 hover:bg-zinc-50 dark:hover:bg-zinc-850/50";
                 let checkIcon = null;
 
                 if (revealed) {
                   if (isCorrectAnswer) {
-                    btnClass = "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-900 dark:text-emerald-100 ring-1 ring-emerald-500";
+                    btnClass = "border-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-100 ring-1 ring-emerald-500";
                     checkIcon = <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />;
                   } else if (isSelected && !isCorrectAnswer) {
-                    btnClass = "border-red-500 bg-red-50 dark:bg-red-900/20 text-red-900 dark:text-red-100 ring-1 ring-red-500";
+                    btnClass = "border-red-500 bg-red-50/70 dark:bg-red-950/30 text-red-900 dark:text-red-100 ring-1 ring-red-500";
                     checkIcon = <XCircle className="h-5 w-5 text-red-500 shrink-0" />;
                   } else {
-                    btnClass = "border-zinc-200 dark:border-zinc-800 opacity-50";
+                    btnClass = "border-zinc-200 dark:border-zinc-800 opacity-40";
                   }
                 } else if (isSelected) {
-                  btnClass = "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 ring-1 ring-indigo-500";
+                  btnClass = "border-indigo-600 bg-indigo-50/70 dark:bg-indigo-950/40 ring-1 ring-indigo-600";
                 }
 
                 return (
@@ -270,23 +271,23 @@ export default function DailyQuizClient({ initialQuestions }: DailyQuizClientPro
                     key={key}
                     onClick={() => handleSelect(key)}
                     disabled={revealed !== null}
-                    className={`w-full text-left p-4 rounded-2xl border-2 transition-all flex items-center justify-between gap-4 ${btnClass}`}
+                    className={`w-full text-left p-4 rounded-xl border transition-all duration-200 flex items-center justify-between gap-4 cursor-pointer active:scale-[0.99] ${btnClass}`}
                   >
-                    <div className="flex gap-4 items-start">
-                      <span className={`font-black mt-0.5 ${
-                        revealed && isCorrectAnswer ? "text-emerald-600 dark:text-emerald-400" :
-                        revealed && isSelected && !isCorrectAnswer ? "text-red-600 dark:text-red-400" :
-                        isSelected ? "text-indigo-600 dark:text-indigo-400" :
-                        "text-zinc-400"
+                    <div className="flex gap-3.5 items-start">
+                      <span className={`h-6 w-6 rounded-md flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 ${
+                        revealed && isCorrectAnswer ? "bg-emerald-600 text-white" :
+                        revealed && isSelected && !isCorrectAnswer ? "bg-red-600 text-white" :
+                        isSelected ? "bg-indigo-600 text-white" :
+                        "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
                       }`}>
                         {key}
                       </span>
-                      <span className={`font-medium ${
-                        revealed && isCorrectAnswer ? "text-emerald-900 dark:text-emerald-100" :
-                        revealed && isSelected && !isCorrectAnswer ? "text-red-900 dark:text-red-100" :
-                        "text-zinc-700 dark:text-zinc-300"
+                      <span className={`text-sm font-medium ${
+                        revealed && isCorrectAnswer ? "text-emerald-950 dark:text-emerald-100 font-semibold" :
+                        revealed && isSelected && !isCorrectAnswer ? "text-red-950 dark:text-red-100 font-semibold" :
+                        "text-zinc-800 dark:text-zinc-200"
                       }`}>
-                        {text as string}
+                        <LatexRenderer text={text as string} />
                       </span>
                     </div>
                     {checkIcon}
