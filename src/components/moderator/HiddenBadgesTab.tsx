@@ -36,8 +36,8 @@ export function HiddenBadgesTab({
       </div>
 
       {isLoadingBadges ? (
-        <div className="p-12 text-center text-zinc-550 flex flex-col items-center justify-center">
-          <div className="h-8 w-8 rounded-full border-4 border-amber-150 border-t-amber-500 animate-spin mb-3" />
+        <div className="p-12 text-center text-zinc-600 flex flex-col items-center justify-center">
+          <div className="h-8 w-8 rounded-full border-4 border-amber-100 border-t-amber-500 animate-spin mb-3" />
           <p className="text-xs font-bold">Memuat data lencana tersembunyi...</p>
         </div>
       ) : (

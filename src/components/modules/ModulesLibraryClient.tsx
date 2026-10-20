@@ -265,8 +265,8 @@ export default function ModulesLibraryClient({
                 onClick={() => setSortBy("newest")}
                 className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                   sortBy === "newest"
-                    ? "bg-white dark:bg-zinc-850 text-indigo-600 dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-700/50"
-                    : "text-zinc-500 hover:text-zinc-850 dark:hover:text-zinc-300"
+                    ? "bg-white dark:bg-zinc-800 text-indigo-600 dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-700/50"
+                    : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300"
                 }`}
               >
                 Terbaru
@@ -275,8 +275,8 @@ export default function ModulesLibraryClient({
                 onClick={() => setSortBy("downloads")}
                 className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                   sortBy === "downloads"
-                    ? "bg-white dark:bg-zinc-850 text-indigo-600 dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-700/50"
-                    : "text-zinc-500 hover:text-zinc-850 dark:hover:text-zinc-300"
+                    ? "bg-white dark:bg-zinc-800 text-indigo-600 dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-700/50"
+                    : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300"
                 }`}
               >
                 Terpopuler
@@ -286,7 +286,7 @@ export default function ModulesLibraryClient({
         </div>
 
         {/* Filters Grid */}
-        <div className="border-t border-zinc-150 dark:border-zinc-850 pt-4 flex flex-col gap-3">
+        <div className="border-t border-zinc-100 dark:border-zinc-800 pt-4 flex flex-col gap-3">
           {/* Category Filters */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 min-w-[70px] flex items-center gap-1">
@@ -300,7 +300,7 @@ export default function ModulesLibraryClient({
                   className={`px-3.5 py-1.5 rounded-full text-xs font-medium border transition-all duration-150 ${
                     selectedCategory === cat
                       ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/10 scale-[1.02]"
-                      : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-850"
+                      : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800"
                   }`}
                 >
                   {cat === "Semua" ? "Semua Kategori" : cat}
@@ -322,7 +322,7 @@ export default function ModulesLibraryClient({
                   className={`px-3.5 py-1.5 rounded-full text-xs font-medium border transition-all duration-150 ${
                     selectedGrade === grd
                       ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/10 scale-[1.02]"
-                      : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-850"
+                      : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800"
                   }`}
                 >
                   {grd === "Semua" ? "Semua Kelas" : `Kelas ${grd}`}
@@ -394,7 +394,7 @@ export default function ModulesLibraryClient({
                       <span className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[10px] font-bold ${fileDetails.color}`}>
                         <FileIcon className="h-3 w-3" /> {fileDetails.label}
                       </span>
-                      <span className="text-[10px] bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 px-2 py-0.5 rounded-lg text-zinc-550 font-semibold">
+                      <span className="text-[10px] bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 px-2 py-0.5 rounded-lg text-zinc-600 font-semibold">
                         Kelas {mod.grade}
                       </span>
                     </div>
@@ -491,7 +491,7 @@ export default function ModulesLibraryClient({
                   setSelectedReaderModule(null);
                   setPrintSuccess(false);
                 }}
-                className="text-zinc-400 hover:text-zinc-650 dark:hover:text-zinc-200 p-2 hover:bg-zinc-150 dark:hover:bg-zinc-800 rounded-xl transition-all shrink-0 cursor-pointer"
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-all shrink-0 cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -594,16 +594,16 @@ export default function ModulesLibraryClient({
                       <h2 className="text-xl sm:text-2xl font-extrabold text-zinc-900 tracking-tight mt-2 flex items-center gap-2">
                         {selectedReaderModule.title} 📝
                       </h2>
-                      <p className="text-xs text-zinc-505 mt-1 font-mono">
+                      <p className="text-xs text-zinc-600 mt-1 font-mono">
                         Discan oleh: <span className="font-bold">{selectedReaderModule.uploaderName || "Anonim"}</span> pada {new Date(selectedReaderModule.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
                       </p>
                     </div>
 
                     {selectedReaderModule.subject.includes("Fisika") ? (
                       /* Mock high-fidelity Physics handwritten note content */
-                      <div className="space-y-6 text-sm sm:text-base leading-relaxed font-sans text-zinc-750">
+                      <div className="space-y-6 text-sm sm:text-base leading-relaxed font-sans text-zinc-700">
                         <div>
-                          <h4 className="font-bold text-lg text-indigo-650 bg-indigo-50 border-b border-indigo-200 px-2 py-0.5 rounded inline-block">
+                          <h4 className="font-bold text-lg text-indigo-600 bg-indigo-50 border-b border-indigo-200 px-2 py-0.5 rounded inline-block">
                             I. Hukum II Newton ⚖️
                           </h4>
                           <p className="mt-2 text-zinc-700">
@@ -618,7 +618,7 @@ export default function ModulesLibraryClient({
                         </div>
 
                         <div>
-                          <h4 className="font-bold text-lg text-indigo-650 bg-indigo-50 border-b border-indigo-200 px-2 py-0.5 rounded inline-block">
+                          <h4 className="font-bold text-lg text-indigo-600 bg-indigo-50 border-b border-indigo-200 px-2 py-0.5 rounded inline-block">
                             II. Rotasi Benda Tegar (Dinamika Rotasi) 🌀
                           </h4>
                           <p className="mt-2 text-zinc-700">
@@ -633,33 +633,33 @@ export default function ModulesLibraryClient({
 
                         <div className="bg-indigo-50/50 border border-indigo-200 rounded-xl p-4 mt-6">
                           <p className="text-xs font-bold text-indigo-600 uppercase">💡 Tips Ujian SMAN 2 Jonggol:</p>
-                          <p className="text-xs text-zinc-650 mt-1 leading-relaxed">
+                          <p className="text-xs text-zinc-600 mt-1 leading-relaxed">
                             Jangan lupa untuk selalu menyamakan arah vektor gaya pada sumbu x dan sumbu y terlebih dahulu sebelum memasukkannya ke rumus ΣF = m·a!
                           </p>
                         </div>
                       </div>
                     ) : selectedReaderModule.subject.includes("Matematika") ? (
                       /* Mock high-fidelity Math handwritten note content */
-                      <div className="space-y-6 text-sm sm:text-base leading-relaxed font-sans text-zinc-750">
+                      <div className="space-y-6 text-sm sm:text-base leading-relaxed font-sans text-zinc-700">
                         <div>
-                          <h4 className="font-bold text-lg text-indigo-650 bg-indigo-50 border-b border-indigo-200 px-2 py-0.5 rounded inline-block">
+                          <h4 className="font-bold text-lg text-indigo-600 bg-indigo-50 border-b border-indigo-200 px-2 py-0.5 rounded inline-block">
                             I. Integral Substitusi 🧮
                           </h4>
-                          <p className="mt-2 text-zinc-750">
+                          <p className="mt-2 text-zinc-700">
                             Metode ini digunakan jika integran dapat dipecah menjadi bentuk f(g(x)) · g&apos;(x) · dx. Caranya dengan memisalkan u = g(x), sehingga du = g&apos;(x)dx.
                           </p>
                           <div className="bg-amber-50/85 border border-dashed border-amber-300 rounded-xl p-4 my-3 text-center">
-                            <span className="font-mono text-lg sm:text-xl font-bold text-indigo-850">
+                            <span className="font-mono text-lg sm:text-xl font-bold text-indigo-800">
                               ∫ f(g(x)) g&apos;(x) dx = ∫ f(u) du = F(u) + C
                             </span>
                           </div>
                         </div>
 
                         <div>
-                          <h4 className="font-bold text-lg text-indigo-650 bg-indigo-50 border-b border-indigo-200 px-2 py-0.5 rounded inline-block">
+                          <h4 className="font-bold text-lg text-indigo-600 bg-indigo-50 border-b border-indigo-200 px-2 py-0.5 rounded inline-block">
                             II. Integral Parsial (Metode Tanzalin) ⚡
                           </h4>
-                          <p className="mt-2 text-zinc-750">
+                          <p className="mt-2 text-zinc-700">
                             Sangat praktis untuk integral perkalian dua fungsi aljabar & trigonometri ∫ u · dv. Buatlah tabel Turunan (Differentiate) dan Integral (Integrate):
                           </p>
                           
@@ -675,17 +675,17 @@ export default function ModulesLibraryClient({
                               <tbody>
                                 <tr>
                                   <td className="py-2 px-3 border-b font-mono">3x²</td>
-                                  <td className="py-2 px-3 border-b font-bold text-indigo-650">(+)</td>
+                                  <td className="py-2 px-3 border-b font-bold text-indigo-600">(+)</td>
                                   <td className="py-2 px-3 border-b font-mono">cos(x)</td>
                                 </tr>
                                 <tr>
-                                  <td className="py-2 px-3 border-b font-mono text-zinc-550">6x</td>
+                                  <td className="py-2 px-3 border-b font-mono text-zinc-600">6x</td>
                                   <td className="py-2 px-3 border-b font-bold text-red-500">(-)</td>
-                                  <td className="py-2 px-3 border-b font-mono text-zinc-550">sin(x)</td>
+                                  <td className="py-2 px-3 border-b font-mono text-zinc-600">sin(x)</td>
                                 </tr>
                                 <tr>
                                   <td className="py-2 px-3 border-b font-mono text-zinc-400">6</td>
-                                  <td className="py-2 px-3 border-b font-bold text-indigo-650">(+)</td>
+                                  <td className="py-2 px-3 border-b font-bold text-indigo-600">(+)</td>
                                   <td className="py-2 px-3 border-b font-mono text-zinc-400">-cos(x)</td>
                                 </tr>
                                 <tr>
@@ -700,12 +700,12 @@ export default function ModulesLibraryClient({
                       </div>
                     ) : (
                       /* Fallback general subject handwritten note content */
-                      <div className="space-y-6 text-sm sm:text-base leading-relaxed font-sans text-zinc-750">
+                      <div className="space-y-6 text-sm sm:text-base leading-relaxed font-sans text-zinc-700">
                         <div>
-                          <h4 className="font-bold text-lg text-indigo-650 bg-indigo-50 border-b border-indigo-200 px-2 py-0.5 rounded inline-block">
+                          <h4 className="font-bold text-lg text-indigo-600 bg-indigo-50 border-b border-indigo-200 px-2 py-0.5 rounded inline-block">
                             Ringkasan Materi Pelajaran 📖
                           </h4>
-                          <p className="mt-2 text-zinc-750">
+                          <p className="mt-2 text-zinc-700">
                             Berikut adalah rangkuman materi catatan ringkas mata pelajaran <b>{selectedReaderModule.subject}</b> yang berhasil diupload ke NAWA-LEARN.
                           </p>
                           <ul className="list-disc pl-5 mt-3 space-y-2 text-zinc-700">
@@ -721,7 +721,7 @@ export default function ModulesLibraryClient({
               ) : (
                 /* LOCAL FILE PREVIEW: Display premium digital textbook/notebook typed layout */
                 <div className="max-w-2xl mx-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 sm:p-8 rounded-2xl shadow-md text-left">
-                  <div className="mb-6 pb-4 border-b border-zinc-200 dark:border-zinc-850 flex justify-between items-start">
+                  <div className="mb-6 pb-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-start">
                     <div>
                       <span className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 text-[10px] px-2.5 py-0.5 rounded font-bold uppercase tracking-wider">
                         Dokumen Modul Terverifikasi
@@ -730,13 +730,13 @@ export default function ModulesLibraryClient({
                         {selectedReaderModule.title}
                       </h2>
                       <p className="text-xs text-zinc-500 mt-1">
-                        Kontributor: <span className="font-bold text-zinc-700 dark:text-zinc-350">{selectedReaderModule.uploaderName || "Anonim"}</span> • {new Date(selectedReaderModule.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+                        Kontributor: <span className="font-bold text-zinc-700 dark:text-zinc-300">{selectedReaderModule.uploaderName || "Anonim"}</span> • {new Date(selectedReaderModule.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
                       </p>
                     </div>
                   </div>
 
                   {/* Typed Mock textbook sheet */}
-                  <div className="space-y-6 text-sm sm:text-base leading-relaxed text-zinc-705 dark:text-zinc-300">
+                  <div className="space-y-6 text-sm sm:text-base leading-relaxed text-zinc-700 dark:text-zinc-300">
                     <div>
                       <h3 className="text-base font-extrabold text-indigo-600 dark:text-indigo-400 mb-2">1. Deskripsi & Silabus Materi</h3>
                       <p>
@@ -746,7 +746,7 @@ export default function ModulesLibraryClient({
 
                     <div>
                       <h3 className="text-base font-extrabold text-indigo-600 dark:text-indigo-400 mb-2">2. Peta Konsep Esensial</h3>
-                      <div className="p-4 bg-zinc-50 dark:bg-zinc-950 border border-zinc-250 dark:border-zinc-800 rounded-xl font-mono text-xs text-indigo-650 dark:text-indigo-400">
+                      <div className="p-4 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl font-mono text-xs text-indigo-600 dark:text-indigo-400">
                         <p className="font-bold">{"// RENCANA MATERI BELAJAR:"}</p>
                         <p className="mt-1">→ Pendahuluan & Definisi Istilah Penting</p>
                         <p>→ Teori Utama & Rumus Praktis Cepat</p>
@@ -773,7 +773,7 @@ export default function ModulesLibraryClient({
                   setSelectedReaderModule(null);
                   setPrintSuccess(false);
                 }}
-                className="bg-zinc-200 hover:bg-zinc-250 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-250 font-bold py-2 px-4 rounded-xl text-xs transition-all shrink-0 cursor-pointer"
+                className="bg-zinc-200 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 font-bold py-2 px-4 rounded-xl text-xs transition-all shrink-0 cursor-pointer"
               >
                 Tutup Reader
               </button>

@@ -18,6 +18,51 @@ html {
     box-shadow       0.2s ease;
 }
 
+/* ── Reduced motion ────────────────────────────────────────────────────────
+   Dua baris di atas memasang transisi pada **setiap** elemen dan
+   `scroll-behavior: smooth` pada `html`. Bagi pengguna yang meminta gerak
+   minimal lewat setelan sistem operasi, keduanya justru yang paling mengganggu,
+   dan `prefers-reduced-motion` adalah satu-satunya cara mereka memberi tahu
+   kita. Sampai M15 tidak ada satu pun media query ini di seluruh `src`.
+
+   Durasi 0.01ms, bukan `none`: `transitionend` dan `animationend` tetap
+   terpicu, jadi kode yang menunggu event itu tidak menggantung. Nilai `none`
+   membatalkan event-nya sekaligus. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  /* Ripple tema memakai View Transitions (clip-path dari tombol toggle), dan
+     pseudo-element itu tidak tersentuh selektor `*` di atas. */
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+/* ── Keyboard focus ────────────────────────────────────────────────────────
+   `DESIGN.md` sudah menetapkan Arcane Indigo `#4f46e5` sebagai warna focus
+   ring, tapi sampai M15 tidak ada satu pun kelas `focus-visible:` di `src`,
+   jadi penanda fokus yang terlihat hanya bergantung pada default peramban —
+   dan itu hilang begitu sebuah elemen memakai `focus:outline-none`.
+
+   Aturan ini berada di `@layer base` dengan sengaja: utilitas Tailwind tetap
+   menang, sehingga input yang sudah punya `focus:ring-2` tidak mendapat cincin
+   ganda. Yang dilengkapi adalah kontrol yang belum punya penanda apa pun. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid #4f46e5;
+    outline-offset: 2px;
+  }
+}
+
 /* ── View Transitions: theme-ripple from toggle button ── */
 /* Disable the default cross-fade; we run our own clip-path animation via JS */
 ::view-transition-old(root),

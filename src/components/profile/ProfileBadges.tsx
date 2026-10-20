@@ -78,7 +78,7 @@ export function ProfileBadges({ badgeDisplays }: { badgeDisplays: BadgeDisplay[]
                         ? `bg-gradient-to-br ${getRarityColor(badge.rarity)} border-opacity-50 border-white shadow-md hover:shadow-lg`
                         : badge.redacted
                           ? "bg-zinc-900/80 dark:bg-zinc-950 border-zinc-700 dark:border-zinc-800"
-                          : "bg-zinc-50/50 dark:bg-zinc-950/40 border-zinc-150 dark:border-zinc-850 opacity-60"
+                          : "bg-zinc-50/50 dark:bg-zinc-950/40 border-zinc-100 dark:border-zinc-800 opacity-60"
                     }`}
                     title={badge.description}
                   >

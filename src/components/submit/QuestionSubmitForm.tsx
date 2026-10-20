@@ -163,7 +163,7 @@ export function QuestionSubmitForm() {
             <div className="bg-zinc-50 dark:bg-zinc-950 p-3 border border-zinc-200 dark:border-zinc-800 rounded-xl mb-5 flex items-center justify-between text-left">
               <div>
                 <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium">POIN SAAT DISETUJUI</p>
-                <p className="text-base font-bold text-indigo-650 dark:text-indigo-400">
+                <p className="text-base font-bold text-indigo-600 dark:text-indigo-400">
                   {questionDifficulty === "mudah" ? "+15" : questionDifficulty === "sulit" ? "+40" : "+25"} Poin XP
                 </p>
               </div>
@@ -188,7 +188,7 @@ export function QuestionSubmitForm() {
               </button>
               <Link
                 href="/profile"
-                className="w-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 font-semibold py-2.5 rounded-xl transition-all duration-200 inline-flex items-center justify-center gap-1.5 text-xs border border-zinc-200 dark:border-zinc-750"
+                className="w-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 font-semibold py-2.5 rounded-xl transition-all duration-200 inline-flex items-center justify-center gap-1.5 text-xs border border-zinc-200 dark:border-zinc-700"
               >
                 Lihat di Profilku
               </Link>
@@ -202,11 +202,11 @@ export function QuestionSubmitForm() {
 
         {/* Question text input */}
         <div>
-          <label className="block text-sm font-bold text-zinc-850 dark:text-zinc-250 mb-1.5">Pertanyaan Soal Kuis</label>
+          <label className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1.5">Pertanyaan Soal Kuis</label>
           <textarea
             value={questionText}
             onChange={(e) => setQuestionText(e.target.value)}
-            className="w-full rounded-xl border border-zinc-250 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-500 dark:text-white transition-all placeholder-zinc-400 min-h-[120px] shadow-inner"
+            className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-500 dark:text-white transition-all placeholder-zinc-400 min-h-[120px] shadow-inner"
             placeholder="Ketikkan deskripsi lengkap soal latihan di sini... (Gunakan $$...$$ atau $...$ untuk rumus LaTeX, contoh: $x^2 + y^2 = r^2$)"
             required
           />
@@ -214,11 +214,11 @@ export function QuestionSubmitForm() {
 
         {/* Explanation text input */}
         <div>
-          <label className="block text-sm font-bold text-zinc-850 dark:text-zinc-250 mb-1.5">Pembahasan Singkat (Opsional)</label>
+          <label className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1.5">Pembahasan Singkat (Opsional)</label>
           <textarea
             value={questionExplanation}
             onChange={(e) => setQuestionExplanation(e.target.value)}
-            className="w-full rounded-xl border border-zinc-250 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white transition-all placeholder-zinc-400 min-h-[100px] shadow-inner"
+            className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white transition-all placeholder-zinc-400 min-h-[100px] shadow-inner"
             placeholder="Beri penjelasan singkat mengapa jawaban tersebut benar... (Mendukung LaTeX)"
           />
         </div>
@@ -227,11 +227,11 @@ export function QuestionSubmitForm() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {/* Subject Selector */}
           <div>
-            <label className="block text-sm font-bold text-zinc-855 dark:text-zinc-200 mb-1.5">Mata Pelajaran</label>
+            <label className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1.5">Mata Pelajaran</label>
             <select
               value={questionSubject}
               onChange={(e) => setQuestionSubject(e.target.value)}
-              className="w-full rounded-xl border border-zinc-250 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white cursor-pointer"
+              className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white cursor-pointer"
               required
             >
               <option value="">-- Pilih Mata Pelajaran --</option>
@@ -243,11 +243,11 @@ export function QuestionSubmitForm() {
 
           {/* Category Selector */}
           <div>
-            <label className="block text-sm font-bold text-zinc-855 dark:text-zinc-200 mb-1.5">Kategori Ujian</label>
+            <label className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1.5">Kategori Ujian</label>
             <select
               value={questionCategory}
               onChange={(e) => setQuestionCategory(e.target.value)}
-              className="w-full rounded-xl border border-zinc-250 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white cursor-pointer"
+              className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white cursor-pointer"
               required
             >
               <option value="UTBK">UTBK / SNBT</option>
@@ -259,7 +259,7 @@ export function QuestionSubmitForm() {
 
         {/* Difficulty + Point Preview */}
         <div>
-          <label className="block text-sm font-bold text-zinc-850 dark:text-zinc-200 mb-2">
+          <label className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-2">
             Tingkat Kesulitan Soal
           </label>
           <div className="grid grid-cols-3 gap-3">
@@ -304,7 +304,7 @@ export function QuestionSubmitForm() {
                 type="text"
                 value={opt.val}
                 onChange={(e) => opt.set(e.target.value)}
-                className="w-full rounded-xl border border-zinc-250 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white transition-all shadow-inner"
+                className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white transition-all shadow-inner"
                 placeholder={`Isi konten jawaban untuk pilihan ${String.fromCharCode(65 + idx)}...`}
                 required={idx < 2} // A and B are required
               />
@@ -314,11 +314,11 @@ export function QuestionSubmitForm() {
 
         {/* Correct answer key selector */}
         <div>
-          <label className="block text-sm font-bold text-zinc-850 dark:text-zinc-200 mb-1.5">Kunci Jawaban Benar</label>
+          <label className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1.5">Kunci Jawaban Benar</label>
           <select
             value={questionAnswerKey}
             onChange={(e) => setQuestionAnswerKey(e.target.value)}
-            className="w-full rounded-xl border border-zinc-250 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white cursor-pointer"
+            className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white cursor-pointer"
             required
           >
             <option value="A">A</option>

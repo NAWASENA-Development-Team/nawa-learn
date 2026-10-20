@@ -71,7 +71,7 @@ export function DrivePickerModal({ onSelect, onClose }: DrivePickerModalProps) {
               <div
                 key={idx}
                 onClick={() => onSelect(file)}
-                className="p-3 border border-zinc-150 dark:border-zinc-800 hover:border-indigo-400 dark:hover:border-indigo-600 hover:bg-indigo-50/10 dark:hover:bg-indigo-950/20 rounded-xl cursor-pointer flex items-center justify-between group transition-all duration-200"
+                className="p-3 border border-zinc-100 dark:border-zinc-800 hover:border-indigo-400 dark:hover:border-indigo-600 hover:bg-indigo-50/10 dark:hover:bg-indigo-950/20 rounded-xl cursor-pointer flex items-center justify-between group transition-all duration-200"
               >
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-lg bg-zinc-50 dark:bg-zinc-800/80 flex items-center justify-center border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-950 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">

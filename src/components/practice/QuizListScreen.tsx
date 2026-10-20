@@ -132,18 +132,18 @@ export function QuizListScreen({
                 <div className="flex items-center gap-3.5 min-w-0">
                   <div className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 text-lg border ${
                     isContributed
-                      ? "bg-amber-100 dark:bg-amber-950/60 border-amber-200 dark:border-amber-900 text-amber-650"
+                      ? "bg-amber-100 dark:bg-amber-950/60 border-amber-200 dark:border-amber-900 text-amber-600"
                       : quiz.isCustom
                         ? "bg-indigo-100 dark:bg-indigo-950/60 border-indigo-200 dark:border-indigo-900"
                         : quiz.subject === "Campuran"
-                          ? "bg-indigo-100 dark:bg-indigo-950/60 border-indigo-200 dark:border-indigo-900 text-indigo-650"
+                          ? "bg-indigo-100 dark:bg-indigo-950/60 border-indigo-200 dark:border-indigo-900 text-indigo-600"
                           : quiz.subject === "Matematika"
-                            ? "bg-orange-100 dark:bg-orange-950/60 border-orange-200 dark:border-orange-900 text-orange-650"
+                            ? "bg-orange-100 dark:bg-orange-950/60 border-orange-200 dark:border-orange-900 text-orange-600"
                             : quiz.subject === "Fisika"
-                              ? "bg-purple-100 dark:bg-purple-950/60 border-purple-200 dark:border-purple-900 text-purple-650"
+                              ? "bg-purple-100 dark:bg-purple-950/60 border-purple-200 dark:border-purple-900 text-purple-600"
                               : quiz.subject === "Biologi"
-                                ? "bg-emerald-100 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-900 text-emerald-650"
-                                : "bg-teal-100 dark:bg-teal-950/60 border-teal-200 dark:border-teal-900 text-teal-650"
+                                ? "bg-emerald-100 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-900 text-emerald-600"
+                                : "bg-teal-100 dark:bg-teal-950/60 border-teal-200 dark:border-teal-900 text-teal-600"
                   }`}>
                     {quiz.icon}
                   </div>
@@ -171,10 +171,10 @@ export function QuizListScreen({
                     </div>
 
                     <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                      <span className="text-[10px] bg-zinc-100 dark:bg-zinc-950 text-zinc-650 dark:text-zinc-400 font-bold px-2 py-0.5 rounded border border-zinc-200/50 dark:border-zinc-800">
+                      <span className="text-[10px] bg-zinc-100 dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 font-bold px-2 py-0.5 rounded border border-zinc-200/50 dark:border-zinc-800">
                         {quiz.subject}
                       </span>
-                      <span className="text-[10px] bg-zinc-100 dark:bg-zinc-950 text-zinc-650 dark:text-zinc-400 font-bold px-2 py-0.5 rounded border border-zinc-200/50 dark:border-zinc-800">
+                      <span className="text-[10px] bg-zinc-100 dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 font-bold px-2 py-0.5 rounded border border-zinc-200/50 dark:border-zinc-800">
                         {quiz.category}
                       </span>
                       <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded border ${getDifficultyStyle(quiz.difficulty)}`}>
@@ -185,7 +185,7 @@ export function QuizListScreen({
                 </div>
 
                 {/* Right: stats + action */}
-                <div className="flex flex-row items-center justify-between md:justify-end gap-3 border-t md:border-0 border-zinc-100 dark:border-zinc-850 pt-3 md:pt-0 shrink-0">
+                <div className="flex flex-row items-center justify-between md:justify-end gap-3 border-t md:border-0 border-zinc-100 dark:border-zinc-800 pt-3 md:pt-0 shrink-0">
                   <div className="flex items-center gap-2">
                     <div className="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400 text-xs font-bold bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/50 dark:border-zinc-800 px-3 py-1.5 rounded-xl shadow-inner">
                       <FileText className="h-3.5 w-3.5 text-indigo-500" />

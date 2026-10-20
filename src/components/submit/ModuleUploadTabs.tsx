@@ -270,7 +270,7 @@ export function ModuleUploadTabs({
               className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
                 activeUploadTab === tab.id
                   ? "bg-white dark:bg-zinc-800 text-indigo-600 dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-700/50"
-                  : "text-zinc-500 hover:text-zinc-850 dark:hover:text-zinc-300 hover:bg-zinc-100/50 dark:hover:bg-zinc-800/40"
+                  : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 hover:bg-zinc-100/50 dark:hover:bg-zinc-800/40"
               }`}
             >
               <tab.icon className="h-4 w-4 shrink-0" />
@@ -289,16 +289,16 @@ export function ModuleUploadTabs({
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-zinc-250 dark:border-zinc-800 hover:border-indigo-500 dark:hover:border-indigo-600 bg-zinc-50 dark:bg-zinc-950/40 rounded-xl py-8 px-4 cursor-pointer flex flex-col items-center justify-center group transition-all duration-300 relative overflow-hidden"
+                  className="border-2 border-dashed border-zinc-200 dark:border-zinc-800 hover:border-indigo-500 dark:hover:border-indigo-600 bg-zinc-50 dark:bg-zinc-950/40 rounded-xl py-8 px-4 cursor-pointer flex flex-col items-center justify-center group transition-all duration-300 relative overflow-hidden"
                 >
                   {/* Interactive upload icon */}
                   <div className="h-12 w-12 rounded-full bg-indigo-50 dark:bg-indigo-950/50 text-indigo-500 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                     <Upload className="h-6 w-6" />
                   </div>
-                  <p className="text-sm font-bold text-zinc-700 dark:text-zinc-350">
+                  <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
                     Pilih file atau seret file Anda di sini
                   </p>
-                  <p className="text-xs text-zinc-400 dark:text-zinc-505 mt-1">
+                  <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
                     Mendukung dokumen .pdf dan gambar .png, .jpg, .webp (maks. 10MB)
                   </p>
 
@@ -311,7 +311,7 @@ export function ModuleUploadTabs({
                   />
                 </div>
               ) : (
-                <div className="text-left border border-zinc-200 dark:border-zinc-850 p-4 rounded-xl flex items-center justify-between bg-zinc-50 dark:bg-zinc-950/60 shadow-sm relative overflow-hidden">
+                <div className="text-left border border-zinc-200 dark:border-zinc-800 p-4 rounded-xl flex items-center justify-between bg-zinc-50 dark:bg-zinc-950/60 shadow-sm relative overflow-hidden">
                   {isUploading && (
                     <div className="absolute inset-x-0 bottom-0 h-1 bg-zinc-200 dark:bg-zinc-800">
                       <div
@@ -330,7 +330,7 @@ export function ModuleUploadTabs({
                       {isUploading ? (
                         <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-0.5 flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> {uploadProgress}% - {uploadStateText}</p>
                       ) : (
-                        <p className="text-[10px] text-zinc-450 dark:text-zinc-500 mt-0.5">{(localFile.size / 1024 / 1024).toFixed(2)} MB • Berhasil diunggah</p>
+                        <p className="text-[10px] text-zinc-500 mt-0.5">{(localFile.size / 1024 / 1024).toFixed(2)} MB • Berhasil diunggah</p>
                       )}
                     </div>
                   </div>
@@ -339,7 +339,7 @@ export function ModuleUploadTabs({
                     <button
                       type="button"
                       onClick={clearLocalFile}
-                      className="p-1.5 text-zinc-450 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-955/20 rounded-lg transition-all"
+                      className="p-1.5 text-zinc-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg transition-all"
                     >
                       <Trash2 className="h-4.5 w-4.5" />
                     </button>
@@ -348,7 +348,7 @@ export function ModuleUploadTabs({
               )}
 
               {fileError && (
-                <div className="p-3 border border-red-200 bg-red-50 dark:bg-red-955/30 dark:border-red-900 rounded-xl flex items-center gap-2.5 text-xs text-red-600 dark:text-red-400 text-left mt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                <div className="p-3 border border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-900 rounded-xl flex items-center gap-2.5 text-xs text-red-600 dark:text-red-400 text-left mt-2 animate-in fade-in slide-in-from-top-1 duration-200">
                   <AlertCircle className="h-4.5 w-4.5 shrink-0" />
                   <span>{fileError}</span>
                 </div>
@@ -389,14 +389,14 @@ export function ModuleUploadTabs({
                         type="url"
                         value={directDriveUrl}
                         onChange={(e) => handleDirectDriveUrlChange(e.target.value)}
-                        className="w-full rounded-xl border border-zinc-250 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 pl-10 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-500 dark:text-white transition-all placeholder-zinc-400"
+                        className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 pl-10 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-500 dark:text-white transition-all placeholder-zinc-400"
                         placeholder="https://drive.google.com/file/d/..."
                       />
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="text-left border border-zinc-200 dark:border-zinc-850 p-4 rounded-xl flex items-center justify-between bg-zinc-50 dark:bg-zinc-950/60 shadow-sm">
+                <div className="text-left border border-zinc-200 dark:border-zinc-800 p-4 rounded-xl flex items-center justify-between bg-zinc-50 dark:bg-zinc-950/60 shadow-sm">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-950 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                       {/* Drive icon indicator */}
@@ -405,7 +405,7 @@ export function ModuleUploadTabs({
                       </svg>
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-zinc-855 dark:text-zinc-200 truncate max-w-[200px] sm:max-w-xs">{selectedDriveFile.name}</p>
+                      <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 truncate max-w-[200px] sm:max-w-xs">{selectedDriveFile.name}</p>
                       <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5 flex items-center gap-1 font-semibold"><Check className="h-3 w-3" /> Drive File Terkoneksi ({selectedDriveFile.size})</p>
                     </div>
                   </div>
@@ -426,7 +426,7 @@ export function ModuleUploadTabs({
           {activeUploadTab === "camera" && (
             <div className="flex flex-col items-center">
               {cameraError && (
-                <div className="mb-4 p-3 border border-red-200 bg-red-50 dark:bg-red-955/30 dark:border-red-900 rounded-xl flex items-center gap-2.5 text-xs text-red-600 dark:text-red-400 text-left">
+                <div className="mb-4 p-3 border border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-900 rounded-xl flex items-center gap-2.5 text-xs text-red-600 dark:text-red-400 text-left">
                   <AlertCircle className="h-5 w-5 shrink-0" />
                   <span>{cameraError}</span>
                 </div>
@@ -442,7 +442,7 @@ export function ModuleUploadTabs({
                     <Camera className="h-4.5 w-4.5" />
                     Aktifkan Kamera Live
                   </button>
-                  <p className="text-xs text-zinc-450 dark:text-zinc-500 mt-3 max-w-sm">
+                  <p className="text-xs text-zinc-500 mt-3 max-w-sm">
                     Ambil gambar catatan fisik Anda secara langsung menggunakan kamera laptop atau ponsel.
                   </p>
                 </div>
@@ -512,7 +512,7 @@ export function ModuleUploadTabs({
                     <button
                       type="button"
                       onClick={startCamera}
-                      className="flex-1 border border-zinc-250 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all"
+                      className="flex-1 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all"
                     >
                       <RefreshCw className="h-3.5 w-3.5" /> Ambil Ulang
                     </button>
@@ -548,7 +548,7 @@ export function ModuleUploadTabs({
           <div className="px-5 py-3 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/40 flex items-center justify-between text-left">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-              <span className="text-[11px] font-bold text-zinc-550 dark:text-zinc-400">File berhasil dilampirkan</span>
+              <span className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400">File berhasil dilampirkan</span>
             </div>
             <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 truncate max-w-[150px] sm:max-w-xs">{contentUrl}</span>
           </div>

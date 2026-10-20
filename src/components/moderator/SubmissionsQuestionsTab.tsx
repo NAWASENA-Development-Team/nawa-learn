@@ -39,7 +39,7 @@ export function SubmissionsQuestionsTab({
           <div className="w-12 h-12 bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-purple-100/40">
             <HelpCircle className="h-6 w-6" />
           </div>
-          <h4 className="text-base font-extrabold text-zinc-850 dark:text-zinc-150">Antrean Latihan Soal Bersih</h4>
+          <h4 className="text-base font-extrabold text-zinc-800 dark:text-zinc-100">Antrean Latihan Soal Bersih</h4>
           <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Siswa belum mengajukan soal kuis baru untuk latihan mandiri. Usulan soal latihan dari kontributor akan muncul di sini untuk peninjauan.</p>
         </div>
       ) : (
@@ -74,7 +74,7 @@ export function SubmissionsQuestionsTab({
 
               {/* Question text */}
               <div>
-                <div className="text-sm font-extrabold text-zinc-950 dark:text-zinc-150 leading-relaxed mb-3">
+                <div className="text-sm font-extrabold text-zinc-950 dark:text-zinc-100 leading-relaxed mb-3">
                   <LatexRenderer text={q.questionText} />
                 </div>
 
@@ -85,7 +85,7 @@ export function SubmissionsQuestionsTab({
                       key={key}
                       className={`p-2.5 rounded-xl border text-xs flex gap-2 items-center ${
                         q.answerKey === key
-                          ? "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-350 text-emerald-800 dark:text-emerald-450 font-bold"
+                          ? "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300 text-emerald-800 dark:text-emerald-400 font-bold"
                           : "border-zinc-100 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400"
                       }`}
                     >

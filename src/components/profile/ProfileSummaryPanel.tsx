@@ -59,7 +59,7 @@ export function ProfileSummaryPanel({
                   <Folder className="h-5 w-5" />
                 </div>
                 <div>
-                  <h4 className="font-extrabold text-xs text-zinc-850 dark:text-zinc-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Total Modul Pending</h4>
+                  <h4 className="font-extrabold text-xs text-zinc-800 dark:text-zinc-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Total Modul Pending</h4>
                   <p className="text-[10px] text-zinc-500">Dalam tinjauan OSIS</p>
                 </div>
               </div>
@@ -74,7 +74,7 @@ export function ProfileSummaryPanel({
                   <Download className="h-5 w-5" />
                 </div>
                 <div>
-                  <h4 className="font-extrabold text-xs text-zinc-850 dark:text-zinc-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">Total Unduhan Karya</h4>
+                  <h4 className="font-extrabold text-xs text-zinc-800 dark:text-zinc-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">Total Unduhan Karya</h4>
                   <p className="text-[10px] text-zinc-500">Diunduh siswa lain</p>
                 </div>
               </div>
@@ -89,7 +89,7 @@ export function ProfileSummaryPanel({
                   <HelpCircle className="h-5 w-5" />
                 </div>
                 <div>
-                  <h4 className="font-extrabold text-xs text-zinc-850 dark:text-zinc-200 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">Soal Latihan Pending</h4>
+                  <h4 className="font-extrabold text-xs text-zinc-800 dark:text-zinc-200 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">Soal Latihan Pending</h4>
                   <p className="text-[10px] text-zinc-500">Verifikasi kesulitan</p>
                 </div>
               </div>
@@ -109,7 +109,7 @@ export function ProfileSummaryPanel({
           <p className="text-xs text-zinc-500 mt-2 leading-relaxed">
             Platform NAWA-LEARN digagas oleh Divisi ICT OSIS Nawasena SMAN 2 Jonggol untuk mempermudah kolaborasi belajar antar siswa. Terima kasih telah menjadi kontributor aktif!
           </p>
-          <div className="border-t border-zinc-100 dark:border-zinc-850 mt-4 pt-4 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+          <div className="border-t border-zinc-100 dark:border-zinc-800 mt-4 pt-4 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
             Kabinet Nawasena • Divisi ICT SMAN 2 Jonggol
           </div>
         </div>

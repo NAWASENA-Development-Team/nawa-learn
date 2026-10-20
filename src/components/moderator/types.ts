@@ -73,5 +73,5 @@ export function difficultyLabel(d: Difficulty): string {
 }
 
 export function difficultyPoints(d: Difficulty): string {
-  return { mudah: "+15 VP", sedang: "+25 VP", sulit: "+40 VP" }[d];
+  return { mudah: "+15 XP", sedang: "+25 XP", sulit: "+40 XP" }[d];
 }

@@ -26,12 +26,12 @@ export function ProfileStatsGrid({ user, userModules, userQuestions }: ProfileSt
           <div className="h-10 w-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-inner font-bold">
             <Trophy className="h-5 w-5" />
           </div>
-          <span className="text-xs font-bold text-zinc-550 dark:text-zinc-450 uppercase tracking-wider">Poin XP</span>
+          <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider">Poin XP</span>
         </div>
         <p className="text-3xl sm:text-4xl font-black text-amber-600 dark:text-amber-400 group-hover:scale-105 transition-transform duration-200">
           {user.points}
         </p>
-        <div className="mt-2 text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-500 font-medium">
+        <div className="mt-2 text-[10px] sm:text-xs text-zinc-500 font-medium">
           Meningkat lewat unggah modul &amp; latihan.
         </div>
       </div>
@@ -43,12 +43,12 @@ export function ProfileStatsGrid({ user, userModules, userQuestions }: ProfileSt
           <div className="h-10 w-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-inner font-bold">
             <TrendingUp className="h-5 w-5" />
           </div>
-          <span className="text-xs font-bold text-zinc-550 dark:text-zinc-450 uppercase tracking-wider">Peringkat Sekolah</span>
+          <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider">Peringkat Sekolah</span>
         </div>
         <p className="text-3xl sm:text-4xl font-black text-indigo-600 dark:text-indigo-400 group-hover:scale-105 transition-transform duration-200">
           {user.points > 0 ? `#${user.rank}` : "—"}
         </p>
-        <div className="mt-2 text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-500 font-medium">
+        <div className="mt-2 text-[10px] sm:text-xs text-zinc-500 font-medium">
           {user.points > 0
             ? `Peringkat #${user.rank} dari ${user.totalStudents} siswa.`
             : "Unggah modul untuk masuk papan peringkat!"
@@ -63,12 +63,12 @@ export function ProfileStatsGrid({ user, userModules, userQuestions }: ProfileSt
           <div className="h-10 w-10 rounded-xl bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 flex items-center justify-center shadow-inner font-bold">
             <BookOpen className="h-5 w-5" />
           </div>
-          <span className="text-xs font-bold text-zinc-550 dark:text-zinc-450 uppercase tracking-wider">Modul Dibagikan</span>
+          <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider">Modul Dibagikan</span>
         </div>
         <p className="text-3xl sm:text-4xl font-black text-purple-600 dark:text-purple-400 group-hover:scale-105 transition-transform duration-200">
           {userModules.length}
         </p>
-        <div className="mt-2 text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-500 font-medium">
+        <div className="mt-2 text-[10px] sm:text-xs text-zinc-500 font-medium">
           {userModules.filter((m) => m.status === "approved").length} disetujui • {userModules.filter((m) => m.status === "pending").length} verifikasi
         </div>
       </div>
@@ -80,12 +80,12 @@ export function ProfileStatsGrid({ user, userModules, userQuestions }: ProfileSt
           <div className="h-10 w-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-inner font-bold">
             <HelpCircle className="h-5 w-5" />
           </div>
-          <span className="text-xs font-bold text-zinc-550 dark:text-zinc-450 uppercase tracking-wider">Soal Latihan</span>
+          <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider">Soal Latihan</span>
         </div>
         <p className="text-3xl sm:text-4xl font-black text-emerald-600 dark:text-emerald-400 group-hover:scale-105 transition-transform duration-200">
           {userQuestions.length}
         </p>
-        <div className="mt-2 text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-500 font-medium">
+        <div className="mt-2 text-[10px] sm:text-xs text-zinc-500 font-medium">
           {userQuestions.filter((q) => q.status === "approved").length} disetujui • {userQuestions.filter((q) => q.status === "pending").length} verifikasi
         </div>
       </div>

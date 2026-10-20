@@ -12,7 +12,7 @@ import type { UserModule } from "./types";
 export function ProfileModulesPanel({ modules }: { modules: UserModule[] }) {
   return (
     <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-sm">
-      <div className="flex items-center justify-between mb-6 pb-4 border-b border-zinc-150 dark:border-zinc-850">
+      <div className="flex items-center justify-between mb-6 pb-4 border-b border-zinc-100 dark:border-zinc-800">
         <div>
           <h3 className="text-lg font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
             <BookOpen className="h-5 w-5 text-indigo-500" /> Modul Yang Kamu Unggah

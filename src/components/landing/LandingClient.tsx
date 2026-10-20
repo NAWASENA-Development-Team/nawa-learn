@@ -131,7 +131,7 @@ export default function LandingClient({ stats, sampleModules }: LandingClientPro
                 <Link
                   id="hero-cta-modules"
                   href="/modules"
-                  className="inline-flex items-center gap-2 rounded-xl border border-zinc-250 bg-white px-6 py-3.5 text-sm font-semibold text-zinc-800 shadow-sm transition-all duration-200 hover:bg-zinc-50 hover:border-zinc-350 hover:-translate-y-0.5 active:scale-[0.98] dark:border-zinc-750 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-850 dark:hover:border-zinc-650"
+                  className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-6 py-3.5 text-sm font-semibold text-zinc-800 shadow-sm transition-all duration-200 hover:bg-zinc-50 hover:border-zinc-300 hover:-translate-y-0.5 active:scale-[0.98] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:border-zinc-600"
                 >
                   <BookOpen className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
                   Jelajahi Bank Modul
@@ -150,7 +150,7 @@ export default function LandingClient({ stats, sampleModules }: LandingClientPro
                 <Link
                   id="hero-cta-leaderboard"
                   href="/leaderboard"
-                  className="inline-flex items-center gap-2 rounded-xl border border-zinc-250 bg-white px-6 py-3.5 text-sm font-semibold text-zinc-800 shadow-sm transition-all duration-200 hover:bg-zinc-50 hover:border-zinc-350 hover:-translate-y-0.5 active:scale-[0.98] dark:border-zinc-750 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-850 dark:hover:border-zinc-650"
+                  className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-6 py-3.5 text-sm font-semibold text-zinc-800 shadow-sm transition-all duration-200 hover:bg-zinc-50 hover:border-zinc-300 hover:-translate-y-0.5 active:scale-[0.98] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:border-zinc-600"
                 >
                   <Trophy className="h-4 w-4 text-amber-500" />
                   Papan Peringkat Musim

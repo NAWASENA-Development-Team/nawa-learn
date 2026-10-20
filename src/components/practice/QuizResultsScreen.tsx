@@ -57,7 +57,7 @@ export function QuizResultsScreen({
         </div>
 
         <h2 className="text-3xl font-extrabold text-zinc-900 dark:text-white">Hasil Latihan CBT Selesai</h2>
-        <p className="text-sm text-zinc-550 dark:text-zinc-400 mt-2 max-w-md mx-auto">
+        <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-2 max-w-md mx-auto">
           Selamat! Anda telah menyelesaikan simulasi kuis dari NAWA-LEARN. Hasil kinerja akademik Anda tercatat di bawah ini.
         </p>
 
@@ -76,20 +76,20 @@ export function QuizResultsScreen({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto mb-6">
           <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-2xl text-left">
             <span className="text-[10px] font-bold text-emerald-600 uppercase">Jawaban Benar</span>
-            <h4 className="text-2xl font-black text-emerald-600 dark:text-emerald-450 mt-1">{correctCount} / {questions.length}</h4>
-            <p className="text-xs text-zinc-455 dark:text-zinc-500 mt-1">Akurasi Soal</p>
+            <h4 className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{correctCount} / {questions.length}</h4>
+            <p className="text-xs text-zinc-500 mt-1">Akurasi Soal</p>
           </div>
           <div className="p-4 bg-red-50/50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-2xl text-left">
             <span className="text-[10px] font-bold text-red-500 uppercase">Jawaban Salah</span>
-            <h4 className="text-2xl font-black text-red-505 mt-1">{wrongCount} / {questions.length}</h4>
-            <p className="text-xs text-zinc-455 dark:text-zinc-500 mt-1">Tinjau Kesalahan</p>
+            <h4 className="text-2xl font-black text-red-600 mt-1">{wrongCount} / {questions.length}</h4>
+            <p className="text-xs text-zinc-500 mt-1">Tinjau Kesalahan</p>
           </div>
           <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 rounded-2xl text-left">
             <span className="text-[10px] font-bold text-indigo-500 uppercase">Sisa Waktu Ujian</span>
             <h4 className="text-2xl font-black text-indigo-600 dark:text-indigo-400 mt-1">
               {Math.floor(timeLeft / 60)}m {timeLeft % 60}s
             </h4>
-            <p className="text-xs text-zinc-455 dark:text-zinc-500 mt-1">Manajemen Waktu</p>
+            <p className="text-xs text-zinc-500 mt-1">Manajemen Waktu</p>
           </div>
         </div>
 
@@ -260,7 +260,7 @@ export function QuizResultsScreen({
           })}
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-center gap-4 border-t border-zinc-150 dark:border-zinc-800/80 pt-8">
+        <div className="flex flex-col sm:flex-row justify-center gap-4 border-t border-zinc-100 dark:border-zinc-800/80 pt-8">
           <button
             onClick={onRestart}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 text-sm transition-all shadow-md shadow-indigo-600/10 hover:shadow-lg active:scale-95 cursor-pointer border border-indigo-700"
@@ -269,7 +269,7 @@ export function QuizResultsScreen({
           </button>
           <button
             onClick={onBackToList}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-750 dark:text-zinc-200 font-bold py-3 px-6 text-sm transition-all border border-zinc-200 dark:border-zinc-750 active:scale-95 cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 font-bold py-3 px-6 text-sm transition-all border border-zinc-200 dark:border-zinc-700 active:scale-95 cursor-pointer"
           >
             <BookOpen className="h-4 w-4" /> Daftar Kuis Lainnya
           </button>

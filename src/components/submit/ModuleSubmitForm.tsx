@@ -181,10 +181,10 @@ export function ModuleSubmitForm() {
       >
         {/* Step 1: Judul Modul */}
         <div>
-          <label className="block text-sm font-bold text-zinc-850 dark:text-zinc-200 mb-1.5">Judul Modul Pembelajaran</label>
+          <label className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1.5">Judul Modul Pembelajaran</label>
           <input
             {...register("title")}
-            className="w-full rounded-xl border border-zinc-250 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-500 dark:text-white transition-all placeholder-zinc-400 dark:placeholder-zinc-650 shadow-inner"
+            className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-500 dark:text-white transition-all placeholder-zinc-400 dark:placeholder-zinc-600 shadow-inner"
             placeholder="e.g. Ringkasan Rumus Turunan Matematika Peminatan Kelas XI"
           />
           {errors.title && <p className="text-red-500 text-xs font-semibold mt-1.5 flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" /> {errors.title.message}</p>}
@@ -194,7 +194,7 @@ export function ModuleSubmitForm() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {/* Kelas Selector */}
           <div>
-            <label className="block text-sm font-bold text-zinc-850 dark:text-zinc-200 mb-1.5">Pilih Kelas</label>
+            <label className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1.5">Pilih Kelas</label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {["X", "XI", "XII", "Umum"].map((gradeOption) => (
                 <button
@@ -216,7 +216,7 @@ export function ModuleSubmitForm() {
 
           {/* Kategori Selector */}
           <div>
-            <label className="block text-sm font-bold text-zinc-855 dark:text-zinc-200 mb-1.5">Kategori Materi</label>
+            <label className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1.5">Kategori Materi</label>
             <div className="grid grid-cols-3 gap-2">
               {[
                 { value: "UTBK", label: "Materi UTBK" },
@@ -230,7 +230,7 @@ export function ModuleSubmitForm() {
                   className={`py-2 rounded-xl text-xs font-bold border transition-all duration-200 ${
                     selectedCategory === categoryOption.value
                       ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/10 scale-[1.02]"
-                      : "border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-955/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+                      : "border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
                   }`}
                 >
                   {categoryOption.label}
@@ -243,7 +243,7 @@ export function ModuleSubmitForm() {
 
         {/* Step 3: Mata Pelajaran Grid Selector */}
         <div>
-          <label className="block text-sm font-bold text-zinc-850 dark:text-zinc-200 mb-2">Pilih Mata Pelajaran</label>
+          <label className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-2">Pilih Mata Pelajaran</label>
 
           <div className="flex flex-wrap gap-2 mb-3">
             {SUBJECTS.map((subj) => (
@@ -254,7 +254,7 @@ export function ModuleSubmitForm() {
                 className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-150 ${
                   selectedSubject === subj
                     ? "bg-indigo-50 dark:bg-indigo-950/40 border-indigo-500 text-indigo-600 dark:text-indigo-400 font-bold scale-[1.02]"
-                    : "border-zinc-200 dark:border-zinc-800 hover:border-zinc-350 dark:hover:border-zinc-700 bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400"
+                    : "border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400"
                 }`}
               >
                 {subj}
@@ -266,7 +266,7 @@ export function ModuleSubmitForm() {
             <input
               value={selectedSubject && !SUBJECTS.includes(selectedSubject) ? selectedSubject : ""}
               onChange={(e) => handleSubjectSelect(e.target.value)}
-              className="w-full rounded-xl border border-zinc-250 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-955 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-500 dark:text-white transition-all placeholder-zinc-400 shadow-inner"
+              className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-500 dark:text-white transition-all placeholder-zinc-400 shadow-inner"
               placeholder="Atau masukkan mata pelajaran khusus (contoh: Sejarah Indonesia)"
             />
           </div>

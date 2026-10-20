@@ -26,7 +26,7 @@ export function QuizPreparationScreen({
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-2xl overflow-hidden text-left relative animate-in fade-in duration-300">
 
-        <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-850 p-6 sm:p-10 text-white relative">
+        <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 p-6 sm:p-10 text-white relative">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-tight">
             {quiz.title}
@@ -49,8 +49,8 @@ export function QuizPreparationScreen({
                   <FileText className="h-4.5 w-4.5" />
                 </div>
                 <div>
-                  <p className="text-[9px] text-zinc-455 dark:text-zinc-500 font-bold uppercase">Jumlah Soal</p>
-                  <p className="text-xs font-extrabold text-zinc-850 dark:text-zinc-200">{quiz.questionsCount} Butir Soal</p>
+                  <p className="text-[9px] text-zinc-500 font-bold uppercase">Jumlah Soal</p>
+                  <p className="text-xs font-extrabold text-zinc-800 dark:text-zinc-200">{quiz.questionsCount} Butir Soal</p>
                 </div>
               </div>
 
@@ -59,8 +59,8 @@ export function QuizPreparationScreen({
                   <Clock className="h-4.5 w-4.5" />
                 </div>
                 <div>
-                  <p className="text-[9px] text-zinc-455 dark:text-zinc-500 font-bold uppercase">Durasi Waktu</p>
-                  <p className="text-xs font-extrabold text-zinc-850 dark:text-zinc-200">{quiz.durationMinutes} Menit</p>
+                  <p className="text-[9px] text-zinc-500 font-bold uppercase">Durasi Waktu</p>
+                  <p className="text-xs font-extrabold text-zinc-800 dark:text-zinc-200">{quiz.durationMinutes} Menit</p>
                 </div>
               </div>
 
@@ -73,11 +73,11 @@ export function QuizPreparationScreen({
                   <GraduationCap className="h-4.5 w-4.5" />
                 </div>
                 <div>
-                  <p className="text-[9px] text-zinc-450 dark:text-zinc-500 font-bold uppercase">Tingkat Kesulitan</p>
+                  <p className="text-[9px] text-zinc-500 font-bold uppercase">Tingkat Kesulitan</p>
                   <p className={`text-xs font-extrabold ${
                     quiz.difficulty.toLowerCase() === "sangat sulit"
                       ? "text-purple-700 dark:text-purple-400"
-                      : "text-zinc-850 dark:text-zinc-200"
+                      : "text-zinc-800 dark:text-zinc-200"
                   }`}>{quiz.difficulty}</p>
                 </div>
               </div>
@@ -87,8 +87,8 @@ export function QuizPreparationScreen({
                   <User className="h-4.5 w-4.5" />
                 </div>
                 <div>
-                  <p className="text-[9px] text-zinc-455 dark:text-zinc-500 font-bold uppercase">{quiz.id === "quiz_contributed" || quiz.isCustom ? "Pembuat Soal" : "Peserta Ujian"}</p>
-                  <p className="text-xs font-extrabold text-zinc-850 dark:text-zinc-200 truncate max-w-[120px]">
+                  <p className="text-[9px] text-zinc-500 font-bold uppercase">{quiz.id === "quiz_contributed" || quiz.isCustom ? "Pembuat Soal" : "Peserta Ujian"}</p>
+                  <p className="text-xs font-extrabold text-zinc-800 dark:text-zinc-200 truncate max-w-[120px]">
                     {quiz.id === "quiz_contributed" ? "Kolaborasi Siswa" : quiz.isCustom ? (quiz.author ?? "Siswa SMAN 2") : "Ahmad Kontributor"}
                   </p>
                 </div>
@@ -108,10 +108,10 @@ export function QuizPreparationScreen({
 
           {/* Instructions */}
           <div className="p-5 bg-indigo-50/20 dark:bg-indigo-950/20 border border-indigo-100/30 dark:border-indigo-900/30 rounded-2xl">
-            <h5 className="text-xs font-bold text-indigo-650 dark:text-indigo-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <h5 className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
               📝 Panduan Pengerjaan Soal:
             </h5>
-            <ul className="space-y-3 text-[11px] text-zinc-655 dark:text-zinc-400 leading-relaxed">
+            <ul className="space-y-3 text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
               <li className="flex gap-2.5 items-start">
                 <div className="h-4.5 w-4.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
                   <Check className="h-3 w-3" />
@@ -139,10 +139,10 @@ export function QuizPreparationScreen({
             </ul>
           </div>
 
-          <div className="border-t border-zinc-150 dark:border-zinc-800/80 pt-6 flex flex-col sm:flex-row gap-3">
+          <div className="border-t border-zinc-100 dark:border-zinc-800/80 pt-6 flex flex-col sm:flex-row gap-3">
             <button
               onClick={onBack}
-              className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-250 dark:border-zinc-800 hover:bg-zinc-55 dark:hover:bg-zinc-950 text-zinc-700 dark:text-zinc-300 font-bold py-3.5 px-6 text-xs sm:text-sm transition-all active:scale-[0.98] cursor-pointer"
+              className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-950 text-zinc-700 dark:text-zinc-300 font-bold py-3.5 px-6 text-xs sm:text-sm transition-all active:scale-[0.98] cursor-pointer"
             >
               <ArrowLeft className="h-4 w-4 shrink-0" /> Menu Kuis
             </button>

@@ -41,7 +41,7 @@ export function QuizSessionScreen({
       <div className="mb-6 flex flex-col sm:flex-row justify-between sm:items-center gap-4 pb-5 border-b border-zinc-200 dark:border-zinc-800/80">
         <div className="text-left">
           <h2 className="text-2xl font-extrabold text-zinc-900 dark:text-white tracking-tight">{quiz.title}</h2>
-          <p className="text-xs text-zinc-550 mt-1">
+          <p className="text-xs text-zinc-600 mt-1">
             Kerjakan soal pilihan ganda di bawah ini secara teliti untuk menguji kesiapan UTBK dan Olimpiade Anda.
           </p>
         </div>
@@ -58,9 +58,9 @@ export function QuizSessionScreen({
       </div>
 
       {/* Progress bar */}
-      <div className="mb-8 bg-zinc-100 dark:bg-zinc-950 border border-zinc-200/50 dark:border-zinc-850 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="mb-8 bg-zinc-100 dark:bg-zinc-950 border border-zinc-200/50 dark:border-zinc-800 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="w-full flex-1">
-          <div className="flex justify-between text-xs font-bold text-zinc-550 mb-1.5 text-left">
+          <div className="flex justify-between text-xs font-bold text-zinc-600 mb-1.5 text-left">
             <span>Progress Pengisian</span>
             <span>{answeredCount} dari {questions.length} Soal Terjawab ({progressPercent}%)</span>
           </div>
@@ -76,7 +76,7 @@ export function QuizSessionScreen({
         <div className="lg:col-span-3 space-y-6">
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm p-6 sm:p-8 text-left">
             <div className="flex justify-between items-center mb-6">
-              <span className="text-[10px] bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 px-3 py-1 rounded-lg text-zinc-550 font-bold uppercase tracking-wider">
+              <span className="text-[10px] bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 px-3 py-1 rounded-lg text-zinc-600 font-bold uppercase tracking-wider">
                 Pertanyaan {currentIndex + 1}
               </span>
               <div className="flex items-center gap-1.5">
@@ -110,7 +110,7 @@ export function QuizSessionScreen({
                       <span className={`h-7 w-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-all ${
                         isSelected
                           ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/10"
-                          : "bg-zinc-50 dark:bg-zinc-850 text-zinc-500 border border-zinc-200 dark:border-zinc-750 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors"
+                          : "bg-zinc-50 dark:bg-zinc-800 text-zinc-500 border border-zinc-200 dark:border-zinc-700 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors"
                       }`}>
                         {key}
                       </span>
@@ -134,7 +134,7 @@ export function QuizSessionScreen({
             <button
               onClick={onPrev}
               disabled={currentIndex === 0}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 px-4 py-2 text-xs font-bold text-zinc-655 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-850 disabled:opacity-40 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 px-4 py-2 text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-40 transition-colors cursor-pointer"
             >
               <ArrowLeft className="h-4 w-4" /> Sebelumnya
             </button>
@@ -177,8 +177,8 @@ export function QuizSessionScreen({
                       isActive
                         ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/20 font-black scale-105"
                         : isAnswered
-                          ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-900/40 text-emerald-600 dark:text-emerald-450"
-                          : "bg-zinc-50 dark:bg-zinc-955 border-zinc-200 dark:border-zinc-800 text-zinc-550 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-850"
+                          ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-900/40 text-emerald-600 dark:text-emerald-400"
+                          : "bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                     }`}
                   >
                     {idx + 1}

@@ -163,8 +163,8 @@ export function DailyQuizTab({
           Soal Kuis Harian Aktif ({dailyQuestions.length})
         </h3>
         {isLoadingDaily ? (
-          <div className="p-12 text-center text-zinc-550 flex flex-col items-center justify-center">
-            <div className="h-8 w-8 rounded-full border-4 border-emerald-150 border-t-emerald-600 animate-spin mb-3" />
+          <div className="p-12 text-center text-zinc-600 flex flex-col items-center justify-center">
+            <div className="h-8 w-8 rounded-full border-4 border-emerald-100 border-t-emerald-600 animate-spin mb-3" />
             <p className="text-xs font-bold">Memuat soal kuis harian...</p>
           </div>
         ) : dailyQuestions.length === 0 ? (

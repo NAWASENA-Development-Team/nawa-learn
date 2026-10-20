@@ -12,7 +12,7 @@ export function ProfilePointsLog({ logs }: { logs: PointLog[] }) {
       {/* Subtle background glow */}
       <div className="absolute -top-32 -right-32 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="mb-8 pb-4 border-b border-zinc-150 dark:border-zinc-850 flex items-center justify-between relative z-10">
+      <div className="mb-8 pb-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between relative z-10">
         <div>
           <h3 className="text-xl font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
             <span className="p-1.5 bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl">

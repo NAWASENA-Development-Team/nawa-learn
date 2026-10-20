@@ -386,7 +386,7 @@ export function ProfileHeader({
                 navigator.clipboard.writeText(typeof window !== "undefined" ? `${window.location.origin}/profile/${user.id}` : "");
                 toastSuccess("Link Disalin!", "Link profil berhasil disalin ke clipboard.");
               }}
-              className="inline-flex items-center gap-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-800 border border-zinc-700/80 text-zinc-350 px-4 py-2.5 text-xs font-bold transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-800 border border-zinc-700/80 text-zinc-400 px-4 py-2.5 text-xs font-bold transition-all cursor-pointer"
             >
               <Share2 className="h-4 w-4" /> Bagikan Profil
             </button>

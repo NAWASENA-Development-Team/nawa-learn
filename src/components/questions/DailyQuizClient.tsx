@@ -249,7 +249,7 @@ export default function DailyQuizClient({ initialQuestions }: DailyQuizClientPro
                 const isSelected = selectedOption === key;
                 const isCorrectAnswer = key === revealed?.correctKey;
                 
-                let btnClass = "border-zinc-200 dark:border-zinc-800 hover:border-indigo-300 dark:hover:border-indigo-900/60 hover:bg-zinc-50 dark:hover:bg-zinc-850/50";
+                let btnClass = "border-zinc-200 dark:border-zinc-800 hover:border-indigo-300 dark:hover:border-indigo-900/60 hover:bg-zinc-50 dark:hover:bg-zinc-800/50";
                 let checkIcon = null;
 
                 if (revealed) {

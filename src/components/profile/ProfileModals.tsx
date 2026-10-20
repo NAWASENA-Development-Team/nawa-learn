@@ -121,11 +121,11 @@ export function EditProfileModal({ bio, motto, onClose }: EditProfileModalProps)
           </div>
         </div>
 
-        <div className="mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-850 flex items-center justify-end gap-3">
+        <div className="mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-end gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-350 font-bold py-2.5 px-4.5 rounded-xl text-xs transition-all cursor-pointer"
+            className="bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-bold py-2.5 px-4.5 rounded-xl text-xs transition-all cursor-pointer"
           >
             Batal
           </button>
@@ -179,7 +179,7 @@ export function AvatarPickerModal({ selectedAvatar, onSelect, onClose }: AvatarP
 
         <button
           onClick={onClose}
-          className="w-full bg-zinc-150 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-250 font-bold py-2.5 px-4 rounded-xl text-xs transition-all cursor-pointer"
+          className="w-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 font-bold py-2.5 px-4 rounded-xl text-xs transition-all cursor-pointer"
         >
           Tutup
         </button>
@@ -410,11 +410,11 @@ export function CertificateModal({ user, onClose }: { user: UserProfile; onClose
         <div className="relative z-10 flex flex-col items-center">
           <span className="text-5xl mb-3">🕊️</span>
           <p className="text-[10px] font-black tracking-[0.25em] text-indigo-700 uppercase">OSIS NAWASENA SMAN 2 JONGGOL</p>
-          <h2 className="font-extrabold text-2xl sm:text-3xl tracking-tight text-zinc-850 mt-2 font-serif">
+          <h2 className="font-extrabold text-2xl sm:text-3xl tracking-tight text-zinc-800 mt-2 font-serif">
             SERTIFIKAT APRESIASI
           </h2>
           <div className="h-0.5 w-24 bg-gradient-to-r from-transparent via-amber-500 to-transparent my-3" />
-          <p className="text-[11px] text-zinc-450 italic font-medium font-sans">
+          <p className="text-[11px] text-zinc-500 italic font-medium font-sans">
             Diberikan penghargaan setinggi-tingginya kepada kontributor berprestasi:
           </p>
         </div>
@@ -434,13 +434,13 @@ export function CertificateModal({ user, onClose }: { user: UserProfile; onClose
         </div>
 
         {/* Achievement Text Description */}
-        <div className="relative z-10 max-w-lg leading-relaxed text-xs sm:text-sm text-zinc-650 px-6 font-sans">
+        <div className="relative z-10 max-w-lg leading-relaxed text-xs sm:text-sm text-zinc-600 px-6 font-sans">
           Atas dedikasi luar biasa dalam membagikan modul, ringkasan belajar estetik, serta kontribusi aktif membuat latihan soal di platform belajar kolaboratif <b>NAWA-LEARN</b> SMAN 2 Jonggol. Dengan total pencapaian perolehan sebesar:
 
           <div className="my-4 flex items-center justify-center gap-6">
             <div className="bg-amber-50 border border-amber-200 px-4 py-2 rounded-xl text-center shadow-sm">
               <p className="text-[10px] text-amber-800 font-bold uppercase tracking-wider">V-Point</p>
-              <p className="text-xl font-black text-amber-700 mt-0.5">{user.points} VP</p>
+              <p className="text-xl font-black text-amber-700 mt-0.5">{user.points} XP</p>
             </div>
             <div className="bg-indigo-50 border border-indigo-200 px-4 py-2 rounded-xl text-center shadow-sm">
               <p className="text-[10px] text-indigo-800 font-bold uppercase tracking-wider">Level Scholar</p>
@@ -459,7 +459,7 @@ export function CertificateModal({ user, onClose }: { user: UserProfile; onClose
               ~ Ketua OSIS Nawasena ~
             </div>
             <p className="font-extrabold text-zinc-800 border-t border-zinc-200 pt-1 w-44 text-sm">Cecillia Natasya Sonthani</p>
-            <p className="text-[9px] text-zinc-450 mt-0.5">Ketua OSIS SMAN 2 Jonggol</p>
+            <p className="text-[9px] text-zinc-500 mt-0.5">Ketua OSIS SMAN 2 Jonggol</p>
           </div>
 
           <div className="flex flex-col items-center">
@@ -468,15 +468,15 @@ export function CertificateModal({ user, onClose }: { user: UserProfile; onClose
               ~ Team Developer ~
             </div>
             <p className="font-extrabold text-zinc-800 border-t border-zinc-200 pt-1 w-44 text-sm">Maulana Ferdi Irawan</p>
-            <p className="text-[9px] text-zinc-450 mt-0.5">Kepala Nawasena Team Developer</p>
+            <p className="text-[9px] text-zinc-500 mt-0.5">Kepala Nawasena Team Developer</p>
           </div>
         </div>
 
         {/* Certificate Modal Action Buttons */}
-        <div data-html2canvas-ignore="true" className="relative z-10 mt-10 pt-4 border-t border-zinc-150 w-full flex items-center justify-between max-w-xl text-xs gap-3">
+        <div data-html2canvas-ignore="true" className="relative z-10 mt-10 pt-4 border-t border-zinc-100 w-full flex items-center justify-between max-w-xl text-xs gap-3">
           <button
             onClick={onClose}
-            className="bg-zinc-200 hover:bg-zinc-250 text-zinc-700 font-bold py-2.5 px-4 rounded-xl transition-all cursor-pointer"
+            className="bg-zinc-200 hover:bg-zinc-200 text-zinc-700 font-bold py-2.5 px-4 rounded-xl transition-all cursor-pointer"
           >
             Kembali Ke Profil
           </button>

@@ -75,7 +75,7 @@ export default function SubmitClient() {
               </div>
               <div className="text-left">
                 <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200">{item.title}</p>
-                <p className="text-xs text-zinc-550">{item.desc}</p>
+                <p className="text-xs text-zinc-600">{item.desc}</p>
               </div>
             </div>
           ))}
@@ -90,7 +90,7 @@ export default function SubmitClient() {
           className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border ${
             submitType === "module"
               ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/10 scale-[1.02]"
-              : "bg-white dark:bg-zinc-900 border-zinc-250 dark:border-zinc-800 text-zinc-650 dark:text-zinc-350 hover:bg-zinc-50"
+              : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50"
           }`}
         >
           <FolderOpen className="h-4 w-4" /> Kontribusi Modul Catatan
@@ -101,7 +101,7 @@ export default function SubmitClient() {
           className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border ${
             submitType === "question"
               ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/10 scale-[1.02]"
-              : "bg-white dark:bg-zinc-900 border-zinc-250 dark:border-zinc-800 text-zinc-655 dark:text-zinc-350 hover:bg-zinc-50"
+              : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50"
           }`}
         >
           <HelpCircle className="h-4 w-4" /> Buat Soal Latihan CBT
@@ -135,7 +135,7 @@ export default function SubmitClient() {
               ))}
             </ul>
 
-            <div className="mt-6 pt-6 border-t border-zinc-150 dark:border-zinc-800 flex items-center gap-3">
+            <div className="mt-6 pt-6 border-t border-zinc-100 dark:border-zinc-800 flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
                 <BookOpen className="h-5 w-5" />
               </div>
@@ -145,7 +145,7 @@ export default function SubmitClient() {
                   {totalActiveModules !== null ? (
                     `${totalActiveModules} Modul Belajar`
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 text-zinc-450 dark:text-zinc-550">
+                    <span className="inline-flex items-center gap-1.5 text-zinc-500">
                       <Loader2 className="h-3.5 w-3.5 animate-spin" /> Memuat...
                     </span>
                   )}

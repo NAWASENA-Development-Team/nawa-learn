@@ -25,8 +25,8 @@ export function SubmissionsModulesTab({
   return (
     <div className="space-y-4">
       {isLoadingModules ? (
-        <div className="p-12 text-center text-zinc-550 flex flex-col items-center justify-center">
-          <div className="h-8 w-8 rounded-full border-4 border-indigo-150 border-t-indigo-600 animate-spin mb-3" />
+        <div className="p-12 text-center text-zinc-600 flex flex-col items-center justify-center">
+          <div className="h-8 w-8 rounded-full border-4 border-indigo-100 border-t-indigo-600 animate-spin mb-3" />
           <p className="text-xs font-bold">Memuat antrean draf modul...</p>
         </div>
       ) : submissions.length === 0 ? (
@@ -34,7 +34,7 @@ export function SubmissionsModulesTab({
           <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-indigo-100/40">
             <CheckCircle2 className="h-6 w-6" />
           </div>
-          <h4 className="text-base font-extrabold text-zinc-850 dark:text-zinc-150">Antrean Modul Bersih</h4>
+          <h4 className="text-base font-extrabold text-zinc-800 dark:text-zinc-100">Antrean Modul Bersih</h4>
           <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Saat ini belum ada draf modul yang diajukan oleh siswa untuk ditinjau. Semua modul yang dikirim telah diterbitkan!</p>
         </div>
       ) : (

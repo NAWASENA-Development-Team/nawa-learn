@@ -210,7 +210,7 @@ export default function LeaderboardClient({
                 )}
 
                 {/* Info card */}
-                <div className="w-full text-center p-5 bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-900 dark:to-zinc-950 border-2 border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-md flex flex-col items-center relative overflow-hidden hover:border-zinc-350 dark:hover:border-zinc-700 transition-all duration-300">
+                <div className="w-full text-center p-5 bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-900 dark:to-zinc-950 border-2 border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-md flex flex-col items-center relative overflow-hidden hover:border-zinc-300 dark:hover:border-zinc-700 transition-all duration-300">
                   <div className="absolute top-0 right-0 w-12 h-12 bg-zinc-400/5 rounded-full blur-xl pointer-events-none" />
                   <h3 className="font-extrabold text-zinc-900 dark:text-zinc-100 truncate max-w-[160px] hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                     <Link href={`/profile/${u.id}`}>{u.name}</Link>
@@ -381,7 +381,7 @@ export default function LeaderboardClient({
             onClick={() => setFilterType("all")}
             className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all shrink-0 cursor-pointer ${
               filterType === "all"
-                ? "bg-white dark:bg-zinc-850 text-amber-600 dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-800"
+                ? "bg-white dark:bg-zinc-800 text-amber-600 dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-800"
                 : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300"
             }`}
           >
@@ -391,7 +391,7 @@ export default function LeaderboardClient({
             onClick={() => setFilterType("top10")}
             className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all shrink-0 cursor-pointer ${
               filterType === "top10"
-                ? "bg-white dark:bg-zinc-850 text-amber-600 dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-800"
+                ? "bg-white dark:bg-zinc-800 text-amber-600 dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-800"
                 : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300"
             }`}
           >
@@ -401,7 +401,7 @@ export default function LeaderboardClient({
             onClick={() => setFilterType("top3")}
             className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all shrink-0 cursor-pointer ${
               filterType === "top3"
-                ? "bg-white dark:bg-zinc-850 text-amber-600 dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-800"
+                ? "bg-white dark:bg-zinc-800 text-amber-600 dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-800"
                 : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300"
             }`}
           >
@@ -465,10 +465,10 @@ export default function LeaderboardClient({
                   <div className={`w-8 h-8 flex items-center justify-center rounded-full font-black text-xs sm:text-sm
                     ${rank === 1 ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-500" : 
                       rank === 2 ? "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400" : 
-                      rank === 3 ? "bg-orange-100 text-orange-850 dark:bg-orange-900/30 dark:text-orange-500" : 
+                      rank === 3 ? "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-500" : 
                       isTop10 ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" :
                       isTop50 ? "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400" :
-                      "bg-zinc-100 text-zinc-500 dark:bg-zinc-900 dark:text-zinc-650"}`}
+                      "bg-zinc-100 text-zinc-500 dark:bg-zinc-900 dark:text-zinc-600"}`}
                   >
                     {rank}
                   </div>
@@ -493,7 +493,7 @@ export default function LeaderboardClient({
                     </div>
                     
                     <div className="flex gap-1.5 items-center">
-                      <span className="text-[9px] bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-1.5 py-0.5 rounded text-zinc-550 dark:text-zinc-400 font-bold shrink-0">
+                      <span className="text-[9px] bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-1.5 py-0.5 rounded text-zinc-600 dark:text-zinc-400 font-bold shrink-0">
                         Level {getLevel(user.points)}
                       </span>
                       <span className="text-[9px] text-zinc-400 dark:text-zinc-500 font-medium truncate hidden md:inline">
