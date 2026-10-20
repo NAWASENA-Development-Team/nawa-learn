@@ -3,9 +3,32 @@
 
 import Link from "next/link";
 import { Show } from "@clerk/nextjs";
-import { useEffect, useRef, useState, ReactNode } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
+import {
+  ArrowRight,
+  BookOpen,
+  Trophy,
+  Shield,
+  GraduationCap,
+  CheckCircle2,
+  FileText,
+  Check,
+  Flame,
+  Zap,
+  Award,
+  Users,
+  Target,
+  Clock,
+  ArrowUpRight,
+  Layers,
+  Lock,
+  Sparkles,
+} from "lucide-react";
+import NawaIcon from "@/components/icons/NawaIcon";
+import { AVATAR_OPTIONS } from "@/lib/avatars";
+import { LatexRenderer } from "@/components/ui/LatexRenderer";
 
-/* === Animated counter ======================================================= */
+/* ── Live Animated Counter ─────────────────────────────────────────────────── */
 function Counter({ target, suffix = "" }: { target: number; suffix?: string }) {
   const [count, setCount] = useState(0);
   const ref = useRef<HTMLSpanElement>(null);
@@ -16,14 +39,18 @@ function Counter({ target, suffix = "" }: { target: number; suffix?: string }) {
       if (!entry.isIntersecting || started.current) return;
       started.current = true;
       observer.disconnect();
-      const duration = 1400;
-      const steps = 80;
-      const step = target / steps;
+      const duration = 1200;
+      const steps = 60;
+      const step = Math.max(1, Math.floor(target / steps));
       let current = 0;
       const timer = setInterval(() => {
         current += step;
-        if (current >= target) { setCount(target); clearInterval(timer); }
-        else setCount(Math.floor(current));
+        if (current >= target) {
+          setCount(target);
+          clearInterval(timer);
+        } else {
+          setCount(current);
+        }
       }, duration / steps);
     });
     if (ref.current) observer.observe(ref.current);
@@ -33,55 +60,17 @@ function Counter({ target, suffix = "" }: { target: number; suffix?: string }) {
   return <span ref={ref}>{count.toLocaleString("id-ID")}{suffix}</span>;
 }
 
-/* ─── Scroll reveal wrapper ────────────────────────────────────────────────── */
-function ScrollReveal({ children, delay = 0, className = "" }: { children: ReactNode; delay?: number; className?: string }) {
-  const [isVisible, setIsVisible] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.05 }
-    );
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <div
-      ref={ref}
-      style={{ transitionDelay: `${delay}ms` }}
-      className={`transition-all duration-[900ms] ease-out ${
-        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none"
-      } ${className}`}
-    >
-      {children}
-    </div>
-  );
+/* ── Props ────────────────────────────────────────────────────────────────── */
+interface SampleModule {
+  id: string;
+  title: string;
+  subject: string;
+  category: string;
+  downloads: number;
+  uploaderName: string;
+  points: number;
 }
 
-/* ─── Marquee text component ───────────────────────────────────────────────── */
-function Marquee({ items }: { items: string[] }) {
-  return (
-    <div className="relative overflow-hidden py-4 border-y border-zinc-100 dark:border-zinc-800/60 bg-zinc-50/50 dark:bg-zinc-900/30">
-      <div className="flex animate-[scroll_30s_linear_infinite] gap-12 whitespace-nowrap">
-        {[...items, ...items].map((item, i) => (
-          <span key={i} className="flex items-center gap-3 text-sm font-semibold text-zinc-400 dark:text-zinc-500 select-none">
-            <span className="h-1.5 w-1.5 rounded-full bg-indigo-400/60 dark:bg-indigo-500/40 shrink-0" />
-            {item}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ─── Props ────────────────────────────────────────────────────────────────── */
 interface LandingClientProps {
   stats: {
     modules: number;
@@ -89,423 +78,735 @@ interface LandingClientProps {
     students: number;
     contributors: number;
   };
-  sampleModules: {
-    id: string;
-    title: string;
-    category: string;
-    points: number;
-  }[];
+  sampleModules: SampleModule[];
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════ */
 export default function LandingClient({ stats, sampleModules }: LandingClientProps) {
+  // Interactive Simulator Tab state: "cbt" | "avatar"
+  const [activeSimTab, setActiveSimTab] = useState<"cbt" | "avatar">("cbt");
+
+  // CBT interactive practice state
+  const [selectedOption, setSelectedOption] = useState<string | null>("B");
+  const [hasCheckedAnswer, setHasCheckedAnswer] = useState<boolean>(true);
+
+  // Avatar showcase state
+  const [selectedAvatarIdx, setSelectedAvatarIdx] = useState<number>(0);
+  const currentAvatar = useMemo(() => AVATAR_OPTIONS[selectedAvatarIdx] ?? AVATAR_OPTIONS[0], [selectedAvatarIdx]);
 
   return (
-    <div className="relative overflow-x-hidden bg-white dark:bg-zinc-950">
+    <div className="relative overflow-x-hidden bg-white text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-50">
 
-      {/* ═══════════════ HERO ═══════════════ */}
-      <section className="relative isolate overflow-hidden">
-        {/* Background glow — subtle, not garish */}
-        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 h-[600px] w-[900px] rounded-full bg-gradient-to-br from-indigo-400/15 via-violet-400/8 to-transparent blur-[80px] dark:from-indigo-500/10 dark:via-violet-500/5" />
-          <div className="absolute -bottom-40 right-0 h-[300px] w-[400px] rounded-full bg-indigo-300/8 blur-[60px] dark:bg-indigo-600/5" />
+      {/* ══════════════════════════════════════════════════════════════════════
+          HERO SECTION
+          Persuade mode: clear value proposition, high typographic authority,
+          zero kicker/eyebrow, and authentic scholastic ambiance.
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section className="relative isolate pt-12 pb-16 md:pt-20 md:pb-24 overflow-hidden border-b border-zinc-200/80 dark:border-zinc-800/80">
+        {/* Ambient atmospheric aura — subtle diffused glow */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 h-[550px] w-[920px] rounded-full bg-gradient-to-b from-indigo-500/12 via-violet-500/6 to-transparent blur-[90px] dark:from-indigo-600/15 dark:via-violet-600/8" />
+          <div className="absolute top-1/3 -right-32 h-[380px] w-[380px] rounded-full bg-purple-500/8 blur-[80px] dark:bg-purple-600/10" />
         </div>
 
-        <div className="mx-auto max-w-7xl px-6 pt-20 pb-10 md:pt-32 md:pb-16 lg:pt-36 lg:pb-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center text-center">
 
-            {/* Overline badge */}
-            <div className="mb-8 inline-flex items-center gap-2.5 rounded-full border border-indigo-200/70 bg-white/80 px-4 py-2 text-sm font-semibold text-indigo-700 shadow-sm backdrop-blur-md dark:border-indigo-800/50 dark:bg-zinc-900/80 dark:text-indigo-300">
-              <svg className="h-4 w-4 text-indigo-500 dark:text-indigo-400" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10.868 2.884c-.321-.772-1.415-.772-1.736 0l-1.83 4.401-4.753.381c-.833.067-1.171 1.107-.536 1.651l3.62 3.102-1.106 4.637c-.194.813.691 1.456 1.405 1.02L10 15.591l4.069 2.485c.713.436 1.598-.207 1.404-1.02l-1.106-4.637 3.62-3.102c.635-.544.297-1.584-.536-1.65l-4.752-.382-1.831-4.401z" clipRule="evenodd" />
-              </svg>
-              Platform Edukasi OSIS NAWASENA
-            </div>
-
-            {/* Main headline */}
-            <h1 className="max-w-5xl text-4xl font-black leading-[1.08] tracking-tight text-zinc-900 dark:text-white sm:text-5xl md:text-6xl lg:text-7xl">
-              Tempat siswa SMAN 2 Jonggol{" "}
-              <span className="relative inline-block">
-                <span className="relative z-10 bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent dark:from-indigo-400 dark:to-violet-400">
-                  belajar bersama
-                </span>
-                <span aria-hidden className="absolute -bottom-1 left-0 right-0 h-3 bg-indigo-200/40 dark:bg-indigo-600/20 rounded-full -z-0" />
-              </span>
+            {/* Direct Authoritative Headline (No kicker/eyebrow above) */}
+            <h1 className="max-w-4xl text-4xl font-black leading-[1.08] tracking-tight sm:text-5xl md:text-6xl lg:text-7xl text-zinc-900 dark:text-white">
+              Ruang Belajar Bersama &amp; Simulasi Ujian SMAN 2 Jonggol
             </h1>
 
-            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-zinc-600 dark:text-zinc-400 md:text-xl">
-              Akses modul pelajaran, latihan soal adaptif, dan kuis harian berhadiah —
-              semuanya gratis, dibuat oleh siswa, untuk siswa.
+            {/* Clear, High-Yield Subheading */}
+            <p className="mt-6 max-w-2xl text-base leading-relaxed text-zinc-600 dark:text-zinc-400 sm:text-lg md:text-xl">
+              Akses modul terverifikasi dari rekan sebayamu, kuasai latihan soal UTBK dan olimpiade dengan notasi LaTeX presisi, dan kumpulkan pencapaian akademikmu dalam ekosistem belajar yang jujur dan suportif.
             </p>
 
-            {/* CTAs */}
-            <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+            {/* Primary & Secondary Action Pair */}
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
               <Show when="signed-out">
                 <Link
-                  id="hero-cta-signin"
+                  id="hero-cta-register"
                   href="/sign-in"
-                  className="group inline-flex items-center gap-2.5 rounded-2xl bg-indigo-600 px-8 py-4 text-base font-bold text-white shadow-xl shadow-indigo-500/25 transition-all duration-300 hover:bg-indigo-700 hover:shadow-indigo-500/40 hover:-translate-y-0.5 active:translate-y-0 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                  className="group inline-flex items-center gap-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-7 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:from-indigo-700 hover:to-violet-700 hover:shadow-indigo-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
                 >
-                  Mulai Belajar Gratis
-                  <svg className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                  </svg>
+                  Mulai Belajar Sekarang
+                  <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
                 </Link>
-              </Show>
-              <Show when="signed-in">
                 <Link
                   id="hero-cta-modules"
                   href="/modules"
-                  className="group inline-flex items-center gap-2.5 rounded-2xl bg-indigo-600 px-8 py-4 text-base font-bold text-white shadow-xl shadow-indigo-500/25 transition-all duration-300 hover:bg-indigo-700 hover:-translate-y-0.5 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                  className="inline-flex items-center gap-2 rounded-xl border border-zinc-250 bg-white px-6 py-3.5 text-sm font-semibold text-zinc-800 shadow-sm transition-all duration-200 hover:bg-zinc-50 hover:border-zinc-350 hover:-translate-y-0.5 active:scale-[0.98] dark:border-zinc-750 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-850 dark:hover:border-zinc-650"
                 >
-                  Ke Perpustakaan Modul
-                  <svg className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                  </svg>
+                  <BookOpen className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
+                  Jelajahi Bank Modul
                 </Link>
               </Show>
-              <Link
-                id="hero-cta-leaderboard"
-                href="/leaderboard"
-                className="inline-flex items-center gap-2 rounded-2xl border border-zinc-300 bg-white px-8 py-4 text-base font-semibold text-zinc-700 shadow-sm transition-all duration-300 hover:border-zinc-400 hover:bg-zinc-50 hover:-translate-y-0.5 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
-              >
-                🏆 Lihat Peringkat
-              </Link>
+
+              <Show when="signed-in">
+                <Link
+                  id="hero-cta-practice"
+                  href="/questions/practice"
+                  className="group inline-flex items-center gap-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-7 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:from-indigo-700 hover:to-violet-700 hover:shadow-indigo-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
+                >
+                  Masuk Ruang Latihan Soal
+                  <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+                </Link>
+                <Link
+                  id="hero-cta-leaderboard"
+                  href="/leaderboard"
+                  className="inline-flex items-center gap-2 rounded-xl border border-zinc-250 bg-white px-6 py-3.5 text-sm font-semibold text-zinc-800 shadow-sm transition-all duration-200 hover:bg-zinc-50 hover:border-zinc-350 hover:-translate-y-0.5 active:scale-[0.98] dark:border-zinc-750 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-850 dark:hover:border-zinc-650"
+                >
+                  <Trophy className="h-4 w-4 text-amber-500" />
+                  Papan Peringkat Musim
+                </Link>
+              </Show>
             </div>
 
-            {/* Trust signals */}
-            <div className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-zinc-500 dark:text-zinc-500">
-              <span className="flex items-center gap-1.5">
-                <svg className="h-4 w-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                100% Gratis
-              </span>
-              <span className="flex items-center gap-1.5">
-                <svg className="h-4 w-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                Tanpa Iklan
-              </span>
-              <span className="flex items-center gap-1.5">
-                <svg className="h-4 w-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                Diverifikasi Moderator
-              </span>
+            {/* Seamless Live Data Ribbon (Not fragmented cookie-cutter metric cards) */}
+            <div className="mt-12 w-full max-w-4xl rounded-2xl border border-zinc-200/80 bg-zinc-50/70 p-4 shadow-sm backdrop-blur-sm dark:border-zinc-800/80 dark:bg-zinc-900/60 sm:p-5">
+              <div className="grid grid-cols-2 gap-4 divide-y divide-zinc-200/60 dark:divide-zinc-800/60 sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
+                <div className="flex flex-col items-center justify-center pt-2 sm:pt-0">
+                  <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400 sm:text-3xl">
+                    <Counter target={stats.modules} suffix="+" />
+                  </div>
+                  <span className="mt-1 text-xs font-semibold text-zinc-500 dark:text-zinc-400">Modul Terverifikasi</span>
+                </div>
+                <div className="flex flex-col items-center justify-center pt-2 sm:pt-0">
+                  <div className="text-2xl font-black text-violet-600 dark:text-violet-400 sm:text-3xl">
+                    <Counter target={stats.questions} suffix="+" />
+                  </div>
+                  <span className="mt-1 text-xs font-semibold text-zinc-500 dark:text-zinc-400">Bank Soal Latihan</span>
+                </div>
+                <div className="flex flex-col items-center justify-center pt-2 sm:pt-0">
+                  <div className="text-2xl font-black text-zinc-900 dark:text-white sm:text-3xl">
+                    <Counter target={stats.students} suffix="+" />
+                  </div>
+                  <span className="mt-1 text-xs font-semibold text-zinc-500 dark:text-zinc-400">Siswa Terdaftar</span>
+                </div>
+                <div className="flex flex-col items-center justify-center pt-2 sm:pt-0">
+                  <div className="text-2xl font-black text-amber-600 dark:text-amber-400 sm:text-3xl">
+                    <Counter target={stats.contributors} suffix="+" />
+                  </div>
+                  <span className="mt-1 text-xs font-semibold text-zinc-500 dark:text-zinc-400">Kontributor Aktif</span>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Interactive Arcane Academy Live Simulator ── */}
+            <div className="mt-12 w-full max-w-4xl text-left">
+              {/* Simulator Switcher Bar */}
+              <div className="flex items-center justify-between border-b border-zinc-200 bg-zinc-100/80 px-4 py-2.5 rounded-t-2xl dark:border-zinc-800 dark:bg-zinc-900/80">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setActiveSimTab("cbt")}
+                    className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                      activeSimTab === "cbt"
+                        ? "bg-white text-indigo-700 shadow-sm dark:bg-zinc-800 dark:text-indigo-400"
+                        : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+                    }`}
+                  >
+                    <GraduationCap className="h-4 w-4 text-indigo-500" />
+                    Simulasi CBT &amp; LaTeX
+                  </button>
+                  <button
+                    onClick={() => setActiveSimTab("avatar")}
+                    className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                      activeSimTab === "avatar"
+                        ? "bg-white text-indigo-700 shadow-sm dark:bg-zinc-800 dark:text-indigo-400"
+                        : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+                    }`}
+                  >
+                    <Trophy className="h-4 w-4 text-amber-500" />
+                    Gelar &amp; 22+ Avatar Siswa
+                  </button>
+                </div>
+                <div className="hidden sm:flex items-center gap-2 text-[11px] font-semibold text-zinc-400 dark:text-zinc-500">
+                  <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Pratinjau Interaktif
+                </div>
+              </div>
+
+              {/* Simulator Viewport Container */}
+              <div className="rounded-b-2xl border-x border-b border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 sm:p-8">
+                {activeSimTab === "cbt" ? (
+                  <div>
+                    {/* Simulated Quiz Header */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 pb-4 dark:border-zinc-800/80">
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-md bg-indigo-50 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wider text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400">
+                          Matematika Saintek
+                        </span>
+                        <span className="rounded-md bg-amber-50 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wider text-amber-700 dark:bg-amber-950/60 dark:text-amber-400">
+                          UTBK-SNBT · Sulit
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 font-mono text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                        <Clock className="h-3.5 w-3.5 text-indigo-500" />
+                        <span>Sisa Waktu: 18:45</span>
+                      </div>
+                    </div>
+
+                    {/* Question with KaTeX Formula */}
+                    <div className="mt-5">
+                      <h2 className="text-base font-bold text-zinc-900 dark:text-white sm:text-lg">
+                        Tentukan nilai limit trigonometri berikut:
+                      </h2>
+                      <div className="my-3 rounded-xl bg-zinc-50/80 p-3.5 text-center text-base sm:text-lg dark:bg-zinc-950/60">
+                        <LatexRenderer text="$\lim_{x \to 0} \frac{\sin(4x) \cdot \tan(3x)}{1 - \cos(2x)} = \dots$" />
+                      </div>
+                    </div>
+
+                    {/* Interactive Multiple Choice Options */}
+                    <div className="mt-4 space-y-2.5">
+                      {[
+                        { key: "A", val: "$3$" },
+                        { key: "B", val: "$6$", correct: true },
+                        { key: "C", val: "$8$" },
+                        { key: "D", val: "$12$" },
+                      ].map((opt) => {
+                        const isChosen = selectedOption === opt.key;
+                        return (
+                          <button
+                            key={opt.key}
+                            onClick={() => {
+                              setSelectedOption(opt.key);
+                              setHasCheckedAnswer(true);
+                            }}
+                            className={`flex w-full items-center justify-between rounded-xl border p-3.5 text-left transition-all duration-150 cursor-pointer ${
+                              isChosen
+                                ? opt.correct
+                                  ? "border-emerald-500 bg-emerald-50/70 text-emerald-950 dark:bg-emerald-950/40 dark:text-emerald-200"
+                                  : "border-rose-500 bg-rose-50/70 text-rose-950 dark:bg-rose-950/40 dark:text-rose-200"
+                                : "border-zinc-200 bg-white hover:border-indigo-300 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-indigo-800"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <span
+                                className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
+                                  isChosen
+                                    ? opt.correct
+                                      ? "bg-emerald-600 text-white"
+                                      : "bg-rose-600 text-white"
+                                    : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+                                }`}
+                              >
+                                {opt.key}
+                              </span>
+                              <span className="text-sm font-semibold">
+                                <LatexRenderer text={opt.val} />
+                              </span>
+                            </div>
+                            {isChosen && (
+                              <span className="flex items-center gap-1 text-xs font-bold">
+                                {opt.correct ? (
+                                  <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                                    <Check className="h-4 w-4" /> Benar (+50 XP)
+                                  </span>
+                                ) : (
+                                  <span className="text-rose-600 dark:text-rose-400">Kurang Tepat</span>
+                                )}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Step-by-Step Explanation Bar */}
+                    {hasCheckedAnswer && (
+                      <div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50/60 p-4 text-xs text-indigo-900 dark:border-indigo-900/50 dark:bg-indigo-950/30 dark:text-indigo-200">
+                        <span className="font-bold">Pembahasan Singkat:</span> Gunakan identitas sudut ganda{" "}
+                        <LatexRenderer text="$1 - \cos(2x) = 2\sin^2(x)$" />. Maka limit menjadi{" "}
+                        <LatexRenderer text="$\lim_{x \to 0} \frac{\sin(4x) \cdot \tan(3x)}{2\sin^2(x)} = \frac{4 \cdot 3}{2 \cdot 1^2} = 6$" />.
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    {/* Simulated Profile & Avatar Vault */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                      <div className="flex flex-col items-center text-center p-4 rounded-2xl bg-zinc-50 border border-zinc-200/80 dark:bg-zinc-950 dark:border-zinc-800">
+                        <div className="relative mb-3 flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 p-1 shadow-lg shadow-indigo-500/20">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={currentAvatar.svg}
+                            alt={currentAvatar.label}
+                            className="h-20 w-20 rounded-xl bg-zinc-900 object-cover"
+                          />
+                          <span className="absolute -top-2 -right-2 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-black text-amber-950 shadow">
+                            Lv. 10
+                          </span>
+                        </div>
+                        <h3 className="text-base font-extrabold text-zinc-900 dark:text-white">Ahmad Fauzi</h3>
+                        <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">{currentAvatar.label}</p>
+                        <div className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-indigo-100/70 px-2.5 py-1 text-xs font-bold text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300">
+                          <Trophy className="h-3.5 w-3.5 text-amber-500" /> Peringkat #3 Sekolah
+                        </div>
+                      </div>
+
+                      <div className="md:col-span-2 space-y-4">
+                        <div>
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2">
+                            Pilih Avatar Fantasy &amp; Sci-Fi (22+ Karakter):
+                          </h4>
+                          <div className="flex flex-wrap gap-2">
+                            {AVATAR_OPTIONS.slice(0, 8).map((av, idx) => (
+                              <button
+                                key={av.svg}
+                                onClick={() => setSelectedAvatarIdx(idx)}
+                                title={av.label}
+                                className={`flex h-11 w-11 items-center justify-center rounded-xl border p-1 transition-all cursor-pointer ${
+                                  selectedAvatarIdx === idx
+                                    ? "border-indigo-600 bg-indigo-50 shadow-md ring-2 ring-indigo-500/30 dark:bg-indigo-950"
+                                    : "border-zinc-200 bg-white hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950"
+                                }`}
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={av.svg} alt={av.label} className="h-8 w-8 rounded-lg object-cover" />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2">
+                            Tingkat Kelangkaan Lencana (80+ Achievements):
+                          </h4>
+                          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center text-[11px] font-bold">
+                            <div className="rounded-lg bg-zinc-100 dark:bg-zinc-800 p-2 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
+                              Common
+                            </div>
+                            <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/60 p-2 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                              Uncommon
+                            </div>
+                            <div className="rounded-lg bg-blue-50 dark:bg-blue-950/60 p-2 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                              Rare
+                            </div>
+                            <div className="rounded-lg bg-purple-50 dark:bg-purple-950/60 p-2 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                              Epic
+                            </div>
+                            <div className="rounded-lg bg-amber-50 dark:bg-amber-950/60 p-2 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 col-span-2 sm:col-span-1">
+                              Legendary
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          CONTENT-LED BENTO ARCHITECTURE
+          Refuses same-size card ruts. Asymmetric, purpose-driven panels
+          grounded in real student workflows.
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section className="py-20 md:py-28 bg-zinc-50/50 dark:bg-zinc-950/50 border-b border-zinc-200/80 dark:border-zinc-800/80">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+
+          {/* Section Heading (No kicker) */}
+          <div className="max-w-3xl">
+            <h2 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-white sm:text-4xl md:text-5xl">
+              Pilar Pembelajaran NAWA-LEARN
+            </h2>
+            <p className="mt-4 text-base text-zinc-600 dark:text-zinc-400 sm:text-lg">
+              Dirancang untuk memenuhi kebutuhan nyata siswa SMAN 2 Jonggol: dari persiapan ujian semester hingga seleksi perguruan tinggi negeri.
+            </p>
+          </div>
+
+          {/* Asymmetric Bento Showcase */}
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+
+            {/* Bento Card 1: Bank Soal & Mesin CBT Presisi (Wide 2-col) */}
+            <div className="md:col-span-2 rounded-3xl border border-zinc-200/80 bg-white p-8 shadow-sm transition-all duration-200 hover:border-indigo-300 dark:border-zinc-800/80 dark:bg-zinc-900 dark:hover:border-indigo-800 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400">
+                    <Target className="h-6 w-6" />
+                  </div>
+                  <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                    Simulasi &amp; Latihan
+                  </span>
+                </div>
+                <h3 className="text-2xl font-bold text-zinc-900 dark:text-white">
+                  Bank Soal Terverifikasi &amp; Penilaian Aman
+                </h3>
+                <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400 max-w-xl">
+                  Kerjakan ratusan soal latihan dari mata pelajaran Matematika, Fisika, Kimia, hingga Biologi. Dilengkapi format persamaan LaTeX presisi, penilaian server-side anti-bocor, serta pembahasan terstruktur di akhir pengerjaan.
+                </p>
+
+                {/* Sub-capabilities list */}
+                <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div className="flex items-start gap-2 text-zinc-700 dark:text-zinc-300">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <span>Dukungan rumus matematika &amp; sains standar KaTeX</span>
+                  </div>
+                  <div className="flex items-start gap-2 text-zinc-700 dark:text-zinc-300">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <span>Tingkat kesulitan terstandar: Mudah, Sedang, Sulit</span>
+                  </div>
+                  <div className="flex items-start gap-2 text-zinc-700 dark:text-zinc-300">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <span>Ujian kustom adaptif dengan timer simulasi UTBK</span>
+                  </div>
+                  <div className="flex items-start gap-2 text-zinc-700 dark:text-zinc-300">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <span>Poin dan reward dievaluasi langsung di sisi server</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+                <Link
+                  href="/questions/practice"
+                  className="inline-flex items-center gap-1.5 text-sm font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
+                >
+                  Buka Ruang Latihan Soal
+                  <ArrowUpRight className="h-4 w-4" />
+                </Link>
+                <span className="text-xs font-semibold text-zinc-400">Gratis &amp; Terbuka</span>
+              </div>
+            </div>
+
+            {/* Bento Card 2: Vault Modul Terkurasi (1-col) */}
+            <div className="rounded-3xl border border-zinc-200/80 bg-white p-8 shadow-sm transition-all duration-200 hover:border-violet-300 dark:border-zinc-800/80 dark:bg-zinc-900 dark:hover:border-violet-800 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-50 text-violet-600 dark:bg-violet-950/60 dark:text-violet-400">
+                    <BookOpen className="h-6 w-6" />
+                  </div>
+                  <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                    Catatan Sebaya
+                  </span>
+                </div>
+                <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
+                  Perpustakaan Modul Terkurasi
+                </h3>
+                <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                  Kumpulan ringkasan materi, peta konsep, dan catatan ujian buatan siswa SMAN 2 Jonggol. Setiap modul melewati kurasi moderator sebelum dipublikasikan.
+                </p>
+
+                <div className="mt-6 space-y-2.5 text-xs text-zinc-600 dark:text-zinc-400">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-violet-500" />
+                    <span>Mendukung PDF &amp; catatan bergambar resolusi tinggi</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-emerald-500" />
+                    <span>Verifikasi ketat oleh tim kurator OSIS</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Award className="h-4 w-4 text-amber-500" />
+                    <span>Hadiah +50 poin untuk setiap modul yang disetujui</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-zinc-100 dark:border-zinc-800">
+                <Link
+                  href="/modules"
+                  className="inline-flex items-center gap-1.5 text-sm font-bold text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 transition-colors"
+                >
+                  Telusuri Semua Modul
+                  <ArrowUpRight className="h-4 w-4" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Bento Card 3: Kuis Harian Berhadiah (1-col) */}
+            <div className="rounded-3xl border border-zinc-200/80 bg-white p-8 shadow-sm transition-all duration-200 hover:border-amber-300 dark:border-zinc-800/80 dark:bg-zinc-900 dark:hover:border-amber-800 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400">
+                    <Zap className="h-6 w-6" />
+                  </div>
+                  <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                    Streak Harian
+                  </span>
+                </div>
+                <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
+                  Kuis Harian Adaptif
+                </h3>
+                <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                  Tantang pemahaman konsepmu setiap hari dengan kuis acak adaptif. Selesaikan satu set soal harian dan klaim poin musim untuk menjaga momentum belajarmu.
+                </p>
+                <div className="mt-5 rounded-2xl bg-amber-50/70 p-3.5 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200 border border-amber-200/60 dark:border-amber-900/40">
+                  <span className="font-bold">Reset otomatis:</span> Pukul 03.00 WIB setiap pagi. Uji konsistensimu!
+                </div>
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-zinc-100 dark:border-zinc-800">
+                <Link
+                  href="/questions/practice"
+                  className="inline-flex items-center gap-1.5 text-sm font-bold text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 transition-colors"
+                >
+                  Mulai Kuis Hari Ini
+                  <ArrowUpRight className="h-4 w-4" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Bento Card 4: Gamifikasi, Avatar, & Privasi UU PDP (Wide 2-col) */}
+            <div className="md:col-span-2 rounded-3xl border border-zinc-200/80 bg-white p-8 shadow-sm transition-all duration-200 hover:border-emerald-300 dark:border-zinc-800/80 dark:bg-zinc-900 dark:hover:border-emerald-800 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
+                    <Shield className="h-6 w-6" />
+                  </div>
+                  <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                    Integritas &amp; Privasi
+                  </span>
+                </div>
+                <h3 className="text-2xl font-bold text-zinc-900 dark:text-white">
+                  Peringkat Sehat &amp; Kepatuhan Privasi Penuh
+                </h3>
+                <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400 max-w-xl">
+                  Kompetisi akademik yang sehat dilindungi oleh sistem keamanan berlapis. Nilai dan peringkat dihitung murni dari kontribusi dan hasil latihan, didukung tata kelola data pribadi sesuai UU PDP Indonesia.
+                </p>
+
+                <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="rounded-2xl border border-zinc-200/80 bg-zinc-50/60 p-4 dark:border-zinc-800 dark:bg-zinc-950/40">
+                    <h4 className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
+                      <Trophy className="h-4 w-4 text-amber-500" /> 80+ Lencana &amp; Papan Peringkat
+                    </h4>
+                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                      Lencana dikelompokkan dalam 5 kategori prestasi dengan 5 tingkat kelangkaan resmi.
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-zinc-200/80 bg-zinc-50/60 p-4 dark:border-zinc-800 dark:bg-zinc-950/40">
+                    <h4 className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
+                      <Lock className="h-4 w-4 text-emerald-500" /> Perlindungan Privasi UU PDP
+                    </h4>
+                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                      Persetujuan eksplisit, ekspor data mandiri (CSV/JSON), dan opsi anonimisasi akun kapan saja.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+                <Link
+                  href="/leaderboard"
+                  className="inline-flex items-center gap-1.5 text-sm font-bold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors"
+                >
+                  Lihat Papan Peringkat
+                  <ArrowUpRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  href="/privacy"
+                  className="text-xs font-semibold text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 underline"
+                >
+                  Kebijakan Privasi
+                </Link>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          LIVE MODULE REPOSITORY PREVIEW
+          Real data feed from the database: authentic notes & verified downloads.
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section className="py-20 md:py-24 border-b border-zinc-200/80 dark:border-zinc-800/80">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
+            <div>
+              <h2 className="text-2xl font-black text-zinc-900 dark:text-white sm:text-3xl">
+                Modul Komunitas Terbaru
+              </h2>
+              <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+                Materi dan catatan belajar yang baru saja diverifikasi oleh kurator sekolah.
+              </p>
+            </div>
+            <Link
+              href="/modules"
+              className="inline-flex items-center gap-1.5 text-sm font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
+            >
+              Lihat Seluruh Perpustakaan Modul
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {sampleModules.map((m) => (
+              <Link
+                key={m.id}
+                href="/modules"
+                className="group flex flex-col justify-between rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm transition-all duration-200 hover:border-indigo-300 hover:shadow-md hover:-translate-y-0.5 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-indigo-700"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <span className="rounded-md bg-indigo-50 px-2.5 py-0.5 text-[11px] font-bold text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">
+                      {m.subject || "Umum"}
+                    </span>
+                    <span className="text-[11px] font-semibold text-zinc-400">
+                      {m.category}
+                    </span>
+                  </div>
+                  <h3 className="text-base font-bold text-zinc-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    {m.title}
+                  </h3>
+                </div>
+
+                <div className="mt-6 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                  <span className="font-medium">Oleh {m.uploaderName}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1">
+                      <BookOpen className="h-3.5 w-3.5 text-zinc-400" />
+                      {m.downloads} diunduh
+                    </span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                      +{m.points} XP
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          COMMUNITY MANIFESTO: OSIS NAWASENA SMAN 2 JONGGOL
+          Grounding the product in real school pride and peer collaboration.
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section className="py-20 md:py-24 bg-gradient-to-b from-transparent via-indigo-50/30 to-transparent dark:via-indigo-950/10 border-b border-zinc-200/80 dark:border-zinc-800/80">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
+          <div className="inline-flex items-center justify-center mb-6">
+            <NawaIcon className="h-16 w-16 drop-shadow-md" />
+          </div>
+          <h2 className="text-2xl font-black text-zinc-900 dark:text-white sm:text-3xl md:text-4xl">
+            Amanat Komunitas OSIS NAWASENA
+          </h2>
+          <blockquote className="mt-6 text-base leading-relaxed text-zinc-700 dark:text-zinc-300 sm:text-lg md:text-xl font-medium max-w-2xl mx-auto">
+            &ldquo;NAWA-LEARN dibangun dari semangat gotong royong warga SMAN 2 Jonggol. Setiap catatan modul yang kamu bagikan dan setiap soal latihan yang kamu susun adalah warisan pengetahuan nyata bagi rekan dan adik kelas yang belajar setelahmu.&rdquo;
+          </blockquote>
+          <div className="mt-6 flex flex-col items-center">
+            <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
+              Tim Pengembang OSIS NAWASENA
+            </span>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+              SMA Negeri 2 Jonggol, Kabupaten Bogor
+            </span>
+          </div>
+        </div>
+      </section>
+
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          FINAL CONVERSION CALL TO ACTION
+          Direct, encouraging invitation to join the scholastic community.
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section className="py-20 md:py-28">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          <div className="relative overflow-hidden rounded-3xl bg-zinc-900 px-8 py-14 text-center text-white shadow-2xl dark:bg-zinc-900 sm:px-16 sm:py-20 border border-zinc-800">
+            {/* Ambient interior glow */}
+            <div aria-hidden className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-indigo-500/20 blur-[80px]" />
+            <div aria-hidden className="pointer-events-none absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-violet-500/20 blur-[80px]" />
+
+            <h2 className="relative text-3xl font-black tracking-tight sm:text-4xl md:text-5xl">
+              Mulai Perjalanan Akademikmu Hari Ini
+            </h2>
+            <p className="relative mt-4 max-w-xl mx-auto text-sm leading-relaxed text-zinc-300 sm:text-base">
+              Bergabunglah bersama ratusan siswa SMAN 2 Jonggol lainnya. Akses seluruh modul, kerjakan simulasi ujian, dan kumpulkan pencapaianmu—100% gratis.
+            </p>
+
+            <div className="relative mt-8 flex flex-wrap items-center justify-center gap-4">
+              <Show when="signed-out">
+                <Link
+                  id="final-cta-signin"
+                  href="/sign-in"
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-7 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:from-indigo-600 hover:to-violet-600 hover:-translate-y-0.5 active:scale-[0.98]"
+                >
+                  Daftar Akun Sekarang
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  id="final-cta-modules"
+                  href="/modules"
+                  className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-800/80 px-6 py-3.5 text-sm font-semibold text-zinc-200 transition-all duration-200 hover:bg-zinc-800 hover:border-zinc-600 hover:-translate-y-0.5 active:scale-[0.98]"
+                >
+                  Jelajahi Modul
+                </Link>
+              </Show>
+
+              <Show when="signed-in">
+                <Link
+                  id="final-cta-practice"
+                  href="/questions/practice"
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-7 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:from-indigo-600 hover:to-violet-600 hover:-translate-y-0.5 active:scale-[0.98]"
+                >
+                  Buka Latihan Soal
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  id="final-cta-leaderboard"
+                  href="/leaderboard"
+                  className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-800/80 px-6 py-3.5 text-sm font-semibold text-zinc-200 transition-all duration-200 hover:bg-zinc-800 hover:border-zinc-600 hover:-translate-y-0.5 active:scale-[0.98]"
+                >
+                  Papan Peringkat
+                </Link>
+              </Show>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ═══════════════ SOCIAL PROOF — LIVE STATS ═══════════════ */}
-      <ScrollReveal>
-        <section className="relative z-10 py-16 md:py-20">
-          <div className="mx-auto max-w-6xl px-6">
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
-              {[
-                { label: "Modul Terverifikasi", target: stats.modules, emoji: "📚", gradient: "from-indigo-500/10 to-indigo-500/0 dark:from-indigo-500/15 dark:to-indigo-500/0", text: "text-indigo-600 dark:text-indigo-400" },
-                { label: "Bank Soal Latihan",   target: stats.questions, emoji: "⚡", gradient: "from-violet-500/10 to-violet-500/0 dark:from-violet-500/15 dark:to-violet-500/0", text: "text-violet-600 dark:text-violet-400" },
-                { label: "Siswa Terdaftar",     target: stats.students, emoji: "👥", gradient: "from-emerald-500/10 to-emerald-500/0 dark:from-emerald-500/15 dark:to-emerald-500/0", text: "text-emerald-600 dark:text-emerald-400" },
-                { label: "Kontributor Aktif",   target: stats.contributors, emoji: "🌟", gradient: "from-amber-500/10 to-amber-500/0 dark:from-amber-500/15 dark:to-amber-500/0", text: "text-amber-600 dark:text-amber-400" },
-              ].map((s) => (
-                <div key={s.label} className={`relative overflow-hidden rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-gradient-to-br ${s.gradient} p-6 md:p-8 text-center`}>
-                  <span className="text-3xl mb-3 block">{s.emoji}</span>
-                  <div className={`text-3xl md:text-4xl font-black ${s.text} tracking-tight`}>
-                    <Counter target={s.target} suffix="+" />
-                  </div>
-                  <p className="mt-2 text-xs md:text-sm font-semibold text-zinc-500 dark:text-zinc-400">{s.label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      </ScrollReveal>
 
-      {/* ═══════════════ BRAND MARQUEE ═══════════════ */}
-      <Marquee items={[
-        "UTBK-SNBT", "Olimpiade Sains", "Matematika", "Fisika",
-        "Kimia", "Biologi", "Bahasa Inggris", "Sosiologi",
-        "Ekonomi", "Sejarah", "Geografi", "Bahasa Indonesia",
-      ]} />
-
-      {/* ═══════════════ FEATURES ═══════════════ */}
-      <ScrollReveal>
-        <section id="fitur" className="relative z-10 mx-auto max-w-7xl px-6 py-20 md:py-28">
-          <div className="mb-14 text-center">
-            <span className="mb-4 inline-flex items-center gap-2 rounded-full bg-indigo-50 dark:bg-indigo-950/50 px-4 py-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider border border-indigo-100 dark:border-indigo-800/50">
-              ✦ Fitur Unggulan
-            </span>
-            <h2 className="mt-4 text-3xl font-black text-zinc-900 dark:text-white md:text-5xl tracking-tight">
-              Semua yang siswa butuhkan
-            </h2>
-            <p className="mt-4 max-w-xl mx-auto text-zinc-600 dark:text-zinc-400 text-lg">
-              Didesain khusus untuk ekosistem belajar SMAN 2 Jonggol yang kolaboratif.
-            </p>
-          </div>
-
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {/* Feature 1 — Perpustakaan Modul */}
-            <Link href="/modules" className="group relative overflow-hidden rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-8 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-indigo-500/5 hover:border-indigo-300 dark:hover:border-indigo-700">
-              <div className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-100 dark:bg-indigo-900/50 text-2xl">📚</div>
-              <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">Perpustakaan Modul</h3>
-              <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-                Akses materi belajar dari UTBK hingga Olimpiade. Setiap modul dikurasi dan diverifikasi oleh moderator.
-              </p>
-              <div className="mt-5 flex items-center gap-1.5 text-sm font-semibold text-indigo-600 dark:text-indigo-400">
-                Jelajahi Modul
-                <svg className="h-4 w-4 transition-transform group-hover:translate-x-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
-              </div>
-            </Link>
-
-            {/* Feature 2 — Latihan Soal */}
-            <Link href="/questions/practice" className="group relative overflow-hidden rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-8 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-violet-500/5 hover:border-violet-300 dark:hover:border-violet-700">
-              <div className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-100 dark:bg-violet-900/50 text-2xl">⚡</div>
-              <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">Bank Soal & Latihan</h3>
-              <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-                Ratusan soal dengan tingkat kesulitan beragam. Ujian kustom, koreksi otomatis, dan penjelasan detail.
-              </p>
-              <div className="mt-5 flex items-center gap-1.5 text-sm font-semibold text-violet-600 dark:text-violet-400">
-                Mulai Latihan
-                <svg className="h-4 w-4 transition-transform group-hover:translate-x-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
-              </div>
-            </Link>
-
-            {/* Feature 3 — Kuis Harian Berhadiah (NEW) */}
-            <Link href="/questions/daily" className="group relative overflow-hidden rounded-3xl border-2 border-amber-300/60 dark:border-amber-700/50 bg-gradient-to-br from-amber-50 via-white to-orange-50 dark:from-amber-950/30 dark:via-zinc-900 dark:to-orange-950/20 p-8 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-amber-500/10">
-              <div className="absolute top-4 right-4 bg-amber-500 text-white text-[10px] font-black px-2.5 py-1 rounded-lg shadow-sm uppercase tracking-wider">
-                Baru!
-              </div>
-              <div className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100 dark:bg-amber-900/50 text-2xl">🎯</div>
-              <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">Kuis Harian Berhadiah</h3>
-              <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-                Tantangan harian dengan soal acak adaptif. Selesaikan dan raih <strong className="text-amber-600 dark:text-amber-400">+25 V-Points</strong> setiap hari! Reset pukul 03.00 WIB.
-              </p>
-              <div className="mt-5 flex items-center gap-1.5 text-sm font-semibold text-amber-600 dark:text-amber-400">
-                Kerjakan Sekarang
-                <svg className="h-4 w-4 transition-transform group-hover:translate-x-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
-              </div>
-            </Link>
-
-            {/* Feature 4 — Papan Peringkat & Gamifikasi */}
-            <Link href="/leaderboard" className="group relative overflow-hidden rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-8 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-500/5 hover:border-emerald-300 dark:hover:border-emerald-700">
-              <div className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 dark:bg-emerald-900/50 text-2xl">🏆</div>
-              <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">Peringkat & 80+ Badge</h3>
-              <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-                Sistem gamifikasi lengkap dengan V-Points, leaderboard, dan 80+ achievement badge yang bisa dikumpulkan.
-              </p>
-              <div className="mt-5 flex items-center gap-1.5 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                Lihat Peringkat
-                <svg className="h-4 w-4 transition-transform group-hover:translate-x-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
-              </div>
-            </Link>
-
-            {/* Feature 5 — Upload & Kontribusi */}
-            <Link href="/submit" className="group relative overflow-hidden rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-8 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-rose-500/5 hover:border-rose-300 dark:hover:border-rose-700">
-              <div className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-100 dark:bg-rose-900/50 text-2xl">🤝</div>
-              <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">Upload & Kontribusi</h3>
-              <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-                Bagikan modulmu dan buatkan soal latihan. Moderasi ketat memastikan kualitas — kontributor top jadi Moderator.
-              </p>
-              <div className="mt-5 flex items-center gap-1.5 text-sm font-semibold text-rose-600 dark:text-rose-400">
-                Mulai Kontribusi
-                <svg className="h-4 w-4 transition-transform group-hover:translate-x-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
-              </div>
-            </Link>
-
-            {/* Feature 6 — Profil & Avatar */}
-            <Link href="/profile" className="group relative overflow-hidden rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-8 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-cyan-500/5 hover:border-cyan-300 dark:hover:border-cyan-700">
-              <div className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-100 dark:bg-cyan-900/50 text-2xl">🧙</div>
-              <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">22+ Avatar & Profil</h3>
-              <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-                Kustomisasi profilmu dengan 22+ avatar fantasy & sci-fi, motto personal, dan level frame yang bisa di-unlock.
-              </p>
-              <div className="mt-5 flex items-center gap-1.5 text-sm font-semibold text-cyan-600 dark:text-cyan-400">
-                Atur Profil
-                <svg className="h-4 w-4 transition-transform group-hover:translate-x-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
-              </div>
-            </Link>
-          </div>
-        </section>
-      </ScrollReveal>
-
-      {/* ═══════════════ HOW IT WORKS ═══════════════ */}
-      <ScrollReveal>
-        <section className="relative z-10 border-y border-zinc-200/80 bg-zinc-50 py-20 md:py-28 dark:border-zinc-800/60 dark:bg-zinc-900/40">
-          <div className="mx-auto max-w-5xl px-6">
-            <div className="mb-14 text-center">
-              <span className="mb-4 inline-flex items-center gap-2 rounded-full bg-emerald-50 dark:bg-emerald-950/50 px-4 py-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider border border-emerald-100 dark:border-emerald-800/50">
-                ✦ Panduan Memulai
-              </span>
-              <h2 className="mt-4 text-3xl font-black text-zinc-900 dark:text-white md:text-5xl tracking-tight">Tiga langkah mudah</h2>
-              <p className="mt-3 text-zinc-600 dark:text-zinc-400 text-lg">Dari pendaftaran sampai berkontribusi — semudah hitungan jari.</p>
-            </div>
-
-            <div className="grid gap-8 md:grid-cols-3">
-              {[
-                { num: 1, title: "Buat Akun", desc: "Daftar gratis menggunakan email apapun. Prosesnya tidak sampai semenit.", icon: "👤" },
-                { num: 2, title: "Jelajahi & Latihan", desc: "Temukan modul, kerjakan soal latihan, dan selesaikan kuis harian untuk poin.", icon: "🔍" },
-                { num: 3, title: "Berkontribusi", desc: "Upload materi dan soal terbaikmu. Kontributor Top 3 akan diangkat menjadi Moderator!", icon: "✨" },
-              ].map((s, i) => (
-                <ScrollReveal key={s.num} delay={i * 150}>
-                  <div className="relative flex flex-col items-center text-center">
-                    {/* Connector */}
-                    {i < 2 && (
-                      <div aria-hidden className="absolute top-8 left-[calc(50%+2.5rem)] right-[calc(-50%+2.5rem)] hidden h-px bg-zinc-300 dark:bg-zinc-700 md:block" />
-                    )}
-                    <div className="relative z-10 mb-5 flex h-18 w-18 items-center justify-center rounded-2xl border-2 border-indigo-200 bg-white shadow-lg dark:border-indigo-800/60 dark:bg-zinc-900">
-                      <span className="text-2xl">{s.icon}</span>
-                      <span className="absolute -top-2.5 -right-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-xs font-black text-white shadow-md dark:bg-indigo-500">
-                        {s.num}
-                      </span>
-                    </div>
-                    <h3 className="mb-2 text-lg font-bold text-zinc-900 dark:text-white">{s.title}</h3>
-                    <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400 max-w-xs">{s.desc}</p>
-                  </div>
-                </ScrollReveal>
-              ))}
-            </div>
-          </div>
-        </section>
-      </ScrollReveal>
-
-      {/* ═══════════════ SAMPLE MODULES PREVIEW ═══════════════ */}
-      <ScrollReveal>
-        <section className="relative z-10 mx-auto max-w-5xl px-6 py-20 md:py-24">
-          <div className="mb-10 text-center">
-            <h2 className="text-2xl font-black text-zinc-900 dark:text-white md:text-3xl">Modul Terbaru</h2>
-            <p className="mt-2 text-zinc-500 dark:text-zinc-400">Diunggah langsung oleh kontributor komunitas.</p>
-          </div>
-
-          <div className="space-y-3">
-            {sampleModules.map((m, idx) => {
-              const badgeCls = m.category.toLowerCase().includes("utbk")
-                ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300"
-                : m.category.toLowerCase().includes("olimpiade")
-                ? "bg-violet-100 text-violet-700 dark:bg-violet-900/60 dark:text-violet-300"
-                : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300";
-
-              return (
-                <ScrollReveal key={idx} delay={idx * 100}>
-                  <Link
-                    href="/modules"
-                    className="group flex items-center justify-between rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-5 transition-all duration-300 hover:border-indigo-400 dark:hover:border-indigo-600 hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20 hover:shadow-md"
-                  >
-                    <div className="flex items-center gap-4">
-                      <span className={`inline-flex items-center rounded-lg px-3 py-1 text-xs font-bold ${badgeCls}`}>{m.category}</span>
-                      <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{m.title}</span>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">+{m.points} poin</span>
-                      <svg className="h-4 w-4 text-indigo-500 opacity-0 -translate-x-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                      </svg>
-                    </div>
-                  </Link>
-                </ScrollReveal>
-              );
-            })}
-          </div>
-
-          <div className="mt-8 text-center">
-            <Link href="/modules" className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline underline-offset-4">
-              Lihat semua modul →
-            </Link>
-          </div>
-        </section>
-      </ScrollReveal>
-
-      {/* ═══════════════ QUOTE ═══════════════ */}
-      <ScrollReveal>
-        <section className="relative z-10 mx-auto max-w-3xl px-6 py-10">
-          <div className="relative rounded-3xl border border-indigo-200/80 bg-gradient-to-br from-indigo-50 via-white to-violet-50 px-8 py-12 text-center dark:border-indigo-800/40 dark:from-indigo-950/30 dark:via-zinc-900 dark:to-violet-950/20 md:px-14">
-            <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-              <span className="rounded-full border border-indigo-200 bg-white px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-indigo-600 shadow-sm dark:border-indigo-800/60 dark:bg-zinc-900 dark:text-indigo-400">
-                Pesan dari OSIS
-              </span>
-            </div>
-            <span aria-hidden className="mb-3 block text-5xl leading-none text-indigo-300 dark:text-indigo-700">&ldquo;</span>
-            <blockquote className="text-lg font-medium leading-relaxed text-zinc-700 dark:text-zinc-300 md:text-xl">
-              NAWA-LEARN lahir dari semangat gotong royong. Setiap modul yang kamu upload,
-              setiap soal yang kamu buat — adalah investasi untuk adik-adik yang belajar setelahmu.
-            </blockquote>
-            <div className="mt-8 text-sm font-bold text-indigo-600 dark:text-indigo-400">
-              Ketua OSIS NAWASENA — SMAN 2 Jonggol
-            </div>
-          </div>
-        </section>
-      </ScrollReveal>
-
-      {/* ═══════════════ FINAL CTA ═══════════════ */}
-      <ScrollReveal>
-        <section className="relative z-10 px-6 py-20">
-          <div className="mx-auto max-w-4xl">
-            <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 p-12 text-center shadow-2xl shadow-indigo-600/20 md:p-20">
-              {/* Decorative */}
-              <div aria-hidden className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full border border-white/10" />
-              <div aria-hidden className="pointer-events-none absolute -bottom-20 -left-20 h-56 w-56 rounded-full border border-white/10" />
-              <div aria-hidden className="pointer-events-none absolute top-1/2 left-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/[0.03]" />
-
-              <h2 className="relative text-3xl font-black text-white md:text-5xl tracking-tight leading-tight">
-                Siap bergabung dengan<br />komunitas pelajar NAWASENA?
-              </h2>
-              <p className="relative mt-4 text-lg text-indigo-200 max-w-lg mx-auto">
-                Gratis. Selamanya. Untuk seluruh warga SMAN 2 Jonggol dan siapapun yang ingin belajar.
-              </p>
-
-              <div className="relative mt-10 flex flex-wrap items-center justify-center gap-4">
-                <Show when="signed-out">
-                  <Link
-                    id="cta-final-signin"
-                    href="/sign-in"
-                    className="group inline-flex items-center gap-2 rounded-2xl bg-white px-8 py-4 text-base font-bold text-indigo-700 shadow-xl transition-all duration-300 hover:bg-indigo-50 hover:-translate-y-0.5 hover:shadow-2xl active:translate-y-0"
-                  >
-                    Daftar Sekarang — Gratis
-                    <svg className="h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                    </svg>
-                  </Link>
-                </Show>
-                <Show when="signed-in">
-                  <Link
-                    id="cta-final-modules"
-                    href="/modules"
-                    className="group inline-flex items-center gap-2 rounded-2xl bg-white px-8 py-4 text-base font-bold text-indigo-700 shadow-xl transition-all duration-300 hover:bg-indigo-50 hover:-translate-y-0.5 hover:shadow-2xl"
-                  >
-                    Jelajahi Modul Sekarang
-                    <svg className="h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                    </svg>
-                  </Link>
-                </Show>
-                <Link
-                  id="cta-final-leaderboard"
-                  href="/leaderboard"
-                  className="inline-flex items-center rounded-2xl border border-white/30 bg-white/10 px-8 py-4 text-base font-semibold text-white backdrop-blur transition-all duration-300 hover:bg-white/20 hover:-translate-y-0.5"
-                >
-                  Lihat Peringkat
-                </Link>
+      {/* ══════════════════════════════════════════════════════════════════════
+          FOOTER
+          Accessible navigation, legal links, and institutional attribution.
+      ══════════════════════════════════════════════════════════════════════ */}
+      <footer className="border-t border-zinc-200/80 bg-zinc-50 py-12 dark:border-zinc-800/80 dark:bg-zinc-950">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-3">
+              <NawaIcon className="h-7 w-7" />
+              <div className="text-left">
+                <span className="font-black text-sm tracking-tight text-zinc-900 dark:text-white">
+                  NAWA-LEARN
+                </span>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Platform Belajar Kolaboratif OSIS NAWASENA · SMAN 2 Jonggol
+                </p>
               </div>
             </div>
-          </div>
-        </section>
-      </ScrollReveal>
 
-      {/* ═══════════════ FOOTER ═══════════════ */}
-      <footer className="border-t border-zinc-200/80 dark:border-zinc-800/60 bg-zinc-50 dark:bg-zinc-900/50 py-10">
-        <div className="mx-auto max-w-7xl px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-sm font-semibold text-zinc-500 dark:text-zinc-400">
-            <span className="font-black text-indigo-600 dark:text-indigo-400">NAWA-LEARN</span>
-            <span>·</span>
-            <span>Platform Edukasi OSIS NAWASENA</span>
+            <div className="flex flex-wrap items-center gap-6 text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+              <Link href="/modules" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                Modul
+              </Link>
+              <Link href="/questions/practice" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                Latihan Soal
+              </Link>
+              <Link href="/leaderboard" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                Peringkat
+              </Link>
+              <Link href="/privacy" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                Privasi (UU PDP)
+              </Link>
+              <Link href="/terms" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                Ketentuan Layanan
+              </Link>
+            </div>
           </div>
-          <p className="text-xs text-zinc-400 dark:text-zinc-500">
-            © {new Date().getFullYear()} SMAN 2 Jonggol. Dibuat dengan ❤️ oleh siswa, untuk siswa.
-          </p>
+
+          <div className="mt-8 pt-8 border-t border-zinc-200/60 dark:border-zinc-800/60 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-zinc-400 dark:text-zinc-500">
+            <p>© {new Date().getFullYear()} OSIS NAWASENA SMAN 2 Jonggol. Hak cipta dilindungi.</p>
+            <p>100% Bebas Iklan · Tanpa Pelacak Komersial</p>
+          </div>
         </div>
       </footer>
-
-      {/* ═══ Marquee animation keyframes ═══ */}
-      <style jsx>{`
-        @keyframes scroll {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-      `}</style>
 
     </div>
   );

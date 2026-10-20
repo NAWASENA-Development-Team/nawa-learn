@@ -1,0 +1,229 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-20T11:20:00.000Z",
+  "title": "Design System: NAWA-LEARN",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Arcane Indigo",
+        "canonical": "#4f46e5",
+        "tonalRamp": ["#1e1b4b", "#312e81", "#3730a3", "#4338ca", "#4f46e5", "#6366f1", "#818cf8", "#e0e7ff"]
+      },
+      "secondary": {
+        "role": "secondary",
+        "displayName": "Celestial Violet",
+        "canonical": "#7c3aed",
+        "tonalRamp": ["#2e1065", "#4c1d95", "#5b21b6", "#6d28d9", "#7c3aed", "#8b5cf6", "#a78bfa", "#ede9fe"]
+      },
+      "surface-dark": {
+        "role": "neutral",
+        "displayName": "Obsidian Pitch",
+        "canonical": "#09090b",
+        "tonalRamp": ["#09090b", "#18181b", "#27272a", "#3f3f46", "#52525b", "#71717a", "#a1a1aa", "#f4f4f5"]
+      },
+      "surface-light": {
+        "role": "neutral",
+        "displayName": "Pure Frost",
+        "canonical": "#ffffff",
+        "tonalRamp": ["#18181b", "#3f3f46", "#71717a", "#a1a1aa", "#d4d4d8", "#e4e4e7", "#f4f4f5", "#ffffff"]
+      },
+      "success": {
+        "role": "tertiary",
+        "displayName": "Emerald Mastery",
+        "canonical": "#10b981",
+        "tonalRamp": ["#022c22", "#064e3b", "#065f46", "#047857", "#059669", "#10b981", "#34d399", "#d1fae5"]
+      },
+      "warning": {
+        "role": "tertiary",
+        "displayName": "Amber Champion",
+        "canonical": "#f59e0b",
+        "tonalRamp": ["#451a03", "#78350f", "#92400e", "#b45309", "#d97706", "#f59e0b", "#fbbf24", "#fef3c7"]
+      },
+      "error": {
+        "role": "tertiary",
+        "displayName": "Rose Critical",
+        "canonical": "#f43f5e",
+        "tonalRamp": ["#4c0519", "#881337", "#9f1239", "#be123c", "#e11d48", "#f43f5e", "#fb7185", "#ffe4e6"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Hero headlines and major portal banners."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section headings and modal titles."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card titles, questions, and student names."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Explanations, module descriptions, and general text."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Badges, difficulty tags, and countdown counters."
+      }
+    },
+    "shadows": [
+      {
+        "name": "subtle-surface",
+        "value": "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+        "purpose": "At-rest container shadow for light cards."
+      },
+      {
+        "name": "card-hover",
+        "value": "0 10px 25px -5px rgba(79, 70, 229, 0.08), 0 8px 10px -6px rgba(79, 70, 229, 0.04)",
+        "purpose": "Lifted card state for clickable modules and practice sessions."
+      },
+      {
+        "name": "primary-cta-bloom",
+        "value": "0 10px 20px -3px rgba(79, 70, 229, 0.25)",
+        "purpose": "Vibrant colored glow under primary action buttons."
+      },
+      {
+        "name": "podium-gold-aura",
+        "value": "0 0 25px 0 rgba(245, 158, 11, 0.3)",
+        "purpose": "Rank 1 leaderboard winner frame."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-tactile",
+        "value": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Default curve for hover lifts, color shifts, and active presses."
+      },
+      {
+        "name": "view-transition-ripple",
+        "value": "clip-path circle expanding from toggle center",
+        "purpose": "Theme toggle transition across viewport."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Action Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Primary high-intent action button with signature indigo-to-violet gradient and tactile lift.",
+      "html": "<button class=\"ds-btn-primary\"><span class=\"ds-btn-text\">Mulai Belajar</span><svg class=\"ds-btn-icon\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\" stroke-width=\"2.5\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M13 7l5 5m0 0l-5 5m5-5H6\"/></svg></button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 12px; background: linear-gradient(to right, #4f46e5, #7c3aed); color: #ffffff; font-family: Inter, sans-serif; font-size: 14px; font-weight: 700; padding: 12px 24px; border: none; cursor: pointer; box-shadow: 0 10px 20px -3px rgba(79, 70, 229, 0.25); transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s ease; } .ds-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 24px -3px rgba(79, 70, 229, 0.35); } .ds-btn-primary:active { transform: scale(0.98); } .ds-btn-icon { width: 16px; height: 16px; }"
+    },
+    {
+      "name": "Secondary Outline Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Light/dark responsive bordered button for secondary pathways.",
+      "html": "<button class=\"ds-btn-secondary\">Lihat Peringkat</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; background: #ffffff; color: #18181b; font-family: Inter, sans-serif; font-size: 14px; font-weight: 600; padding: 12px 24px; border: 1px solid #e4e4e7; cursor: pointer; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease; } .ds-btn-secondary:hover { transform: translateY(-1px); background: #f4f4f5; border-color: #d4d4d8; } .ds-btn-secondary:active { transform: scale(0.98); }"
+    },
+    {
+      "name": "Quiz Option Card",
+      "kind": "custom",
+      "refersTo": "input-option",
+      "description": "Interactive multiple choice drill option with radio badge and selection state.",
+      "html": "<div class=\"ds-option-card ds-option-selected\"><div class=\"ds-option-left\"><span class=\"ds-option-badge\">A</span><span class=\"ds-option-label\">f'(x) = 6x² + 4x - 5</span></div><svg class=\"ds-option-check\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\" stroke-width=\"3\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M5 13l4 4L19 7\"/></svg></div>",
+      "css": ".ds-option-card { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 16px; border-radius: 12px; border: 1px solid #e4e4e7; background: #ffffff; cursor: pointer; font-family: Inter, sans-serif; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); } .ds-option-card:hover { border-color: #a5b4fc; background: #faf5ff; transform: scale(1.005); } .ds-option-selected { border-color: #4f46e5; background: #eef2ff; box-shadow: 0 1px 3px 0 rgba(79, 70, 229, 0.1); } .ds-option-left { display: flex; align-items: center; gap: 12px; } .ds-option-badge { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 9999px; background: #4f46e5; color: #ffffff; font-size: 12px; font-weight: 700; } .ds-option-label { font-size: 14px; font-weight: 600; color: #1e1b4b; } .ds-option-check { width: 16px; height: 16px; color: #4f46e5; }"
+    },
+    {
+      "name": "Metric Counter Card",
+      "kind": "card",
+      "refersTo": "card-stat",
+      "description": "Social proof and profile statistic card with gentle chromatic gradient wash.",
+      "html": "<div class=\"ds-stat-card\"><span class=\"ds-stat-emoji\">📚</span><div class=\"ds-stat-value\">1,250+</div><p class=\"ds-stat-label\">Modul Terverifikasi</p></div>",
+      "css": ".ds-stat-card { border-radius: 16px; border: 1px solid #e4e4e7; background: linear-gradient(135deg, rgba(79, 70, 229, 0.06), rgba(79, 70, 229, 0)); padding: 24px; text-align: center; font-family: Inter, sans-serif; } .ds-stat-emoji { font-size: 28px; display: block; margin-bottom: 12px; } .ds-stat-value { font-size: 32px; font-weight: 900; color: #4f46e5; letter-spacing: -0.02em; line-height: 1.1; } .ds-stat-label { margin-top: 8px; font-size: 12px; font-weight: 600; color: #71717a; text-transform: uppercase; letter-spacing: 0.02em; }"
+    },
+    {
+      "name": "Category Tag Pill",
+      "kind": "chip",
+      "refersTo": "chip-category",
+      "description": "Compact uppercase tag pill for subjects, exam types, and difficulties.",
+      "html": "<span class=\"ds-tag-pill\">UTBK-SNBT</span>",
+      "css": ".ds-tag-pill { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 9999px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; font-family: Inter, sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }"
+    },
+    {
+      "name": "Search & Filter Input",
+      "kind": "input",
+      "refersTo": "input-text",
+      "description": "Rounded input field with embedded icon and subtle focus glow.",
+      "html": "<div class=\"ds-search-wrapper\"><svg class=\"ds-search-icon\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\" stroke-width=\"2\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z\"/></svg><input type=\"text\" class=\"ds-search-input\" placeholder=\"Cari materi atau latihan soal...\"/></div>",
+      "css": ".ds-search-wrapper { position: relative; width: 100%; font-family: Inter, sans-serif; } .ds-search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: #a1a1aa; pointer-events: none; } .ds-search-input { width: 100%; border-radius: 12px; border: 1px solid #e4e4e7; background: #f4f4f5; padding: 12px 16px 12px 42px; font-size: 14px; color: #18181b; outline: none; transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease; } .ds-search-input:focus { background: #ffffff; border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Arcane Academy",
+    "overview": "NAWA-LEARN is a high-tech scholastic sanctum built for the students of SMAN 2 Jonggol. It bridges rigorous academic discipline with the vibrant, rewarding momentum of modern role-playing gamification. Rather than feeling like a sterile institutional portal or a toy-like children's game, the interface evokes the quiet authority of an illuminated digital study hall: high-contrast surfaces, razor-sharp typography, and radiant violet-indigo accents that celebrate intellectual mastery and collaborative peer contribution.",
+    "keyCharacteristics": [
+      "Luminous Energy on Clean Slate: Dynamic gradients (#4f46e5 to #7c3aed) reserved for focal actions and brand anchors, grounded in obsidian dark modes (#09090b) and crisp daylight whites (#ffffff).",
+      "Tactile Micro-Feedback: Physical feel with slight active-scale presses (scale-[0.98]), gentle hover lifts (-translate-y-0.5), and smooth theme transitions.",
+      "Academic Clarity First: Uncompromising readability for LaTeX formulas, PDF guides, and multiple-choice drill cards, framed by generous rounded corners (12px to 24px).",
+      "Verified Tier Hierarchy: Consistent chromatic coding for achievements and difficulties—Common (Slate), Uncommon (Emerald), Rare (Blue), Epic (Purple), and Legendary (Amber/Gold)."
+    ],
+    "rules": [
+      {
+        "name": "The Gradient Signature Rule",
+        "body": "Gradients combining Arcane Indigo and Celestial Violet are reserved strictly for high-intent actions (primary hero buttons, active nav indicators, brand logos). Plain utility actions, pagination buttons, and inputs must remain solid or tonal.",
+        "section": "colors"
+      },
+      {
+        "name": "The Rarity Luminescence Rule",
+        "body": "Achievement badges and avatar borders must strictly reflect their rarity tier color; never apply arbitrary ad-hoc gradients that confuse achievement significance.",
+        "section": "colors"
+      },
+      {
+        "name": "The KaTeX Formula Integration Rule",
+        "body": "All mathematical and scientific notation must inherit the ambient text color and scale proportionately to its enclosing type container without vertical baseline clipping.",
+        "section": "typography"
+      },
+      {
+        "name": "The Dynamic Clamp Rule",
+        "body": "Top-level hero titles must use responsive fluid sizing via clamp() to prevent unsightly line breaks and word clipping on narrow mobile viewports.",
+        "section": "typography"
+      },
+      {
+        "name": "The Mobile Thumb Reach Rule",
+        "body": "In mobile viewports, interactive confirmation controls (such as next question, submit quiz, and filter toggles) must span full width or sit within effortless thumb reach at the lower portion of the screen.",
+        "section": "layout"
+      },
+      {
+        "name": "The Tactile Lift Rule",
+        "body": "Hover elevation must always pair a shadow bloom with a slight upward translation (-translate-y-0.5) and an immediate active depression (active:scale-[0.98]).",
+        "section": "elevation"
+      },
+      {
+        "name": "The Restraint in Glow Rule",
+        "body": "Glowing colored shadows are permitted only on elements with high primary or milestone significance (primary buttons, active question selection, Rank 1–3 podiums). Ordinary cards must never use colored shadows.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Nested Radius Hierarchy Rule",
+        "body": "When a rounded element sits inside another rounded container, the inner radius must be strictly smaller than the outer radius (e.g., an inner 12px control inside a 24px card) to preserve visual concentricity.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do wrap all mathematical expressions, variables, and formulas in KaTeX renderer components to ensure consistent typography and symbol alignment.",
+      "Do maintain a strict 1px hairline border on cards and dialogs in both light and dark modes to guarantee planar structural clarity.",
+      "Do pair interactive hover transitions with matching active depression states (active:scale-[0.98]) to give buttons and options a tangible, tactile weight.",
+      "Do reserve high-saturation indigo-to-violet gradients exclusively for primary CTAs, active states, and brand crests.",
+      "Do display achievement badges with their verified rarity tier colors (Common = Slate, Uncommon = Green, Rare = Blue, Epic = Purple, Legendary = Amber/Gold)."
+    ],
+    "donts": [
+      "Don't use pure solid black (#000000) for dark mode surfaces; always use dark obsidian zinc (#09090b for canvas, #18181b for cards) to preserve border contrast.",
+      "Don't apply garish, neon box-shadows on unselected cards, form inputs, or static content panels.",
+      "Don't reveal answers, explanations, or grading keys on practice question cards prior to server evaluation.",
+      "Don't invent non-standard corner radii (such as mixing 4px, 14px, and 30px in the same view); stick strictly to the established scale (8px, 12px, 16px, 24px, full).",
+      "Don't hide critical action buttons off-screen on mobile devices; adhere to the Mobile Thumb Reach Rule."
+    ]
+  }
+}
