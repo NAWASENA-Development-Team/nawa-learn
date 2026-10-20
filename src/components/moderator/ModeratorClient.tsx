@@ -5,65 +5,34 @@
 // a reviewer. It used to fetch `/api/moderator/auth-check` on mount and render a
 // "Memeriksa hak akses…" spinner followed by an "Akses Ditolak" card — a client
 // gate that a browser could skip by simply not running the JavaScript.
+//
+// Dulu 897 baris: empat antrean, empat kumpulan state, empat kelompok handler
+// dan seluruh markup empat tab dalam satu komponen. Sekarang file ini adalah
+// shell: memuat keempat antrean pada saat mount, memegang jumlah untuk label
+// tab, dan menyerahkan setiap tab ke komponen presentasionalnya.
 "use client";
 
 import { useState, useEffect } from "react";
-import { 
-  Check, 
-  X, 
-  BookOpen, 
-  HelpCircle, 
-  Clock, 
-  User, 
-  CheckCircle2, 
-  BookMarked,
-  Eye,
-  ChevronDown,
-  Zap,
-  Plus,
-  Trash2,
+import {
+  BookOpen, BookMarked, Eye, Zap,
 } from "lucide-react";
-import { getRarityColor } from "@/lib/badges";
 import type { BadgeDisplay } from "@/lib/badges";
 import { useToast } from "@/components/ui/Toast";
+import { SubmissionsModulesTab } from "./SubmissionsModulesTab";
+import { SubmissionsQuestionsTab } from "./SubmissionsQuestionsTab";
+import { HiddenBadgesTab } from "./HiddenBadgesTab";
+import { DailyQuizTab } from "./DailyQuizTab";
+import type { DailyFormState } from "./DailyQuizTab";
+import type {
+  PendingSubmission, PendingQuestion, HiddenBadgeHolder, DailyQuestion,
+} from "./types";
 
-type PendingSubmission = {
-  submissionId: string;
-  submittedAt: string;
-  moduleId: string;
-  moduleTitle: string;
-  moduleUrl: string;
-  submitterId: string;
-  submitterName: string;
-};
-
-type PendingQuestion = {
-  submissionId: string;
-  questionId: string;
-  questionText: string;
-  options: Record<string, string>;
-  answerKey: string;
-  difficulty: "mudah" | "sedang" | "sulit";
-  subject: string | null;
-  category: string | null;
-  submittedAt: string;
-  submitterId: string;
-  submitterName: string;
-};
-
-// User stats returned from /api/moderator/hidden-badges
-type HiddenBadgeHolder = {
-  id: string;
-  name: string;
-  points: number;
-  approvedModules: number;
-  approvedQuestions: number;
-};
+type ModeratorTab = "modules" | "questions" | "badges" | "daily";
 
 export default function ModeratorClient() {
   const { success, error: toastError, info } = useToast();
-  const [activeTab, setActiveTab] = useState<"modules" | "questions" | "badges" | "daily">("modules");
-  
+  const [activeTab, setActiveTab] = useState<ModeratorTab>("modules");
+
   // Modules State
   const [submissions, setSubmissions] = useState<PendingSubmission[]>([]);
   const [isLoadingModules, setIsLoadingModules] = useState(true);
@@ -86,20 +55,11 @@ export default function ModeratorClient() {
   const [isLoadingBadges, setIsLoadingBadges] = useState(false);
   const [expandedBadge, setExpandedBadge] = useState<string | null>(null);
 
-  // Daily Quiz Creator State
-  type DailyQuestion = {
-    id: string;
-    questionText: string;
-    options: Record<string, string>;
-    answerKey: string;
-    difficulty: string;
-    subject: string | null;
-    createdAt: string;
-  };
+  // Daily Quiz State
   const [dailyQuestions, setDailyQuestions] = useState<DailyQuestion[]>([]);
   const [isLoadingDaily, setIsLoadingDaily] = useState(false);
   const [isSubmittingDaily, setIsSubmittingDaily] = useState(false);
-  const [dailyForm, setDailyForm] = useState({
+  const [dailyForm, setDailyForm] = useState<DailyFormState>({
     questionText: "",
     optionA: "",
     optionB: "",
@@ -107,7 +67,7 @@ export default function ModeratorClient() {
     optionD: "",
     optionE: "",
     answerKey: "A",
-    difficulty: "sedang" as "mudah" | "sedang" | "sulit",
+    difficulty: "sedang",
     subject: "Umum",
   });
 
@@ -373,7 +333,7 @@ export default function ModeratorClient() {
           >
             <BookOpen className="h-4 w-4" /> Draf Modul Catatan ({submissions.length})
           </button>
-          
+
           <button
             onClick={() => setActiveTab("questions")}
             className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center gap-2 ${
@@ -411,486 +371,47 @@ export default function ModeratorClient() {
 
       {/* 1. MODULES SUBMISSION TAB */}
       {activeTab === "modules" && (
-        <div className="space-y-4">
-          {isLoadingModules ? (
-            <div className="p-12 text-center text-zinc-550 flex flex-col items-center justify-center">
-              <div className="h-8 w-8 rounded-full border-4 border-indigo-150 border-t-indigo-600 animate-spin mb-3" />
-              <p className="text-xs font-bold">Memuat antrean draf modul...</p>
-            </div>
-          ) : submissions.length === 0 ? (
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200/60 dark:border-zinc-800 rounded-3xl p-10 text-center shadow-sm max-w-xl mx-auto">
-              <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-indigo-100/40">
-                <CheckCircle2 className="h-6 w-6" />
-              </div>
-              <h4 className="text-base font-extrabold text-zinc-850 dark:text-zinc-150">Antrean Modul Bersih</h4>
-              <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Saat ini belum ada draf modul yang diajukan oleh siswa untuk ditinjau. Semua modul yang dikirim telah diterbitkan!</p>
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {submissions.map((sub) => (
-                <div 
-                  key={sub.submissionId} 
-                  className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between shadow-sm transition-all hover:border-indigo-300 gap-3 sm:gap-6"
-                >
-                  <div className="space-y-1.5 flex-1 text-left">
-                    <h3 className="text-base font-extrabold text-zinc-900 dark:text-white leading-snug">
-                      {sub.moduleTitle}
-                    </h3>
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400 font-semibold">
-                      <span className="text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
-                        <User className="h-3.5 w-3.5" /> Pengirim: {sub.submitterName}
-                      </span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3.5 w-3.5 text-zinc-400" /> {new Date(sub.submittedAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}
-                      </span>
-                    </div>
-                    <div className="pt-2">
-                      <button
-                        onClick={() => {
-                          const url = sub.moduleUrl;
-                          if (url.startsWith("data:")) {
-                            // Trigger download for real uploaded files stored as base64
-                            const ext = url.startsWith("data:image/png") ? ".png"
-                                      : url.startsWith("data:image/jpeg") ? ".jpg"
-                                      : url.startsWith("data:application/pdf") ? ".pdf"
-                                      : url.includes("wordprocessingml") ? ".docx"
-                                      : url.includes("presentationml") ? ".pptx"
-                                      : ".dat";
-                            try {
-                              const parts = url.split(",");
-                              const byteString = atob(parts[1]);
-                              const ab = new ArrayBuffer(byteString.length);
-                              const ia = new Uint8Array(ab);
-                              for (let i = 0; i < byteString.length; i++) {
-                                ia[i] = byteString.charCodeAt(i);
-                              }
-                              const mime = parts[0].split(":")[1].split(";")[0];
-                              const blob = new Blob([ab], { type: mime });
-                              const blobUrl = URL.createObjectURL(blob);
-                              
-                              const link = document.createElement("a");
-                              link.href = blobUrl;
-                              link.download = `modul-${sub.moduleTitle}${ext}`;
-                              document.body.appendChild(link);
-                              link.click();
-                              document.body.removeChild(link);
-                              
-                              setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-                            } catch (err) {
-                              console.error("Failed to download data URI in moderator", err);
-                            }
-                          } else {
-                            window.open(url, "_blank", "noopener,noreferrer");
-                          }
-                        }}
-                        className="inline-flex items-center text-xs font-bold text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
-                      >
-                        Buka Dokumen Modul ↗
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 shrink-0 border-t sm:border-t-0 border-zinc-100 dark:border-zinc-800 pt-4 sm:pt-0">
-                    <button 
-                      onClick={() => handleApproveModule(sub)}
-                      disabled={processingModuleId === sub.submissionId}
-                      className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-xl text-xs font-extrabold transition-all shadow-md shadow-indigo-600/10 cursor-pointer h-9 disabled:opacity-50"
-                    >
-                      {processingModuleId === sub.submissionId ? "Memproses..." : "Setujui Modul"}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 3. HIDDEN BADGES MONITOR TAB */}
-      {activeTab === "badges" && (
-        <div className="space-y-4">
-          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 rounded-2xl px-5 py-3 flex items-start gap-3 text-xs text-amber-800 dark:text-amber-300">
-            <Eye className="h-4 w-4 shrink-0 mt-0.5" />
-            <span>
-              Halaman ini hanya terlihat oleh moderator. Lencana tersembunyi <strong>tidak ditampilkan</strong> kepada
-              siswa — mereka hanya melihat slot <em>&quot;???&quot;</em> di profil. Pantau siapa saja yang berhasil
-              membukanya di sini.
-            </span>
-          </div>
-
-          {isLoadingBadges ? (
-            <div className="p-12 text-center text-zinc-550 flex flex-col items-center justify-center">
-              <div className="h-8 w-8 rounded-full border-4 border-amber-150 border-t-amber-500 animate-spin mb-3" />
-              <p className="text-xs font-bold">Memuat data lencana tersembunyi...</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {hiddenBadges.map((badge) => {
-                // Pemegangnya sudah dihitung server. Komponen ini tidak punya
-                // `unlockCondition` untuk dijalankan — dan itu tujuannya.
-                const holders = badgeHolders[badge.id] ?? [];
-
-                const isExpanded = expandedBadge === badge.id;
-
-                return (
-                  <div
-                    key={badge.id}
-                    className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm"
-                  >
-                    {/* Badge header row */}
-                    <button
-                      onClick={() => setExpandedBadge(isExpanded ? null : badge.id)}
-                      className="w-full flex items-center gap-4 p-4 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer"
-                    >
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 bg-gradient-to-br ${getRarityColor(badge.rarity)} shadow-sm`}>
-                        {badge.icon}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className="font-extrabold text-sm text-zinc-900 dark:text-white">{badge.title}</h4>
-                          <span className="text-[10px] bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-bold px-2 py-0.5 rounded uppercase tracking-wider">
-                            Tersembunyi
-                          </span>
-                          <span className="text-[10px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-bold px-2 py-0.5 rounded capitalize">
-                            {badge.rarity}
-                          </span>
-                        </div>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 leading-snug">{badge.description}</p>
-                        <p className="text-[10px] text-amber-600 dark:text-amber-500 font-semibold mt-1">
-                          Syarat rahasia: {badge.requirement ?? "—"}
-                        </p>
-                      </div>
-                      <div className="flex flex-col items-end gap-1 shrink-0 pr-1">
-                        <span className="text-sm font-black text-indigo-600 dark:text-indigo-400">
-                          {holders.length}
-                        </span>
-                        <span className="text-[10px] text-zinc-400 font-semibold">pemegang</span>
-                        <ChevronDown className={`h-4 w-4 text-zinc-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
-                      </div>
-                    </button>
-
-                    {/* Holders list (expandable) */}
-                    {isExpanded && (
-                      <div className="border-t border-zinc-100 dark:border-zinc-800 px-4 pb-4 pt-3">
-                        {holders.length === 0 ? (
-                          <p className="text-xs text-zinc-500 italic">Belum ada siswa yang membuka lencana ini.</p>
-                        ) : (
-                          <div className="space-y-2">
-                            <p className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-3">
-                              {holders.length} Siswa Pemegang Lencana
-                            </p>
-                            {holders.map((u, idx) => (
-                              <div key={u.id} className="flex items-center gap-3 p-2.5 bg-zinc-50 dark:bg-zinc-800/60 rounded-xl">
-                                <span className="text-xs font-black text-zinc-400 w-5 text-center">{idx + 1}</span>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-xs font-extrabold text-zinc-900 dark:text-white truncate">{u.name}</p>
-                                  <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-semibold">
-                                    {u.points} VP · {u.approvedModules} modul · {u.approvedQuestions} soal
-                                  </p>
-                                </div>
-                                <a
-                                  href={`/profile/${u.id}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline shrink-0"
-                                >
-                                  Profil ↗
-                                </a>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        <SubmissionsModulesTab
+          submissions={submissions}
+          isLoadingModules={isLoadingModules}
+          processingModuleId={processingModuleId}
+          onApproveModule={handleApproveModule}
+        />
       )}
 
       {/* 2. QUESTIONS SUBMISSION TAB */}
       {activeTab === "questions" && (
-        <div className="space-y-4">
-          {isLoadingQuestions ? (
-            <div className="text-center py-10 text-zinc-500 text-sm">Memuat soal pending...</div>
-          ) : pendingQuestions.length === 0 ? (
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200/60 dark:border-zinc-800 rounded-3xl p-10 text-center shadow-sm max-w-xl mx-auto">
-              <div className="w-12 h-12 bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-purple-100/40">
-                <HelpCircle className="h-6 w-6" />
-              </div>
-              <h4 className="text-base font-extrabold text-zinc-850 dark:text-zinc-150">Antrean Latihan Soal Bersih</h4>
-              <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Siswa belum mengajukan soal kuis baru untuk latihan mandiri. Usulan soal latihan dari kontributor akan muncul di sini untuk peninjauan.</p>
-            </div>
-          ) : (
-            <div className="grid gap-6">
-              {pendingQuestions.map((q) => {
-                const difficultyBadge = {
-                  mudah:  { label: "Mudah",  cls: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400", pts: "+15 VP" },
-                  sedang: { label: "Sedang", cls: "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400",   pts: "+25 VP" },
-                  sulit:  { label: "Sulit",  cls: "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400",           pts: "+40 VP" },
-                }[q.difficulty] ?? { label: q.difficulty, cls: "bg-zinc-100 text-zinc-600", pts: "" };
+        <SubmissionsQuestionsTab
+          pendingQuestions={pendingQuestions}
+          isLoadingQuestions={isLoadingQuestions}
+          processingQuestionId={processingQuestionId}
+          onApproveQuestion={handleApproveQuestion}
+          onRejectQuestion={handleRejectQuestion}
+        />
+      )}
 
-                return (
-                <div 
-                  key={q.questionId} 
-                  className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm flex flex-col gap-5 text-left border-l-4 border-l-purple-500"
-                >
-                  {/* Top Header Card */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 dark:border-zinc-800/80 pb-3">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {q.subject && (
-                        <span className="text-[10px] bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-extrabold px-2.5 py-0.5 rounded">
-                          {q.subject}
-                        </span>
-                      )}
-                      {q.category && (
-                        <span className="text-[10px] bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-extrabold px-2.5 py-0.5 rounded">
-                          {q.category}
-                        </span>
-                      )}
-                      <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded ${difficultyBadge.cls}`}>
-                        {difficultyBadge.label} · {difficultyBadge.pts}
-                      </span>
-                    </div>
-
-                    <div className="text-right">
-                      <p className="text-[10px] text-zinc-400">PENGUSUL: <span className="font-bold text-zinc-600 dark:text-zinc-300">{q.submitterName}</span></p>
-                    </div>
-                  </div>
-
-                  {/* Question text */}
-                  <div>
-                    <h4 className="text-sm font-extrabold text-zinc-950 dark:text-zinc-150 leading-relaxed mb-3">
-                      {q.questionText}
-                    </h4>
-
-                    {/* Options list */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-                      {Object.entries(q.options as Record<string, string>).map(([key, val]) => (
-                        <div 
-                          key={key} 
-                          className={`p-2.5 rounded-xl border text-xs flex gap-2 items-center ${
-                            q.answerKey === key 
-                              ? "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-350 text-emerald-800 dark:text-emerald-450 font-bold"
-                              : "border-zinc-100 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400"
-                          }`}
-                        >
-                          <span className={`h-5 w-5 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold ${
-                            q.answerKey === key ? "bg-emerald-600 text-white" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
-                          }`}>
-                            {key}
-                          </span>
-                          <span className="truncate">{val}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Footer tools */}
-                  <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 pt-3 border-t border-zinc-100 dark:border-zinc-800/80">
-                    <div className="text-xs text-zinc-450 dark:text-zinc-500 font-semibold">
-                      🔑 Kunci Jawaban: <span className="text-emerald-600 dark:text-emerald-400 font-black text-sm uppercase">Opsi {q.answerKey}</span>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleRejectQuestion(q)}
-                        disabled={processingQuestionId === q.questionId}
-                        className="inline-flex h-9 items-center justify-center rounded-xl border border-red-200 dark:border-red-950 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400 font-bold px-4 text-xs transition-colors cursor-pointer disabled:opacity-50"
-                      >
-                        <X className="h-4 w-4 mr-1" /> Tolak
-                      </button>
-
-                      <button
-                        onClick={() => handleApproveQuestion(q)}
-                        disabled={processingQuestionId === q.questionId}
-                        className="inline-flex h-9 items-center justify-center rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-4 text-xs transition-all shadow-md shadow-emerald-600/10 cursor-pointer disabled:opacity-50"
-                      >
-                        <Check className="h-4 w-4 mr-1" /> {processingQuestionId === q.questionId ? "Memproses..." : "Setujui & Publikasikan"}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+      {/* 3. HIDDEN BADGES MONITOR TAB */}
+      {activeTab === "badges" && (
+        <HiddenBadgesTab
+          hiddenBadges={hiddenBadges}
+          badgeHolders={badgeHolders}
+          isLoadingBadges={isLoadingBadges}
+          expandedBadge={expandedBadge}
+          onToggleExpand={(badgeId) => setExpandedBadge(expandedBadge === badgeId ? null : badgeId)}
+        />
       )}
 
       {/* 4. DAILY QUIZ CREATOR TAB */}
       {activeTab === "daily" && (
-        <div className="space-y-6">
-          {/* Info Banner */}
-          <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 rounded-2xl px-5 py-3 flex items-start gap-3 text-xs text-emerald-800 dark:text-emerald-300">
-            <Zap className="h-4 w-4 shrink-0 mt-0.5" />
-            <span>
-              Buat soal untuk <strong>Kuis Harian</strong>. Soal yang dibuat di sini langsung aktif tanpa perlu persetujuan.
-              Siswa yang menyelesaikan kuis harian mendapat <strong>+25 V-Points</strong> (1x per hari, reset 03:00 WIB).
-              Variasikan tingkat kesulitannya!
-            </span>
-          </div>
-
-          {/* Create Form */}
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm">
-            <h3 className="text-base font-extrabold text-zinc-900 dark:text-white mb-4 flex items-center gap-2">
-              <Plus className="h-5 w-5 text-emerald-600" /> Buat Soal Baru
-            </h3>
-            <form onSubmit={handleCreateDailyQuestion} className="space-y-4">
-              {/* Question Text */}
-              <div>
-                <label className="block text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1.5">Pertanyaan</label>
-                <textarea
-                  value={dailyForm.questionText}
-                  onChange={(e) => setDailyForm(f => ({ ...f, questionText: e.target.value }))}
-                  placeholder="Tulis pertanyaan di sini..."
-                  rows={3}
-                  required
-                  className="w-full px-4 py-2.5 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm resize-none"
-                />
-              </div>
-
-              {/* Subject + Difficulty Row */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1.5">Mata Pelajaran</label>
-                  <select
-                    value={dailyForm.subject}
-                    onChange={(e) => setDailyForm(f => ({ ...f, subject: e.target.value }))}
-                    className="w-full px-3 py-2 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="Umum">Umum</option>
-                    <option value="Matematika">Matematika</option>
-                    <option value="Fisika">Fisika</option>
-                    <option value="Kimia">Kimia</option>
-                    <option value="Biologi">Biologi</option>
-                    <option value="Bahasa Indonesia">Bahasa Indonesia</option>
-                    <option value="Bahasa Inggris">Bahasa Inggris</option>
-                    <option value="Sejarah">Sejarah</option>
-                    <option value="Geografi">Geografi</option>
-                    <option value="Ekonomi">Ekonomi</option>
-                    <option value="Sosiologi">Sosiologi</option>
-                    <option value="PKN">PKN</option>
-                    <option value="Informatika">Informatika</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1.5">Tingkat Kesulitan</label>
-                  <select
-                    value={dailyForm.difficulty}
-                    onChange={(e) => setDailyForm(f => ({ ...f, difficulty: e.target.value as "mudah" | "sedang" | "sulit" }))}
-                    className="w-full px-3 py-2 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="mudah">Mudah</option>
-                    <option value="sedang">Sedang</option>
-                    <option value="sulit">Sulit</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Options */}
-              <div className="space-y-2">
-                <label className="block text-xs font-bold text-zinc-600 dark:text-zinc-400">Pilihan Jawaban</label>
-                {(["A", "B", "C", "D", "E"] as const).map((key) => {
-                  const fieldKey = `option${key}` as "optionA" | "optionB" | "optionC" | "optionD" | "optionE";
-                  const isRequired = key !== "E";
-                  return (
-                    <div key={key} className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setDailyForm(f => ({ ...f, answerKey: key }))}
-                        className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-black shrink-0 transition-all border-2 cursor-pointer ${
-                          dailyForm.answerKey === key
-                            ? "bg-emerald-600 border-emerald-600 text-white scale-110"
-                            : "bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-emerald-400"
-                        }`}
-                        title={`Jadikan ${key} sebagai kunci jawaban`}
-                      >
-                        {key}
-                      </button>
-                      <input
-                        type="text"
-                        value={dailyForm[fieldKey]}
-                        onChange={(e) => setDailyForm(f => ({ ...f, [fieldKey]: e.target.value }))}
-                        placeholder={`Opsi ${key}${key === "E" ? " (opsional)" : ""}`}
-                        required={isRequired}
-                        className="flex-1 px-3 py-2 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                      />
-                      {dailyForm.answerKey === key && (
-                        <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider shrink-0">Kunci</span>
-                      )}
-                    </div>
-                  );
-                })}
-                <p className="text-[10px] text-zinc-400 mt-1">Klik huruf untuk menjadikannya kunci jawaban yang benar.</p>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSubmittingDaily}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3 rounded-xl transition-all shadow-md shadow-emerald-600/10 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
-              >
-                {isSubmittingDaily ? (
-                  <><div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Menyimpan...</>
-                ) : (
-                  <><Zap className="h-4 w-4" /> Tambahkan ke Kuis Harian</>
-                )}
-              </button>
-            </form>
-          </div>
-
-          {/* Existing Daily Questions List */}
-          <div>
-            <h3 className="text-sm font-extrabold text-zinc-700 dark:text-zinc-300 mb-3 flex items-center gap-2">
-              Soal Kuis Harian Aktif ({dailyQuestions.length})
-            </h3>
-            {isLoadingDaily ? (
-              <div className="p-12 text-center text-zinc-550 flex flex-col items-center justify-center">
-                <div className="h-8 w-8 rounded-full border-4 border-emerald-150 border-t-emerald-600 animate-spin mb-3" />
-                <p className="text-xs font-bold">Memuat soal kuis harian...</p>
-              </div>
-            ) : dailyQuestions.length === 0 ? (
-              <div className="bg-white dark:bg-zinc-900 border border-zinc-200/60 dark:border-zinc-800 rounded-2xl p-8 text-center">
-                <Zap className="h-10 w-10 text-zinc-300 mx-auto mb-3" />
-                <p className="text-sm font-bold text-zinc-500">Belum ada soal kuis harian. Buat soal pertamamu di atas!</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {dailyQuestions.map((q, idx) => {
-                  const diffBadge = {
-                    mudah: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400",
-                    sedang: "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400",
-                    sulit: "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400",
-                  }[q.difficulty] || "bg-zinc-100 text-zinc-600";
-
-                  return (
-                    <div key={q.id} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 flex gap-4 items-start text-left">
-                      <span className="text-xs font-black text-zinc-400 mt-1 shrink-0 w-6 text-center">{idx + 1}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200 leading-relaxed">{q.questionText}</p>
-                        <div className="flex flex-wrap gap-1.5 mt-2">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${diffBadge}`}>{q.difficulty}</span>
-                          {q.subject && <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400">{q.subject}</span>}
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500">Kunci: {q.answerKey}</span>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleDeleteDailyQuestion(q.id)}
-                        className="shrink-0 h-8 w-8 rounded-lg border border-red-200 dark:border-red-900 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center justify-center transition-colors cursor-pointer"
-                        title="Hapus soal ini"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
+        <DailyQuizTab
+          dailyQuestions={dailyQuestions}
+          isLoadingDaily={isLoadingDaily}
+          isSubmittingDaily={isSubmittingDaily}
+          dailyForm={dailyForm}
+          onFormChange={setDailyForm}
+          onCreateQuestion={handleCreateDailyQuestion}
+          onDeleteQuestion={handleDeleteDailyQuestion}
+        />
       )}
     </div>
   );
