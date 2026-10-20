@@ -426,3 +426,20 @@ Every one of these was a real defect surfaced by turning the gate on, and each i
 - `watch(name)` from react-hook-form makes React Compiler bail out of the whole component ("Use of incompatible library"). `useWatch({ control, name })` does not. If the compiler bails, the file is no longer compiled — a silent, whole-file regression.
 - `react-hooks/refs` fires when a function that writes a ref is passed during render. `onSubmit={handleSubmit(onSubmit)}` writes `fileInputRef.current` transitively, so it must be `onSubmit={(event) => { void handleSubmit(onSubmit)(event); }}` — ref access in an event handler is allowed, during render it is not.
 - Dead state is worse than missing state. `editName`, `isNameChanged`, `isSaving`, `restUsers`, and a never-set `totalQuestions` `useState` all read like features and were never read by anything. Delete them; a fake spinner is a lie that survives review.
+
+## Design tokens & accessibility
+
+### A colour class that does not exist produces no CSS, silently
+- Tailwind knows eleven steps per colour: `50, 100, … 900, 950`. `zinc-550`, `zinc-850`, `indigo-650` are not in the scale, and Tailwind v4 emits **no rule at all** for them — no warning, no error. The class stays in `className` and reads like a design decision while the element simply inherits its parent's colour.
+- M15's overhaul shipped **200** of these across 26 files, almost all from one bulk `+50` shift (`border-zinc-250` sitting next to `dark:border-zinc-750` is unmistakably 200/700). Nothing failed, so nothing noticed for several milestones.
+- `tests/unit/design-tokens.test.ts` now scans `src/**/*.{ts,tsx,css}` and fails on any shade outside the scale. It reads the **source**, through `withoutComments()`, for the same reason as `pii-surface.test.ts`: a dead class is invisible in rendered HTML.
+- Repairing one is not mechanical. Backgrounds, borders and rings round **down** — that reverses the shift. Light-mode text rounds **up** while the result stays ≤ 600, because `text-zinc-450` → `zinc-400` is 3.1:1 on white and fails AA for normal text, while `450` → `500` passes. Dark-mode text always rounds down, i.e. lighter on `#09090b`. Pick the direction from contrast, not from symmetry.
+- A `dark:` variant holding the same value as its base is a no-op, not documentation. Fourteen `text-zinc-500 dark:text-zinc-500` pairs became redundant during the repair and were collapsed.
+
+### The two user preferences live in CSS, not in components
+- `globals.css` puts a `transition` on `*, *::before, *::after` and `scroll-behavior: smooth` on `html`, so honouring reduced motion is a **base-layer** job: one `@media (prefers-reduced-motion: reduce)` overrides both. Durations become `0.01ms`, **not** `none` — `transitionend`/`animationend` still fire, so code waiting on them does not hang.
+- `::view-transition-*` pseudo-elements are not matched by `*`, so the theme ripple needs its own `animation: none` inside that media query. A reduced-motion block covering only `*` leaves the largest animation in the app running.
+- Focus is the same shape: `@layer base { :focus-visible { outline: 2px solid #4f46e5 } }`. It sits in `base` on purpose so Tailwind utilities still win — an input with `focus:ring-2` must not get a second ring. The colour is `DESIGN.md`'s own focus-ring token, so this implements the written spec rather than inventing a look.
+- Do not "fix" accessibility by sprinkling `focus-visible:` classes across 40 components. One base rule covers every control that had no indicator, and it changes nothing for mouse users.
+- Proving either one is live means checking the **emitted** CSS (`.next/static/chunks/*.css`), not `globals.css`. A stylesheet that is never imported looks identical in a diff.
+- `@theme` is still deliberately absent. The first precondition (no dead classes) is now met, but 397 arbitrary-value classes remain; moving 17 colours into `@theme` alongside them would create two sources of truth that disagree immediately. Arbitrary classes first, tokens second — see the M15 decision note in `docs/AUDIT-AND-ROADMAP.md`.
