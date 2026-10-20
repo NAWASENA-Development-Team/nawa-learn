@@ -8,8 +8,8 @@
 
 import Link from "next/link";
 import {
-  Clock, ArrowRight, FileText, PlusCircle, Trash2, BrainCircuit, Sparkles,
-  GraduationCap, BookOpen, Users, AlertTriangle,
+  Clock, ArrowRight, FileText, PlusCircle, Trash2, BrainCircuit,
+  BookOpen, Users, AlertTriangle,
 } from "lucide-react";
 import type { Quiz } from "./types";
 import { getDifficultyStyle } from "./types";

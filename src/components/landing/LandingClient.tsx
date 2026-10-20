@@ -13,16 +13,12 @@ import {
   CheckCircle2,
   FileText,
   Check,
-  Flame,
   Zap,
   Award,
-  Users,
   Target,
   Clock,
   ArrowUpRight,
-  Layers,
   Lock,
-  Sparkles,
 } from "lucide-react";
 import NawaIcon from "@/components/icons/NawaIcon";
 import { AVATAR_OPTIONS } from "@/lib/avatars";

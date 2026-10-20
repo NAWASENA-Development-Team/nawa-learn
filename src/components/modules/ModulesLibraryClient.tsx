@@ -7,7 +7,6 @@ import {
   Search, 
   BookOpen, 
   Download, 
-  Sparkles, 
   FileText, 
   Image as ImageIcon, 
   ExternalLink,

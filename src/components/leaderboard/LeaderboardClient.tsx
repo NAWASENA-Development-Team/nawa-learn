@@ -11,9 +11,7 @@ import {
   Smile,
   ArrowRight,
   Trophy,
-  Flame,
-  Medal,
-  Award
+  Flame
 } from "lucide-react";
 import { AVATAR_OPTIONS, AvatarOption } from "@/lib/avatars";
 import { getSpecialtyBadge, SpecialtyStats } from "@/lib/badges";

@@ -13,7 +13,7 @@
 "use client";
 
 import {
-  Award, AlertCircle, Sparkles, Minus, RotateCcw, BookOpen, Info, Lock, Gift, CheckCircle,
+  Award, AlertCircle, Sparkles, Minus, RotateCcw, BookOpen, Info, Lock, Gift,
 } from "lucide-react";
 import { LatexRenderer } from "@/components/ui/LatexRenderer";
 import type { Question } from "./types";

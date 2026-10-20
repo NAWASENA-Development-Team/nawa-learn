@@ -8,7 +8,7 @@
 "use client";
 
 import {
-  Clock, ArrowLeft, ArrowRight, Check, CheckCircle2, GraduationCap, Shuffle, AlertTriangle,
+  Clock, ArrowLeft, ArrowRight, Check, CheckCircle2, Shuffle, AlertTriangle,
 } from "lucide-react";
 import { LatexRenderer } from "@/components/ui/LatexRenderer";
 import type { Quiz, Question } from "./types";

@@ -8,7 +8,7 @@
 "use client";
 
 import {
-  FileText, Clock, GraduationCap, User, AlertTriangle, Check, ArrowLeft, Sparkles,
+  FileText, Clock, GraduationCap, User, AlertTriangle, Check, ArrowLeft,
 } from "lucide-react";
 import type { Quiz } from "./types";
 

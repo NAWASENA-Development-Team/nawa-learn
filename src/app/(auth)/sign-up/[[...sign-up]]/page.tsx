@@ -168,30 +168,3 @@ export default function SignUpPage() {
     </div>
   );
 }
-                Setelah akun dibuat, kamu akan diminta menyetujui{" "}
-                <Link
-                  href={POLICY_PATHS.privacy}
-                  target="_blank"
-                  className="font-bold text-indigo-600 hover:underline dark:text-indigo-400"
-                >
-                  Kebijakan Privasi
-                </Link>{" "}
-                dan{" "}
-                <Link
-                  href={POLICY_PATHS.terms}
-                  target="_blank"
-                  className="font-bold text-indigo-600 hover:underline dark:text-indigo-400"
-                >
-                  Ketentuan Layanan
-                </Link>{" "}
-                kami sebelum bisa memakai fitur-fiturnya. Bacalah dulu — keduanya ditulis
-                dengan bahasa sehari-hari, bukan pasal berbelit.
-              </p>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-  );
-}
