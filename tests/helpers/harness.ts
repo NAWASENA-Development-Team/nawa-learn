@@ -7,8 +7,10 @@
 // scoring is idempotent) lives in the database: a mocked Drizzle would prove
 // nothing.
 import { PGlite } from "@electric-sql/pglite";
+import { getTableName, is, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
+import { PgTable } from "drizzle-orm/pg-core";
 import * as schema from "@/db/schema";
 
 export type TestDb = ReturnType<typeof drizzle<typeof schema>>;
@@ -30,6 +32,35 @@ export async function createTestDb(
   return db;
 }
 
+/**
+ * Kosongkan seluruh tabel aplikasi tanpa membangun ulang Postgres.
+ *
+ * Hampir setiap berkas integrasi memakai `beforeAll` + satu `createTestDb()`,
+ * karena `createTestDb()` menyalakan Postgres yang dikompilasi ke WASM. Membuat
+ * database baru di dalam `beforeEach` berarti membayar biaya itu sekali per
+ * test, dan pada mesin 2 inti satu boot bisa melewati `hookTimeout` 120 detik —
+ * laporannya lalu berbunyi "Hook timed out", yang terbaca seperti regresi padahal
+ * bukan. `TRUNCATE ... CASCADE` memberi keadaan awal yang sama dengan biaya
+ * milidetik.
+ *
+ * Daftar tabelnya diambil dari `schema` itu sendiri, bukan ditulis manual: tabel
+ * baru otomatis ikut, sehingga tidak ada tabel yang diam-diam masih menyimpan
+ * baris dari test sebelumnya.
+ */
+export async function resetTestDb(db: TestDb): Promise<void> {
+  const names: string[] = [];
+  for (const value of Object.values(schema)) {
+    // `schema` juga memuat tiga `pgEnum`; hanya tabel yang bisa di-`TRUNCATE`.
+    if (is(value, PgTable)) names.push(getTableName(value));
+  }
+  await db.execute(
+    sql`TRUNCATE TABLE ${sql.join(
+      names.map((name) => sql.identifier(name)),
+      sql`, `,
+    )} RESTART IDENTITY CASCADE`,
+  );
+}
+
 let counter = 0;
 
 /** Unique-per-call ids, so one test can never collide with another. */
@@ -46,6 +77,7 @@ export async function seedUser(
     role: "guest" | "student" | "contributor" | "moderator" | "admin";
     points: number;
     seasonPoints: number;
+    seasonRoleKey: string | null;
   }> = {},
 ) {
   const clerkId = overrides.clerkId ?? uniqueId("clerk");
@@ -58,6 +90,7 @@ export async function seedUser(
       role: overrides.role ?? "student",
       points: overrides.points ?? 0,
       ...(overrides.seasonPoints === undefined ? {} : { seasonPoints: overrides.seasonPoints }),
+      ...(overrides.seasonRoleKey === undefined ? {} : { seasonRoleKey: overrides.seasonRoleKey }),
     })
     .returning();
   return row;

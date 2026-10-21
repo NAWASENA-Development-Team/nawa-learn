@@ -82,13 +82,22 @@ describe("runRetention", () => {
     const newPoint = await seedPoint(user.id, RECENT);
     const oldSubmission = await seedSubmission(user.id, LONG_AGO);
     const newSubmission = await seedSubmission(user.id, RECENT);
+    // Kehadiran kuis harian: satu baris tua, satu baris baru. Yang tua dibuang
+    // karena satu-satunya pembacanya adalah jendela hari ini.
+    await db
+      .insert(schema.dailyActivity)
+      .values([
+        { userId: user.id, windowStart: LONG_AGO },
+        { userId: user.id, windowStart: RECENT },
+      ]);
 
     const result = await runRetention(db, { now: NOW });
 
     expect(result.deleted.reports).toBe(1);
     expect(result.deleted.points_log).toBe(1);
     expect(result.deleted.submissions).toBe(1);
-    expect(result.totalDeleted).toBe(3);
+    expect(result.deleted.daily_activity).toBe(1);
+    expect(result.totalDeleted).toBe(4);
 
     const reports = await db.select().from(schema.reports);
     expect(reports.map((row) => row.id)).toEqual([newReport.id]);
@@ -121,6 +130,7 @@ describe("runRetention", () => {
     expect(result.cutoffs.reports).toBe(cutoffDate(NOW, 12).toISOString());
     expect(result.cutoffs.points_log).toBe(cutoffDate(NOW, 24).toISOString());
     expect(result.cutoffs.submissions).toBe(cutoffDate(NOW, 24).toISOString());
+    expect(result.cutoffs.daily_activity).toBe(cutoffDate(NOW, 24).toISOString());
   });
 
   it("is idempotent: a second run the same day deletes nothing new", async () => {
@@ -133,7 +143,13 @@ describe("runRetention", () => {
 
     expect(first.totalDeleted).toBeGreaterThan(0);
     expect(second.totalDeleted).toBe(0);
-    expect(second.deleted).toEqual({ reports: 0, points_log: 0, submissions: 0 });
+    expect(second.deleted).toEqual({
+      reports: 0,
+      points_log: 0,
+      submissions: 0,
+      daily_activity: 0,
+      mail_outbox: 0,
+    });
   });
 
   it("never touches a table the policy does not name", async () => {

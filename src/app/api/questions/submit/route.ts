@@ -40,6 +40,20 @@ export async function POST(req: Request) {
 
     if (dbUser.role === "student") return NextResponse.json({ error: "Hanya kontributor yang dapat mengunggah soal" }, { status: 403 });
 
+    // Kursi Dewan Podium tidak boleh mengunggah (I2). Alasannya sama dengan
+    // `modules/submit`: kursi memegang `role = 'moderator'` selama masa jabatan,
+    // sehingga tanpa penjaga ini ia mewarisi hak unggah staf dan bisa menjadi
+    // penulis sekaligus penilai.
+    if (dbUser.seasonRoleKey !== null) {
+      return NextResponse.json(
+        {
+          error: "Pemegang kursi Dewan Podium tidak dapat mengunggah soal.",
+          code: "seat_cannot_upload",
+        },
+        { status: 403 },
+      );
+    }
+
     const limit = await rateLimit(req, "questions/submit", dbUser.id);
     if (!limit.ok) return limit.response;
 

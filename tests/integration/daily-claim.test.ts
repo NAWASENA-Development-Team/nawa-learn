@@ -1,6 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
-import { apiRequest, createTestDb, seedQuestion, seedUser, type TestDb } from "../helpers/harness";
+import { apiRequest, createTestDb, seedUser, type TestDb } from "../helpers/harness";
 
 const holder = vi.hoisted(() => ({ db: undefined as unknown }));
 
@@ -14,6 +14,7 @@ vi.mock("@clerk/nextjs/server", () => ({ auth: vi.fn() }));
 import { auth } from "@clerk/nextjs/server";
 import * as schema from "@/db/schema";
 import { POST } from "@/app/api/quiz/daily-claim/route";
+import { startOfDailyWindow } from "@/lib/dailyWindow";
 
 const authMock = vi.mocked(auth);
 
@@ -45,15 +46,19 @@ async function pointsOf(userId: string): Promise<number> {
   return row?.points ?? 0;
 }
 
-/** A graded attempt, exactly as /api/quiz/submit would have written it. */
-async function recordAttempt(userId: string, questionId: string, createdAt?: Date) {
-  await db.insert(schema.pointsLog).values({
-    userId,
-    action: "quiz_answer",
-    refId: questionId,
-    delta: 0,
-    ...(createdAt ? { createdAt } : {}),
-  });
+/**
+ * Bukti partisipasi, persis seperti yang ditulis `/api/quiz/submit`.
+ *
+ * Sejak M16 buktinya `daily_activity`, bukan `points_log`. Perbedaan ini bukan
+ * detail internal: `points_log` hanya berisi jawaban yang **dibayar**, sehingga
+ * pengguna yang sudah menjawab semua soal tidak pernah punya baris baru dan
+ * kehilangan +25 selamanya.
+ */
+async function recordActivity(userId: string, windowStart: Date = startOfDailyWindow()) {
+  await db
+    .insert(schema.dailyActivity)
+    .values({ userId, windowStart })
+    .onConflictDoNothing();
 }
 
 describe("POST /api/quiz/daily-claim", () => {
@@ -74,33 +79,26 @@ describe("POST /api/quiz/daily-claim", () => {
     expect(await pointsOf(student.id)).toBe(0);
   });
 
-  it("refuses to pay out for attempts on non-daily questions", async () => {
-    const author = await seedUser(db, {});
+  it("pays out even when the attempt earned no points at all", async () => {
+    // Inilah bug yang M16 perbaiki: dulu buktinya dibaca dari `points_log`, dan
+    // baris itu tidak pernah ditulis ketika soal sudah pernah dijawab (atau
+    // ketika soalnya karya sendiri). Pengguna paling rajin justru yang pertama
+    // kehilangan hadiah harian — permanen.
     const student = await seedUser(db, {});
-    const utbk = await seedQuestion(db, {
-      uploaderId: author.id,
-      difficulty: "sedang",
-      category: "UTBK",
-    });
-    await recordAttempt(student.id, utbk.id);
+    await recordActivity(student.id);
 
     signIn(student.clerkId);
     const { data } = await claim();
 
-    expect(data.success).toBe(false);
-    expect(await pointsOf(student.id)).toBe(0);
+    expect(data.success).toBe(true);
+    expect(data.pointsAwarded).toBe(25);
+    expect(await pointsOf(student.id)).toBe(25);
   });
 
-  it("ignores a daily attempt from a previous window", async () => {
-    const author = await seedUser(db, {});
+  it("ignores activity from a previous window", async () => {
     const student = await seedUser(db, {});
-    const daily = await seedQuestion(db, {
-      uploaderId: author.id,
-      difficulty: "sedang",
-      category: "Kuis Harian",
-    });
-    // 48 hours ago: definitely before today's 03:00 WIB reset.
-    await recordAttempt(student.id, daily.id, new Date(Date.now() - 48 * 60 * 60 * 1000));
+    // 48 jam lalu: pasti sebelum reset 03:00 WIB hari ini.
+    await recordActivity(student.id, new Date(Date.now() - 48 * 60 * 60 * 1000));
 
     signIn(student.clerkId);
     const { data } = await claim();
@@ -110,14 +108,8 @@ describe("POST /api/quiz/daily-claim", () => {
   });
 
   it("pays the flat bonus once, and refuses a second claim the same day", async () => {
-    const author = await seedUser(db, {});
     const student = await seedUser(db, {});
-    const daily = await seedQuestion(db, {
-      uploaderId: author.id,
-      difficulty: "sedang",
-      category: "Kuis Harian",
-    });
-    await recordAttempt(student.id, daily.id);
+    await recordActivity(student.id);
 
     signIn(student.clerkId);
 
@@ -132,14 +124,8 @@ describe("POST /api/quiz/daily-claim", () => {
   });
 
   it("stamps the user row so the UI can show today's status", async () => {
-    const author = await seedUser(db, {});
     const student = await seedUser(db, {});
-    const daily = await seedQuestion(db, {
-      uploaderId: author.id,
-      difficulty: "sedang",
-      category: "Kuis Harian",
-    });
-    await recordAttempt(student.id, daily.id);
+    await recordActivity(student.id);
 
     signIn(student.clerkId);
     await claim();

@@ -89,6 +89,16 @@ function fixture(): UserDataExport {
     pengajuan: [{ id: "s1", type: "module", status: "approved" }],
     laporan: [{ id: "r1", issueType: "bug", status: "pending" }],
     penanda: [{ moduleId: "m1", savedAt: "2026-10-17T00:00:00.000Z" }],
+    surel: [
+      {
+        kind: "submission_approved",
+        status: "sent",
+        payload: { title: "Modul, dengan koma" },
+        createdAt: "2026-10-17T00:00:00.000Z",
+        sentAt: "2026-10-17T00:00:05.000Z",
+      },
+    ],
+    harian: [{ windowStart: "2026-10-17T00:00:00.000Z", createdAt: "2026-10-17T00:00:00.000Z" }],
   };
 }
 
@@ -105,6 +115,12 @@ describe("exportUserDataCsv", () => {
     expect(csv).toContain('"modul[0]","downloads","5"');
     expect(csv).toContain('"poin[0]","delta","10"');
     expect(csv).toContain('"laporan[0]","issueType","bug"');
+    // The two categories M16 added are reached by the same generic loop, which
+    // is exactly why they are asserted rather than assumed: a category that is
+    // added to the export object but skipped here would be invisible in the one
+    // file the student is told to keep.
+    expect(csv).toContain('"surel[0]","kind","submission_approved"');
+    expect(csv).toContain('"harian[0]","windowStart","2026-10-17T00:00:00.000Z"');
   });
 
   it("serialises a nested object as JSON rather than dropping it", () => {

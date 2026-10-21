@@ -4,12 +4,15 @@ import { z } from "zod";
 import { db } from "@/db";
 import { questions, submissions, users, pointsLog } from "@/db/schema";
 import { and, eq, sql } from "drizzle-orm";
-import { requireModerator } from "@/lib/authz";
+import { requireReviewer, isHumanReviewer } from "@/lib/authz";
 import { checkAndGrantLevelRewards } from "@/lib/levelRewards";
 import { needsSeasonReset } from "@/lib/season";
+import { isInConflictZone } from "@/lib/seat";
 import { requestLogger } from "@/lib/logger";
 import { parseJsonBody } from "@/lib/validation";
 import { recordAudit } from "@/lib/auditLog";
+import { notifyUnlockedBadges } from "@/lib/badgeMail";
+import { enqueueMail } from "@/lib/mailer";
 
 // `questionId` and `submitterId` are resolved from the submission row in the
 // database, never from the request body.
@@ -27,8 +30,8 @@ const QUESTION_APPROVAL_POINTS: Record<string, number> = {
 
 export async function POST(req: Request) {
   const log = requestLogger(req);
-  // 1. Authorization: moderator or admin only.
-  const authz = await requireModerator();
+  // 1. Authorization: staf manusia atau pemegang kursi musim yang masih berlaku.
+  const authz = await requireReviewer();
   if (!authz.ok) return authz.response;
   const reviewer = authz.user;
 
@@ -53,10 +56,28 @@ export async function POST(req: Request) {
     const questionId = submission.refId;
     const submitterId = submission.submitterId;
 
+    // 2b. Penjaga yang sama dengan `modules/approve`, sebelum poin ditulis.
+    if (submitterId === reviewer.id) {
+      return NextResponse.json(
+        { error: "Tidak dapat meninjau kiriman sendiri", code: "self_review_forbidden" },
+        { status: 403 },
+      );
+    }
+    if (!isHumanReviewer(reviewer) && (await isInConflictZone(db, submitterId))) {
+      return NextResponse.json(
+        {
+          error: "Kiriman ini berasal dari sepuluh besar. Pemegang kursi tidak dapat meninjaunya.",
+          code: "seat_conflict_of_interest",
+        },
+        { status: 403 },
+      );
+    }
+
     // Difficulty (and therefore the reward) comes from the stored question.
+    // `questionText` is returned only to title the notification email.
     const question = await db.query.questions.findFirst({
       where: eq(questions.id, questionId),
-      columns: { difficulty: true },
+      columns: { difficulty: true, questionText: true },
     });
     if (!question) return NextResponse.json({ error: "Question not found" }, { status: 404 });
 
@@ -127,6 +148,22 @@ export async function POST(req: Request) {
 
     // 9. Check level rewards.
     const levelRewards = await checkAndGrantLevelRewards(submitterId, submitter.points, newPoints);
+
+    // 10. Notifikasi (lihat modules/approve).
+    await enqueueMail(
+      db,
+      {
+        toUserId: submitterId,
+        kind: "submission_approved",
+        dedupeKey: `sub:${submissionId}`,
+        payload: {
+          title: `Soal: ${question.questionText.slice(0, 70)}`,
+          points: pointsAwarded,
+        },
+      },
+      log,
+    );
+    await notifyUnlockedBadges(db, submitterId, log);
 
     return NextResponse.json({
       success: true,

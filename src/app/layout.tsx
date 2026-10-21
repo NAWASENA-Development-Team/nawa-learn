@@ -8,7 +8,7 @@ import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { ToastProvider } from "@/components/ui/Toast";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from "@/lib/site";
 import { getCurrentUser } from "@/lib/currentUser";
-import { hasReviewerRole } from "@/lib/authz";
+import { canReview } from "@/lib/authz";
 import Navbar from "@/components/layout/Navbar";
 import "./globals.css";
 
@@ -93,7 +93,7 @@ export default async function RootLayout({
   // below shares this same query rather than paying for a second one. Anonymous
   // visitors run no query at all.
   const currentUser = await getCurrentUser();
-  const isModerator = hasReviewerRole(currentUser?.role ?? "guest");
+  const isModerator = currentUser ? canReview(currentUser) : false;
 
   return (
     <ClerkProvider nonce={nonce}>

@@ -49,11 +49,11 @@ The profile page now features 22+ custom SVG avatars with fantasy and sci-fi the
 
 ### Moderator Panel Security
 - Moderator panel is hidden from public navigation unless the signed-in user has reviewer rights.
-- Access is **role-based**, not password-based: the panel opens only when `users.role` is `moderator` or `admin`.
-- `isModerator` is resolved **on the server** by `getCurrentUser()` (`src/lib/currentUser.ts`), which the root layout calls once per request (React `cache`) and passes to `Navbar` as a boolean prop. There is no client-side password, no `sessionStorage` flag, and no `/api/moderator/auth-check` round trip — that route was deleted in M14d because it had no callers left.
+- Access is **role-based**, not password-based: the panel opens only when `users.role` is `moderator` or `admin`. A season seat also holds `role = 'moderator'` for the length of its season — see *Dewan Podium* below for what that does and does not permit.
+- `canReview` is resolved **on the server** by `getCurrentUser()` (`src/lib/currentUser.ts`), which the root layout calls once per request (React `cache`) and passes to `Navbar` as a boolean prop. There is no client-side password, no `sessionStorage` flag, and no `/api/moderator/auth-check` round trip — that route was deleted in M14d because it had no callers left.
 - The panel itself is gated in `src/app/(dashboard)/moderator/page.tsx` (a server component) with `hasReviewerRole()`, which calls `notFound()` for anyone else. The UI lives in `src/components/moderator/ModeratorClient.tsx` (a thin shell that loads the four queues on mount; the tabs themselves are `SubmissionsModulesTab`, `SubmissionsQuestionsTab`, `HiddenBadgesTab`, `DailyQuizTab`) and only ever mounts for a reviewer, so there is no client-side gate to skip by not running JavaScript.
 - `role` is read from `users.role` and nowhere else. Clerk `publicMetadata` is deliberately not consulted: a second copy of the role would drift from `npm run db:promote`.
-- All reviewer API routes are guarded by `requireModerator()` from `src/lib/authz.ts`.
+- Reviewer API routes are guarded by `requireReviewer()` (human staff **and** season seats) or `requireHumanReviewer()` (human staff only) from `src/lib/authz.ts`. `requireModerator()` no longer exists — it was deleted, not aliased, and `tests/unit/authz.test.ts` scans `src/` (comments stripped) so the name cannot come back as an alias.
 - To grant access, promote a user's role:
   `npm run db:promote -- someone@example.com moderator` (see `src/db/promote.ts`).
 - Authentication itself (deny-by-default for every route) is enforced in `src/proxy.ts`.
@@ -218,6 +218,7 @@ To add new badges, edit `src/lib/badges/catalog.ts`:
 ### Counting statements is the only honest proof of an N+1 fix
 - `createTestDb({ onQuery })` in `tests/helpers/harness.ts` receives every statement the drizzle instance sends. `tests/integration/query-count.test.ts` asserts the count is **constant** as rows grow (`getSpecialtyStats` = 3, `profile/status` = 5).
 - A response-body test cannot catch a regression here: 5 queries and 55 queries produce byte-identical JSON.
+- **`createTestDb()` belongs in `beforeAll`, never in `beforeEach`.** It starts a whole Postgres compiled to WASM; on a 2-core machine one boot can approach the 120 s `hookTimeout`, so 21 boots (one per test) turned `season-cron.test.ts` into 506 s and one run reported `Hook timed out` — a message that reads like a regression and is not. Between tests, call `resetTestDb(db)`: it derives the table list from `schema` itself and issues one `TRUNCATE ... RESTART IDENTITY CASCADE`, so a table added later is cleared without anyone remembering to add it. The proof it is not vacuous is a test that asserts an *empty* table after earlier tests wrote to it (e.g. `expect(audits).toHaveLength(0)`).
 
 ### `src/lib/specialtyStats.ts` is shared, so the two pages cannot disagree
 - The six badge numbers are computed in **three** aggregate queries and returned as a pre-filled `Map`; `emptySpecialtyStats()` is the zero value for an id with no data.
@@ -273,7 +274,7 @@ To add new badges, edit `src/lib/badges/catalog.ts`:
 - `explanation` **is** sent — it is not a secret, only the key is, and the review screen shows it after grading.
 
 ### `requireSession()` — the cheap guard
-- `src/lib/authz.ts` exports `requireSession()` alongside `requireUser()`/`requireModerator()`. It calls only `auth()` and fetches no user row; it returns the **Clerk id, never a database id**.
+- `src/lib/authz.ts` exports `requireSession()` alongside `requireUser()`/`requireReviewer()`. It calls only `auth()` and fetches no user row; it returns the **Clerk id, never a database id**.
 - Use it for a route that needs *a* session but has no use for the user (`api/modules/count`, `api/modules/download`). The point is that "not worth an extra query on the hot path" is no longer a reason to skip an in-handler guard.
 - Every route must authorize in the handler. `src/proxy.ts` is defence in depth, **not** the only defence — it was dead code from M1 to M9 (see C6) and three routes silently lost their only gate. `api/exams/list`, `api/modules/count` and `api/modules/download` are now guarded locally.
 - Never hand `requireSession()`'s Clerk id to `rateLimit` or to an ownership check. Pass the **database** user id, or `null` when the identity is unknown — the IP bucket still applies.
@@ -298,7 +299,8 @@ To add new badges, edit `src/lib/badges/catalog.ts`:
 - Pre-M11 accounts have `NULL` consent columns and are asked **once**. That is intended, not an oversight.
 
 ### `RETENTION_POLICY` is one array with two readers
-- `src/lib/retention.ts` owns the windows (`reports` 12 months, `points_log` 24, `submissions` 24). The table on `/privacy` renders from it and `runRetention()` deletes from it, so the policy a student reads cannot drift from the one the machine runs.
+- `src/lib/retention.ts` owns the windows (`reports` 12 months, `points_log` 24, `submissions` 24, `daily_activity` 24, `mail_outbox` 1). The table on `/privacy` renders from it and `runRetention()` deletes from it, so the policy a student reads cannot drift from the one the machine runs.
+- `daily_activity` is a target even though it is also deleted on account deletion: the two paths answer different questions ("this account is gone" vs "this row is older than the window"), exactly like `points_log`. Its only readers are today's window and the data export, so a two-year-old attendance row answers nothing.
 - `modules`, `questions` and `custom_exams` are deliberately **not** retention targets: they are library content other students read, not a record about one person. Attribution is handled by account deletion instead.
 - `POST /api/cron/retention` is **POST-only** — `GET` answers 405. It is destructive, and a GET can be fired by a prefetcher, crawler or stray tab. Vercel Cron sends POST.
 - An unset `CRON_SECRET` means **401 for everyone** (fail closed), logged as `cron_retention_misconfigured` rather than `cron_retention_unauthorized` because the two need different midnight actions. The token comparison is hand-rolled constant-time so no `node:crypto` is needed on that path. Schedule lives in `vercel.json`.
@@ -308,7 +310,7 @@ To add new badges, edit `src/lib/badges/catalog.ts`:
 - Route handlers are **not** under `(dashboard)/layout.tsx`, so the consent gate does not cover them — each guards itself (`requireUser()` → `rateLimit()` → then read input).
 - Export lists every column **by name**. A bare `select()` would silently pick up PII columns added later.
 - CSV is long form (`kategori,kolom,nilai`) with a BOM (Excel reads UTF-8) and a leading `'` on cells starting with `=`, `+`, `-`, `@`, tab or CR to defuse CSV injection. Six record types with unrelated columns cannot share one header without dropping data, and this file is evidence.
-- Delete is **anonymisation, not `DELETE FROM users`**: `modules.uploader_id`, `questions.uploader_id` and `submissions.submitter_id` are `NOT NULL` and point here, so deleting the row would destroy unrelated students' work. `clerk_id` becomes a unique `deleted:<uuid>` tombstone, identity fields are blanked, consent columns are nulled, `reports` + `points_log` are deleted, and the user's exams are renamed to "Anonim". The UI requires typing `HAPUS AKUN SAYA`, and that phrase is defined **once** in `src/lib/accountConstants.ts` — a copy anywhere else is the drift the module exists to prevent (`tests/unit/ci-gates.test.ts` fails if a second literal appears in `src/`).
+- Delete is **anonymisation, not `DELETE FROM users`**: `modules.uploader_id`, `questions.uploader_id` and `submissions.submitter_id` are `NOT NULL` and point here, so deleting the row would destroy unrelated students' work. `clerk_id` becomes a unique `deleted:<uuid>` tombstone, identity fields are blanked, consent columns are nulled, `reports` + `points_log` + `bookmarks` + `daily_activity` + `mail_outbox` are deleted, `role`/`season_role_key` are reset, and the user's exams are renamed to "Anonim". The UI requires typing `HAPUS AKUN SAYA`, and that phrase is defined **once** in `src/lib/accountConstants.ts` — a copy anywhere else is the drift the module exists to prevent (`tests/unit/ci-gates.test.ts` fails if a second literal appears in `src/`).
 - Order is deliberate and **not transactional** (Neon HTTP has none): local data is anonymised first, the Clerk account is deleted last. If the last step fails the user already has no personal data with us and it is logged (`account_deletion_clerk_failed`); the reverse — Clerk gone, data still here — would be unrecoverable.
 - **Two doors, one implementation.** `POST /api/profile/delete` (self-service) and the `user.deleted` branch of `webhooks/clerk` (deleted from the Clerk dashboard) both call `anonymiseAccountByClerkId()` in `src/lib/accountData.ts`. Never duplicate the anonymisation field list in a route — that is how the two doors drift and one of them quietly stops blanking a column.
 - `anonymiseAccountByClerkId()` is **idempotent by construction**: after it runs, `clerk_id` is `deleted:<uuid>`, so a replayed webhook finds no row and answers `200` (`clerk_user_deleted_no_row`). A Clerk `user.deleted` for an unknown id is also `200`, not `404` — Clerk retries on non-2xx.
@@ -320,6 +322,64 @@ To add new badges, edit `src/lib/badges/catalog.ts`:
 - Bookmarks are personal data: they are in `collectUserData()` as `penanda` (module id + saved time only — never the module title, which belongs to another student) and in the anonymisation delete list. They are **not** a retention target, like `modules`/`questions`.
 - This is a deliberate **reversal of M5**, which dropped `bookmarks` for having no writer and no reader. The reason M5 gave is exactly why the table earns its place now: it ships with a writer, a reader and an owner.
 
+## Dewan Podium (season seats)
+
+### The seat is a derived fact, never a stored grant
+- The current season's top three hold a real moderator seat until the season ends. The seat is computed from the leaderboard, not recorded as "this user was elected": `src/lib/seat.ts` exports `SEAT_COUNT = 3`, `rankOf()`, `isInConflictZone()` and `getPodium()`, and `getPodium()` is the **single** definition of "top three". The cron, the leaderboard and the mailer all call it; none of them re-derives the ranking.
+- `users.role` stays the **only** permission source. `users.season_role_key` records *why* a role was granted: `NULL` means a human granted it (`npm run db:promote`) and it is **never** auto-revoked; a season key (`"2026-Q4"`) means the cron granted it and the cron may take it back.
+- `season_podium` is **archival only** — it exists so a finished season can be mailed and displayed. It is never consulted for authorization. A permission check that reads an archive table is a permission check that outlives its season.
+- Season expiry works **without** the cron: `isSeatActive()` compares `season_role_key` against the current season key, so a stale key stops granting anything the moment the season turns. The cron is a reconciliation job, not the enforcement point.
+
+### Two guards, split by capability
+- `requireReviewer()` — human staff **and** season seats. Used by the four queues, `modules/approve`, `questions/approve`, `questions/reject`, `moderator/hidden-badges` and `questions/daily-create`.
+- `requireHumanReviewer()` — human staff only. Used by `moderator/audit-log` (a list of everyone ever moderated is not a thing to hand three students for three months) and to decide whether hidden-badge `requirement` text is included.
+- A seat **may not** upload: `modules/submit` and `questions/submit` answer `403 seat_cannot_upload` when `season_role_key !== null`. The check keys on the key being set, **not** on the seat still being active — an expired-but-not-yet-revoked seat also cannot upload, which is the safe direction.
+- That guard runs **before** rate limiting and before the body is read, so a seat sending an empty body still gets 403 rather than a validation error.
+- A seat **may** still answer quizzes and claim the daily +25. Losing upload rights is the trade-off of the seat; losing the ability to study would be a punishment for winning.
+
+### Conflict of interest is explicit, not inferred
+- A seat cannot review a submission from anyone in the top 10 (`CONFLICT_ZONE_RANK`), answered with `403 seat_conflict_of_interest`. Human staff are exempt: they were appointed, not elected by the same board they are judging.
+- Self-review is forbidden for **everyone** on both approve routes and `questions/reject` (`403 self_review_forbidden`). A seat reviewing its own upload would be the obvious hole; a human moderator doing it is the same bug.
+
+### The stipend is flat and idempotent
+- `+10` per day while seated, awarded by the cron through `points_log` with `deterministicUuid("season-stipend:{userId}:{windowStart}")` as the reference — so a second run in the same window conflicts on the unique index and pays nothing.
+- Capped at `STIPEND_MAX_DAYS_PER_SEASON = 30` credited days (300 points) per season. The cap counts `season_stipend` rows, not days elapsed.
+- Authorship of the daily quiz is **deliberately not rewarded**. An earlier design paid +10 to whoever authored it first; that is a 03:00 race, it rewards speed over quality, and the author nets −15/day after paying the quiz themselves.
+
+### Daily quiz economy
+- `daily_quiz_slot` has `window_start` as its primary key, so **one curated question per day** is enforced by the database, not by a read-then-write check.
+- `question_id` is `NOT NULL`, so the slot cannot be claimed before the question exists. The order is: create the question → claim the slot with `ON CONFLICT DO NOTHING` → on conflict **delete the question just created** and answer `409 daily_slot_taken`. The orphan window is milliseconds and a failed compensating delete is logged (`daily slot compensation delete failed`) rather than swallowed.
+- `daily_activity` is the **proof of participation**, separate from `points_log`. Before M16 `daily-claim` inferred "already done today" from a `quiz_answer` ledger row — but that row only exists when points were actually paid, so the most diligent students were the first to lose their +25, permanently. A fact must not be inferred from its payment record.
+- Because it is a record about the person and not about their work, it is **exported as `harian`** and **deleted** on account deletion (not anonymised — the same class as `points_log`, unlike `modules`/`questions`).
+- `quiz/submit` writes `daily_activity` with `onConflictDoNothing()` inside a `try/catch`: a failure there never fails grading, because the points are already paid and a correct answer is still correct.
+- The session is **deterministic**, not shuffled: slot first, then the `Kuis Harian` category, then easy → sedang → sulit, then newest, `id` desc. A stable order is what makes "why is this question here" answerable.
+- Hybrid supply fills the day from the slot plus up to 19 unanswered approved questions, so the 03:00–07:00 WIB gap before the cron still has a session.
+
+### The cron is a reconciler, and its order is load-bearing
+- `src/lib/seasonCron.ts` `runSeasonCron(db, log, now?)` — testable without HTTP, mirroring `runRetention`. `POST /api/cron/season` is POST-only, constant-time bearer check, and **401 for everyone** when `CRON_SECRET` is unset.
+- **Both cron paths must be in `PUBLIC_ROUTES`.** The scheduler has no session, so a path the proxy does not list answers a **307 to Clerk's hosted sign-in** for a request carrying a bearer token and no cookie — the job then fails every night and nothing in the response says why. `tests/unit/proxy-location.test.ts` derives every `src/app/api/cron/*/route.ts` and requires a matching matcher entry **in both directions** (a listed path with no route also fails), and `scripts/verify-proxy.mjs` probes both cron paths at runtime, demanding a non-3xx answer plus a `401` from the route's own gate. This is the C6/C8 shape for the third time: a control that exists, is documented, and never runs.
+- Order: archive the podium **before** resetting points → rollover → revoke keys from *other* seasons → grant to the current top three → revoke current-season holders displaced from the top three → stipend → fill an empty slot → measure pool depth → drain the mail outbox.
+- Archiving after the reset would archive a board of zeroes. That is the one ordering mistake that loses a season permanently.
+- Revoking "keys from other seasons" and "current-season holders who fell out of the top three" are **two separate steps**. Merging them produces daily revoke/re-grant churn and an audit row per day per seat.
+- The cron never stamps a season key onto human staff (`role` moderator/admin with `season_role_key IS NULL`) even when they rank in the top three — only two seats fill in that case.
+- Rollover is idempotent without a state table: `UPDATE users SET season_points = 0, season_reset_at = now() WHERE season_reset_at IS NULL OR season_reset_at < <season start>`. The `season_points = 0` guard is mandatory; without it a second run stamps a new reset time on already-reset users.
+- An empty slot is filled from the **oldest approved question never yet used as a slot** (`author_id = NULL`) — deterministic rotation, not random, so the bank is exhausted in a predictable order.
+- `daily_pool_depth` is sampled from 20 recently-active users (two bounded queries), never the whole table, and warns `daily_pool_depth_low` below `DAILY_POOL_DEPTH_MIN = 20`.
+
+### Mail is an outbox, not a call in the request
+- `src/lib/mailer.ts` owns six `MailKind`s: `submission_approved`, `submission_rejected`, `badge_unlocked`, `season_result`, `seat_granted`, `seat_revoked`.
+- `enqueueMail()` writes a row; `sendPendingMail()` drains it with a 10 s `AbortController` deadline and `MAX_ATTEMPTS = 5`. Delivery is **best-effort and immediate**, so a normal request sends at once while a provider outage leaves the row for the next cron.
+- `dedupe_key` is unique. Approval and rejection share `sub:{submissionId}` — a submission can only be decided once, so the two kinds can never both fire for it.
+- No `RESEND_API_KEY` → status `skipped`, `lastError: mail_not_configured`, and the caller still gets 200. A notification is not a reason to fail an approval.
+- `users.emailNotifications` is respected at enqueue time and changed through `POST /api/profile/notifications` with a **desired-state** body `{ enabled }`, never a toggle — the same reasoning as `POST /api/bookmarks`.
+- Pruning lives in `RETENTION_POLICY` (`mail_outbox`, 1 month), not in `mailer.ts`. One delete path per table.
+- The outbox is **part of a student's own data**: `collectUserData()` exports it as `surel` (`kind`, `status`, `payload`, `createdAt`, `sentAt` — never `lastError`, which is the provider talking about the delivery, not about the person), and `deleteAccountData()` deletes the account's rows. Without that delete a `pending` row would still be picked up by the next cron and sent to the tombstone address `deleted+<uuid>@deleted.nawasena.site` — a guaranteed-failing provider call for an account that asked to be forgotten.
+
+### Badge mail
+- `src/lib/badgeMail.ts` `notifyUnlockedBadges()` mails only `epic`/`legendary` and **never** hidden badges — for a hidden badge the title *is* the secret.
+- Dedupe key `badge:{userId}:{badgeId}`; the function never throws.
+- Its queries run **sequentially**, not `Promise.all`: PGlite in tests is a single connection, and a parallel batch deadlocks the suite.
+
 ## Audit log
 
 ### One writer, scalar snapshots
@@ -328,7 +388,7 @@ To add new badges, edit `src/lib/badges/catalog.ts`:
 - Audit writes are **best-effort**: a failure logs the alertable `audit_write_failed` and the audited action still stands. Neon HTTP has no transactions, so "write the audit and mutate atomically" is not available; the alternative — rolling back a moderation decision that already happened — is worse.
 - `AUDIT_ACTIONS` is a closed list (`content.approve`, `content.reject`, `user.role_change`, `user.anonymise`). **Automatic point grants are deliberately not audited** — `points_log` is already their complete record, and copying it into `audit_log` creates two tables that can disagree.
 - `actor_id` is nullable and means **system/CLI**, not "unknown" (`npm run db:promote` has no `users` row to point at). It is never nulled on anonymisation: the FK is `ON DELETE no action` and the row is never deleted — M11's tombstone design is what keeps the trail.
-- `GET /api/moderator/audit-log` (`requireModerator` → `rateLimit("moderator/audit-log", user.id)`) exists so the table is not write-only theatre. It returns ids, actions and scalars — never names or emails — and validates `entity` against a closed enum plus UUID-shaped ids.
+- `GET /api/moderator/audit-log` (`requireHumanReviewer` → `rateLimit("moderator/audit-log", user.id)`) exists so the table is not write-only theatre. It returns ids, actions and scalars — never names or emails — and validates `entity` against a closed enum plus UUID-shaped ids. It is **human-only** on purpose: an audit trail that a season seat can read is a list of everyone who has ever been moderated, handed to three students for three months.
 
 ## Data minimisation, enforced
 
@@ -465,6 +525,7 @@ Every one of these was a real defect surfaced by turning the gate on, and each i
   - That file carries `// @vitest-environment jsdom`; the suite default stays `node` so PGlite is not dragged through a fake DOM. `vitest.config.mts` includes `tests/**/*.test.tsx` for this one reason.
   - **Why jsdom and not Playwright:** every real defect sits behind the auth gate (`/submit`, `/practice`, `/profile`, `/moderator`), while `PUBLIC_ROUTES` exposes five pages and the CI job is hermetic by design (`ci-gates.test.ts` fails if `secrets.*` returns). A browser job would audit the marketing pages and report green over forms it never loaded — C6/C8 for a third time. No secrets, no server, no browser download.
   - The harness has **permanent self-tests** proving it is not vacuously green: `<div aria-label>` without a role must yield `aria-prohibited-attr`, and `<input type="text">` with no name must yield `label`. If someone breaks `audit()`, those fail before any component test does.
+  - **`axe._running` is a module-level flag, and a timeout does not clear it.** One audit that exceeds its timeout leaves the flag set, so every later `axe.run` throws `Axe is already running` — one slow audit reads as five accessibility failures that do not exist (this happened on a full M16 run). The file therefore sets a 120 s timeout for its own blocks and clears the flag in `beforeEach`; tests inside one file are sequential, so an abandoned audit from the previous test is already orphaned. Do not lower that timeout back to the global 30 s: a large form in jsdom was measured at 36 s on a loaded 2-core machine.
 - **`color-contrast` is disabled on purpose, with the reason in the file.** jsdom computes no layout, so axe reports every text node as *incomplete*. Contrast, touch-target size and responsive layout still need a browser; screen-reader behaviour (NVDA/JAWS/VoiceOver) still needs a human. None of those is claimed as covered — **M18** in `docs/AUDIT-AND-ROADMAP.md` owns them, and it is a separate milestone precisely so "M15 selesai" can be true.
 - `<div onClick>` is **not** caught by any gate here. The Google Drive file rows in `DrivePickerModal` are still unreachable by keyboard; that is recorded as debt, not as done.
 

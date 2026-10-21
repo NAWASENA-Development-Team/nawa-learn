@@ -10,7 +10,7 @@
 // di diff, bukan menyelinap lewat `before`/`after`.
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { requireModerator } from "@/lib/authz";
+import { requireHumanReviewer } from "@/lib/authz";
 import { requestLogger } from "@/lib/logger";
 import { rateLimit } from "@/lib/rateLimit";
 import { AUDIT_ENTITIES, AUDIT_LIST_MAX, listAuditEntries, type AuditEntity } from "@/lib/auditLog";
@@ -28,9 +28,10 @@ function badRequest(message: string) {
 export async function GET(req: Request) {
   const log = requestLogger(req);
 
-  // Membaca jejak tindakan moderator lain adalah wewenang peninjau, bukan
-  // sekadar "punya sesi".
-  const authz = await requireModerator();
+  // Membaca jejak tindakan moderator lain adalah wewenang peninjau **manusia**,
+  // bukan sekadar "punya sesi" — dan bukan wewenang pemegang kursi. Kursi adalah
+  // amanah satu musim; riwayat keputusan staf tidak ikut menjadi miliknya.
+  const authz = await requireHumanReviewer();
   if (!authz.ok) return authz.response;
 
   const limit = await rateLimit(req, "moderator/audit-log", authz.user.id);

@@ -44,6 +44,7 @@ export function DailyQuizTab({
         <Zap className="h-4 w-4 shrink-0 mt-0.5" />
         <span>
           Buat soal untuk <strong>Kuis Harian</strong>. Soal yang dibuat di sini langsung aktif tanpa perlu persetujuan.
+          <strong> Satu soal kurasi per hari</strong> — kalau slot hari ini sudah terisi, soalmu tidak disimpan.
           Siswa yang menyelesaikan kuis harian mendapat <strong>+25 Poin XP</strong> (1x per hari, reset 03:00 WIB).
           Variasikan tingkat kesulitannya!
         </span>

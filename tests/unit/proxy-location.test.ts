@@ -20,9 +20,10 @@
 // its place because the failure mode is *invisible*: nothing else in this suite,
 // and nothing in `next build`, can see it. If this test ever fails, do not
 // "fix" it by editing the path — move the file.
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { withoutComments } from "../helpers/source";
 
 const root = process.cwd();
 
@@ -45,5 +46,69 @@ describe("Next.js file-convention locations", () => {
   it("leaves no deprecated middleware file behind (Next 16 renamed it to proxy)", () => {
     expect(exists("middleware.ts")).toBe(false);
     expect(exists("src/middleware.ts")).toBe(false);
+  });
+});
+
+// ─── Setiap jalur cron harus publik bagi proxy ────────────────────────────────
+//
+// Penjadwal platform tidak punya sesi. Sebuah jalur cron yang tidak terdaftar di
+// matcher proxy dijawab **307 ke halaman masuk Clerk** untuk permintaan yang
+// membawa bearer token dan tidak membawa cookie — job-nya lalu gagal setiap
+// malam, dan tidak ada satu pun bagian dari respons yang menjelaskan sebabnya.
+//
+// Itu bukan hipotesis: M16 menambahkan `POST /api/cron/season` dan lupa
+// mendaftarkannya, dan tidak ada gerbang mana pun yang memerah. Yang menangkapnya
+// adalah pemeriksaan manual, yang justru jenis kontrol yang sudah tiga kali
+// terbukti tidak pernah dijalankan (C6, C8, dan lint M4–M13).
+//
+// Diperiksa dua arah, karena keduanya kegagalan yang berbeda: jalur yang lupa
+// didaftarkan berarti job yang tidak pernah berjalan, sedangkan jalur yang
+// terdaftar tanpa route berarti konfigurasi mati yang membuat daftar ini
+// menipu.
+describe("cron routes and the proxy allowlist", () => {
+  const cronRoot = path.join(root, "src/app/api/cron");
+
+  /** Nama direktori di bawah `src/app/api/cron` yang benar-benar punya route. */
+  function cronRoutePaths(): string[] {
+    return readdirSync(cronRoot, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .filter((entry) => exists(`src/app/api/cron/${entry.name}/route.ts`))
+      .map((entry) => `/api/cron/${entry.name}`)
+      .sort();
+  }
+
+  /** Isi array `createRouteMatcher([...])`, tanpa komentar. */
+  function publicRoutesSource(): string {
+    const source = readFileSync(path.join(root, "src/proxy.ts"), "utf8");
+    const open = source.indexOf("createRouteMatcher([");
+    expect(open, "src/proxy.ts no longer calls createRouteMatcher([...])").toBeGreaterThan(-1);
+    const close = source.indexOf("])", open);
+    expect(close).toBeGreaterThan(open);
+    return withoutComments(source.slice(open, close));
+  }
+
+  it("finds at least one cron route, so the scan cannot pass over nothing", () => {
+    expect(cronRoutePaths().length).toBeGreaterThan(0);
+  });
+
+  it("lists every cron route as public", () => {
+    const matcher = publicRoutesSource();
+    for (const routePath of cronRoutePaths()) {
+      expect(
+        matcher.includes(`'${routePath}'`),
+        `${routePath} is missing from PUBLIC_ROUTES in src/proxy.ts. ` +
+          "The scheduler has no session, so this route would answer a 307 to " +
+          "Clerk's sign-in page and never run.",
+      ).toBe(true);
+    }
+  });
+
+  it("lists no cron route that does not exist", () => {
+    const matcher = publicRoutesSource();
+    const listed = [...matcher.matchAll(/'(\/api\/cron\/[a-z0-9-]+)'/g)]
+      .map((match) => match[1])
+      .sort();
+
+    expect(listed).toEqual(cronRoutePaths());
   });
 });

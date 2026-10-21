@@ -164,18 +164,24 @@ export function toBadgeDisplays(options: BadgeDisplayOptions): BadgeDisplay[] {
 }
 
 /**
- * Lencana tersembunyi saja, lengkap dengan syaratnya — untuk panel moderator.
+ * Lencana tersembunyi saja — untuk panel moderator.
  *
  * Fungsi terpisah, bukan `toBadgeDisplays({ category: "hidden" })`, karena nama
  * yang menyebut "hidden" di satu-satunya pemanggilnya membuat niatnya terbaca:
- * ini permukaan moderator, dan `includeRequirement` tidak punya jalan lain
- * untuk aktif.
+ * ini permukaan moderator.
+ *
+ * `includeRequirement` kini **wajib** diberikan pemanggil, dan itu perubahan
+ * yang disengaja (M16). Sebelumnya fungsi ini selalu menyertakan syarat, jadi
+ * setiap peninjau membacanya. Pemegang kursi musim tidak boleh: syarat yang
+ * terbaca adalah syarat yang bisa diakali, dan kursi hanya memegang amanah satu
+ * musim. Karena parameter ini tidak punya nilai bawaan, pemanggil baru tidak
+ * bisa "lupa" membatasinya — ia harus menyebutkan pilihannya.
  */
-export function getHiddenBadgeDisplays(): BadgeDisplay[] {
+export function getHiddenBadgeDisplays(options: { includeRequirement: boolean }): BadgeDisplay[] {
   return toBadgeDisplays({
     unlockedIds: [],
     isModerator: true,
-    includeRequirement: true,
+    includeRequirement: options.includeRequirement,
     category: "hidden",
   });
 }

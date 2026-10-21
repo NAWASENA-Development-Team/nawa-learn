@@ -303,7 +303,10 @@ describe("toBadgeDisplays", () => {
     // fungsi **terkompilasi**: `3000` keluar sebagai `3e3` dan di bundel
     // produksi `data` menjadi `e`. Sekarang teksnya ada di katalog.
     const byId = new Map(
-      getHiddenBadgeDisplays().map((display) => [display.id, display.requirement]),
+      getHiddenBadgeDisplays({ includeRequirement: true }).map((display) => [
+        display.id,
+        display.requirement,
+      ]),
     );
     expect(byId.get("shadow_pioneer")).toBe("Poin minimal 3000.");
     expect(byId.get("midnight_scholar")).toBe("Minimal 50 modul disetujui.");
@@ -321,12 +324,24 @@ describe("toBadgeDisplays", () => {
 
 describe("getHiddenBadgeDisplays", () => {
   it("mengembalikan delapan lencana rahasia lengkap dengan syaratnya", () => {
-    const displays = getHiddenBadgeDisplays();
+    const displays = getHiddenBadgeDisplays({ includeRequirement: true });
     expect(displays.length).toBe(8);
     for (const display of displays) {
       expect(display.hidden).toBe(true);
       expect(display.redacted).toBe(false);
       expect(display.requirement).toBeTruthy();
+    }
+  });
+
+  it("menyembunyikan syarat dari pemegang kursi musim", () => {
+    // Kursi hanya memegang amanah satu musim. Ia tetap perlu melihat **siapa**
+    // memegang lencana rahasia (bagian pekerjaan moderasi), tetapi syarat yang
+    // terbaca adalah syarat yang bisa diakali.
+    const displays = getHiddenBadgeDisplays({ includeRequirement: false });
+    expect(displays.length).toBe(8);
+    for (const display of displays) {
+      expect(display.hidden).toBe(true);
+      expect(display.requirement).toBeUndefined();
     }
   });
 });

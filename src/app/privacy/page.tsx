@@ -41,9 +41,10 @@ export default function PrivacyPage() {
             <><strong>Identitas akun</strong> — nama tampilan, alamat surel, dan ID akun dari layanan masuk (Clerk). Surel dipakai untuk masuk dan untuk menghubungimu soal akun.</>,
             <><strong>Profil yang kamu isi sendiri</strong> — foto profil, bio, motto, dan pilihan avatar. Semuanya opsional.</>,
             <><strong>Karya yang kamu unggah</strong> — judul, mata pelajaran, kelas, dan tautan berkas modul; teks soal, pilihan jawaban, kunci jawaban, dan pembahasan.</>,
-            <><strong>Aktivitas belajar</strong> — jawaban kuis, nilai ujian buatanmu, dan riwayat Poin XP.</>,
+            <><strong>Aktivitas belajar</strong> — jawaban kuis, nilai ujian buatanmu, riwayat Poin XP, dan catatan hari-hari ketika kamu mengerjakan kuis harian.</>,
             <><strong>Laporan yang kamu kirim</strong> — jenis masalah dan uraiannya, kalau kamu melaporkan bug atau konten.</>,
-            <><strong>Catatan teknis</strong> — waktu kamu menyetujui kebijakan ini, dan ID permintaan di log server saat terjadi error.</>,
+            <><strong>Catatan teknis</strong> — waktu kamu menyetujui kebijakan ini, ID permintaan di log server saat terjadi error, dan catatan pengiriman surel (jenis pesan, status kirim, dan kode kesalahan bila gagal).</>,
+            <><strong>Preferensi surel</strong> — satu sakelar: apakah kamu mau dikirimi kabar lewat surel. Bawaannya menyala, dan bisa kamu matikan kapan saja.</>,
           ]}
         />
         <p>
@@ -71,13 +72,40 @@ export default function PrivacyPage() {
           items={[
             <><strong>Siswa lain</strong> hanya melihat profil publikmu: nama tampilan, avatar, bio, motto, poin, peringkat, serta modul dan soal yang sudah disetujui. <strong>Alamat surelmu tidak pernah ditampilkan.</strong></>,
             <><strong>Moderator dan admin sekolah</strong> melihat antrean moderasi dan laporan, termasuk nama pengirimnya, karena itu tugas mereka.</>,
-            <><strong>Penyedia layanan</strong> yang kami pakai untuk menjalankan platform: Clerk (masuk/akun), Neon (database), Vercel (hosting dan penyimpanan berkas), serta Upstash (pembatas permintaan) bila diaktifkan. Mereka memproses data atas nama kami, bukan untuk kepentingan mereka sendiri.</>,
+            <><strong>Penyedia layanan</strong> yang kami pakai untuk menjalankan platform: Clerk (masuk/akun), Neon (database), Vercel (hosting dan penyimpanan berkas), Resend (pengiriman surel transaksional), serta Upstash (pembatas permintaan) bila diaktifkan. Mereka memproses data atas nama kami, bukan untuk kepentingan mereka sendiri.</>,
           ]}
         />
         <p>Kami tidak mengirim datamu ke pihak lain, kecuali diwajibkan hukum yang berlaku.</p>
       </LegalSection>
 
-      <LegalSection number={5} title="Berapa lama kami menyimpannya">
+      <LegalSection number={5} title="Surel dari kami">
+        <p>
+          Kami mengirim surel hanya untuk hal yang menyangkut akunmu sendiri, dan hanya ke alamat yang kamu
+          pakai untuk masuk:
+        </p>
+        <LegalList
+          items={[
+            <>Kirimanmu disetujui atau ditolak, beserta poin yang didapat dan catatan peninjau.</>,
+            <>Lencana langka yang baru terbuka, dan hasil musim kalau kamu berada di tiga besar.</>,
+            <>Kabar pemberian dan pencabutan kursi Dewan Podium, kalau kamu memegangnya.</>,
+          ]}
+        />
+        <p>
+          Tidak ada buletin, tidak ada iklan, dan alamatmu tidak pernah dibagikan ke pihak lain. Pengirimnya
+          layanan surel transaksional (Resend), yang hanya menerima alamat tujuan dan isi pesannya. Kamu bisa
+          mematikan seluruh surel ini kapan saja lewat{" "}
+          <Link className="font-bold text-nawa-primary hover:underline dark:text-indigo-400" href="/profile/privacy">halaman privasi profilmu</Link>
+          ; keputusan dan poinmu tetap tercatat di dalam aplikasi.
+        </p>
+        <p>
+          Kami menyimpan catatan teknis pengiriman (status dan kode kesalahan, bukan isi pesannya) paling lama
+          satu bulan — lihat bagian masa simpan di bawah. Catatan itu <strong>tidak</strong> ikut ke berkas
+          ekspormu: isinya tentang jalur kirim kami, bukan tentang kamu, dan yang tentang kamu (jenis pesan,
+          kapan dikirim, dan statusnya) tetap ada di sana.
+        </p>
+      </LegalSection>
+
+      <LegalSection number={6} title="Berapa lama kami menyimpannya">
         <p>
           Data yang kamu lihat di profilmu disimpan selama akunmu ada. Sebagian catatan teknis punya masa
           simpan sendiri, dan sebuah tugas terjadwal menghapusnya secara otomatis:
@@ -108,7 +136,7 @@ export default function PrivacyPage() {
         </p>
       </LegalSection>
 
-      <LegalSection number={6} title="Hakmu">
+      <LegalSection number={7} title="Hakmu">
         <LegalList
           items={[
             <><strong>Melihat</strong> — seluruh data yang kami simpan tentangmu bisa kamu unduh sebagai berkas JSON atau CSV di <Link className="font-bold text-nawa-primary hover:underline dark:text-indigo-400" href="/profile/privacy">halaman privasi profilmu</Link>.</>,
@@ -120,7 +148,7 @@ export default function PrivacyPage() {
         />
       </LegalSection>
 
-      <LegalSection number={7} title="Cara kami melindungi data">
+      <LegalSection number={8} title="Cara kami melindungi data">
         <LegalList
           items={[
             <>Setiap halaman dan setiap API tertutup secara bawaan: tanpa sesi yang sah, permintaan ditolak sebelum sampai ke data.</>,
@@ -132,7 +160,7 @@ export default function PrivacyPage() {
         />
       </LegalSection>
 
-      <LegalSection number={8} title="Kalau kamu masih di bawah umur">
+      <LegalSection number={9} title="Kalau kamu masih di bawah umur">
         <p>
           Sebagian besar pengguna NAWA-LEARN adalah pelajar. Karena itu kami sengaja mengumpulkan sesedikit
           mungkin: tanpa nomor telepon, tanpa alamat, tanpa NISN. Kami menyarankan kamu memberi tahu orang
@@ -142,7 +170,7 @@ export default function PrivacyPage() {
         </p>
       </LegalSection>
 
-      <LegalSection number={9} title="Kalau terjadi kebocoran data">
+      <LegalSection number={10} title="Kalau terjadi kebocoran data">
         <p>
           Kami mencatat setiap dugaan kebocoran dan menilainya dalam <strong>1×24 jam</strong>. Kalau
           terbukti ada data pribadi yang terdampak, kami memberi tahu pengguna yang terdampak dan pihak
@@ -152,7 +180,7 @@ export default function PrivacyPage() {
         </p>
       </LegalSection>
 
-      <LegalSection number={10} title="Kalau kebijakan ini berubah">
+      <LegalSection number={11} title="Kalau kebijakan ini berubah">
         <p>
           Setiap perubahan material menaikkan nomor versi di atas dan menghapus tanda persetujuanmu, sehingga
           kamu akan diminta menyetujui versi baru sebelum bisa memakai dashboard lagi. Kami tidak pernah
@@ -160,7 +188,7 @@ export default function PrivacyPage() {
         </p>
       </LegalSection>
 
-      <LegalSection number={11} title="Hubungi kami">
+      <LegalSection number={12} title="Hubungi kami">
         <p>
           Pertanyaan, permintaan data, atau keberatan: <a className="font-bold text-nawa-primary hover:underline dark:text-indigo-400" href={`mailto:${PRIVACY_CONTACT_EMAIL}`}>{PRIVACY_CONTACT_EMAIL}</a>.
           Dokumen pendamping: <Link className="font-bold text-nawa-primary hover:underline dark:text-indigo-400" href={POLICY_PATHS.terms}>Ketentuan Layanan</Link>.

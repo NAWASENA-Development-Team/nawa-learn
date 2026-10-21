@@ -43,6 +43,13 @@
       "when": 1792287062468,
       "tag": "0005_curvy_vampiro",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792579122173,
+      "tag": "0006_dewan_podium",
+      "breakpoints": true
     }
   ]
 }

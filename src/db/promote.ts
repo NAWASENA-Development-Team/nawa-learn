@@ -48,11 +48,11 @@ async function main() {
   const target =
     (await db.query.users.findFirst({
       where: eq(schema.users.email, identifier),
-      columns: { id: true, name: true, email: true, clerkId: true, role: true },
+      columns: { id: true, name: true, email: true, clerkId: true, role: true, seasonRoleKey: true },
     })) ??
     (await db.query.users.findFirst({
       where: eq(schema.users.clerkId, identifier),
-      columns: { id: true, name: true, email: true, clerkId: true, role: true },
+      columns: { id: true, name: true, email: true, clerkId: true, role: true, seasonRoleKey: true },
     })) ??
     null;
 
@@ -61,12 +61,23 @@ async function main() {
     process.exit(1);
   }
 
-  if (target.role === role) {
+  // `season_role_key` selalu dikosongkan di sini, dan itu bukan kerapian.
+  //
+  // Peran yang diberikan manusia tidak boleh dicabut mesin. Tanpa langkah ini,
+  // mempromosikan pemegang kursi yang sedang menjabat menjadi moderator akan
+  // terlihat seperti "sudah moderator, tidak ada yang berubah" — lalu cron
+  // musim berikutnya mencabut perannya, karena yang tersimpan hanyalah kunci
+  // musim. Cabang `already` di bawah juga memeriksa kolom ini, supaya kasus itu
+  // benar-benar tertangani alih-alih dilewati.
+  if (target.role === role && target.seasonRoleKey === null) {
     console.log(`"${target.name}" (${target.email}) is already "${role}". Nothing to do.`);
     process.exit(0);
   }
 
-  await db.update(schema.users).set({ role }).where(eq(schema.users.id, target.id));
+  await db
+    .update(schema.users)
+    .set({ role, seasonRoleKey: null })
+    .where(eq(schema.users.id, target.id));
 
   // Perubahan peran adalah tindakan paling sensitif di aplikasi ini: `moderator`
   // membuka seluruh antrean moderasi dan `admin` membuka sisanya. Sampai M12 ia
@@ -81,7 +92,7 @@ async function main() {
     action: "user.role_change",
     entity: "user",
     entityId: target.id,
-    before: { role: target.role },
+    before: { role: target.role, seasonRoleKey: target.seasonRoleKey },
     after: { role, source: "cli:db:promote" },
   });
 

@@ -23,7 +23,7 @@
 import { createElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import axe from "axe-core";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Komponen klien memanggil hook router; di luar app router hook itu melempar.
 vi.mock("next/navigation", () => ({
@@ -46,6 +46,34 @@ const RULES = {
   "color-contrast": { enabled: false },
   "color-contrast-enhanced": { enabled: false },
 };
+
+// ─── Dua hal yang membuat berkas ini sempat gagal acak ───────────────────────
+//
+// 1. **Batas waktunya sendiri.** `testTimeout` 30 detik di `vitest.config.mts`
+//    ditulis untuk unit test, bukan untuk audit axe atas form besar di jsdom. Di
+//    mesin 2-core yang sedang memuat proses Node lain, audit `ModuleSubmitForm`
+//    terukur 36 detik — jadi batas global itu memotong audit yang sebenarnya
+//    sedang berjalan, bukan menggagalkannya. Angka di bawah hanya menutupi
+//    biayanya (sama seperti `hookTimeout` 120 detik untuk PGlite); audit yang
+//    benar-benar menggantung tetap akan gagal, hanya lebih lambat.
+//
+// 2. **`axe._running` adalah flag tingkat modul, dan timeout tidak
+//    membersihkannya.** Ketika satu audit terpotong, promise-nya tidak pernah
+//    selesai dan flag itu tetap menyala — setiap `axe.run` berikutnya lalu
+//    melempar "Axe is already running", sehingga **satu** audit yang lambat
+//    terbaca sebagai **lima** pelanggaran aksesibilitas yang tidak ada. Itu
+//    persis yang terjadi pada satu run penuh di M16. Karena test di dalam satu
+//    berkas berjalan berurutan, sisa audit dari test sebelumnya sudah menjadi
+//    yatim saat test berikutnya mulai, jadi mengosongkan flag di `beforeEach`
+//    adalah pilihan yang jujur — dan membuat kegagalan nyata muncul sebagai satu
+//    kegagalan, bukan lima.
+const AUDIT_TIMEOUT_MS = 120_000;
+
+const axeInternals = axe as unknown as { _running?: boolean };
+
+beforeEach(() => {
+  axeInternals._running = false;
+});
 
 async function audit(element: ReactElement) {
   const markup = renderToStaticMarkup(element);
@@ -93,7 +121,7 @@ function withToast(element: ReactElement) {
   return createElement(ToastProvider, null, element);
 }
 
-describe("axe: komponen yang dirender tidak punya pelanggaran WCAG A/AA", () => {
+describe("axe: komponen yang dirender tidak punya pelanggaran WCAG A/AA", { timeout: AUDIT_TIMEOUT_MS }, () => {
   it("ConsentForm — kotak centang persetujuan UU PDP", async () => {
     const violations = await audit(withToast(createElement(ConsentForm)));
     expect(violations, report(violations)).toEqual([]);
@@ -117,6 +145,7 @@ describe("axe: komponen yang dirender tidak punya pelanggaran WCAG A/AA", () => 
         createElement(PrivacyClient, {
           name: "Siswa Contoh",
           email: "siswa@example.com",
+          emailNotifications: true,
           policyVersion: "2026-01",
           consentVersion: "2026-01",
           consentAcceptedAt: "2026-01-01T00:00:00.000Z",
@@ -152,7 +181,7 @@ describe("axe: komponen yang dirender tidak punya pelanggaran WCAG A/AA", () => 
   });
 });
 
-describe("axe: harness-nya sendiri tidak hijau secara hampa", () => {
+describe("axe: harness-nya sendiri tidak hijau secara hampa", { timeout: AUDIT_TIMEOUT_MS }, () => {
   it("mendeteksi markup yang memang salah", async () => {
     // Gerbang yang selalu hijau tidak bisa dibedakan dari gerbang yang tidak
     // pernah jalan. Dua probe ini membuktikan `audit()` benar-benar memanggil

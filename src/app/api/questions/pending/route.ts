@@ -3,13 +3,14 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { questions, submissions, users } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
-import { requireModerator } from "@/lib/authz";
+import { requireReviewer } from "@/lib/authz";
 import { requestLogger } from "@/lib/logger";
 
 export async function GET(req: Request) {
   const log = requestLogger(req);
-  // Contains unreviewed questions *with their answer keys* — moderators only.
-  const authz = await requireModerator();
+  // Contains unreviewed questions *with their answer keys* — staff or a seated
+  // season moderator, never a plain student.
+  const authz = await requireReviewer();
   if (!authz.ok) return authz.response;
 
   try {

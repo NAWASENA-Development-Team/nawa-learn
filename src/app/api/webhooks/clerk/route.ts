@@ -182,6 +182,8 @@ export async function POST(req: Request) {
         reportsDeleted: result.report.deleted.reports,
         pointsDeleted: result.report.deleted.pointsLog,
         bookmarksDeleted: result.report.deleted.bookmarks,
+        mailDeleted: result.report.deleted.mailOutbox,
+        dailyActivityDeleted: result.report.deleted.dailyActivity,
         submissionsFeedbackCleared: result.report.submissionsFeedbackCleared,
       });
 

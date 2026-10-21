@@ -10,6 +10,7 @@ import { db } from "@/db";
 import { users, pointsLog } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { getLevel, getLevelThreshold, getPointsToNextLevel } from "@/lib/levelUtils";
+import { needsSeasonReset } from "@/lib/season";
 export { getLevel, getLevelThreshold, getPointsToNextLevel };
 
 // ─── Reward definitions ───────────────────────────────────────────────────────
@@ -45,7 +46,7 @@ export async function checkAndGrantLevelRewards(
 ): Promise<GrantedReward[]> {
   const user = await db.query.users.findFirst({
     where: eq(users.id, userId),
-    columns: { claimedLevelRewards: true },
+    columns: { claimedLevelRewards: true, seasonResetAt: true },
   });
 
   const claimed = (user?.claimedLevelRewards as number[] | null) ?? [];
@@ -104,6 +105,17 @@ export async function checkAndGrantLevelRewards(
 
   // Commit bonus points separately (uses sql expression)
   if (bonusPoints > 0) {
+    // Reset malas, seperti `quiz/submit` dan kedua route approve: poin musim baru
+    // bisa direset saat pengguna menulis poin berikutnya. Tanpa langkah ini,
+    // bonus level yang diterima pada hari pertama kuartal baru akan ditambahkan
+    // ke angka musim lalu, dan poin musim pengguna itu menjadi terlalu tinggi
+    // sampai ia menulis poin lagi.
+    if (needsSeasonReset(user?.seasonResetAt ?? null)) {
+      await db.update(users)
+        .set({ seasonPoints: 0, seasonResetAt: new Date() })
+        .where(eq(users.id, userId));
+    }
+
     await db.update(users)
       .set({
         points: sql`${users.points} + ${bonusPoints}`,

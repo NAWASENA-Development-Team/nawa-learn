@@ -44,6 +44,27 @@ export async function POST(req: Request) {
       }, { status: 403 });
     }
 
+    // Kursi Dewan Podium **tidak** boleh mengunggah (I2).
+    //
+    // Pemegang kursi memegang `role = 'moderator'` selama masa jabatannya, jadi
+    // tanpa penjaga ini ia otomatis mewarisi hak unggah staf. Kursi adalah
+    // amanah menilai, bukan hak menerbitkan: kalau kursi boleh mengunggah dan
+    // menilai, ia bisa menerbitkan karyanya sendiri (dan itu sebabnya
+    // `questions/approve` juga menolak tinjauan atas kiriman sendiri).
+    //
+    // Kuncinya `season_role_key`, bukan "kursi masih aktif": peran yang berasal
+    // dari musim tidak pernah memberi hak unggah, termasuk pada hari terakhir
+    // sebelum cron mencabutnya.
+    if (dbUser.seasonRoleKey !== null) {
+      return NextResponse.json(
+        {
+          error: "Pemegang kursi Dewan Podium tidak dapat mengunggah modul.",
+          code: "seat_cannot_upload",
+        },
+        { status: 403 },
+      );
+    }
+
     const limit = await rateLimit(req, "modules/submit", dbUser.id);
     if (!limit.ok) return limit.response;
 

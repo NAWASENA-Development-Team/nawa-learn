@@ -34,6 +34,7 @@ export default async function ProfilePrivacyPage() {
       id: true,
       name: true,
       email: true,
+      emailNotifications: true,
       consentPolicyVersion: true,
       consentAcceptedAt: true,
     },
@@ -47,6 +48,7 @@ export default async function ProfilePrivacyPage() {
     <PrivacyClient
       name={user.name}
       email={user.email}
+      emailNotifications={user.emailNotifications}
       policyVersion={POLICY_VERSION}
       consentVersion={user.consentPolicyVersion}
       consentAcceptedAt={user.consentAcceptedAt ? user.consentAcceptedAt.toISOString() : null}

@@ -15,7 +15,7 @@ import { NextResponse } from "next/server";
 import { desc } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { requireModerator } from "@/lib/authz";
+import { requireReviewer, isHumanReviewer } from "@/lib/authz";
 import { requestLogger } from "@/lib/logger";
 import { IS_PARTICIPANT } from "@/lib/participants";
 import { emptySpecialtyStats, getSpecialtyStats, getSubjectBreakdown } from "@/lib/specialtyStats";
@@ -45,8 +45,13 @@ interface HiddenBadgeHolder {
 
 export async function GET(req: Request) {
   const log = requestLogger(req);
-  // Memuat statistik per siswa, jadi moderator/admin saja.
-  const authz = await requireModerator();
+  // Memuat statistik per siswa, jadi staf atau pemegang kursi musim.
+  //
+  // Kursi boleh melihat **siapa** memegang lencana rahasia — itu bagian dari
+  // pekerjaan moderasi — tetapi tidak boleh membaca **syaratnya**. Syarat yang
+  // terbaca adalah syarat yang bisa diakali, dan kursi hanya memegang amanah
+  // satu musim.
+  const authz = await requireReviewer();
   if (!authz.ok) return authz.response;
 
   try {
@@ -72,7 +77,9 @@ export async function GET(req: Request) {
       getSubjectBreakdown(db, ids),
     ]);
 
-    const badges = getHiddenBadgeDisplays();
+    const badges = getHiddenBadgeDisplays({
+      includeRequirement: isHumanReviewer(authz.user),
+    });
     const holders: Record<string, HiddenBadgeHolder[]> = {};
     for (const badge of badges) holders[badge.id] = [];
 

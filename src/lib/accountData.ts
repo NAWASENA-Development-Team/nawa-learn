@@ -61,6 +61,10 @@ export interface UserDataExport {
   laporan: unknown[];
   /** Modul yang ditandai "tersimpan" oleh pengguna ini. */
   penanda: unknown[];
+  /** Surel transaksional yang pernah/akan dikirim ke akun ini. */
+  surel: unknown[];
+  /** Hari-hari ketika akun ini menjawab kuis harian. */
+  harian: unknown[];
 }
 
 const iso = (value: Date | null | undefined): string | null =>
@@ -100,7 +104,7 @@ export async function collectUserData(db: AppDb, userId: string): Promise<UserDa
     throw new Error(`accountData: no user row for ${userId}`);
   }
 
-  const [modul, soal, ujian, poin, pengajuan, laporan, penanda] = await Promise.all([
+  const [modul, soal, ujian, poin, pengajuan, laporan, penanda, surel, harian] = await Promise.all([
     db.query.modules.findMany({
       where: eq(schema.modules.uploaderId, userId),
       columns: {
@@ -172,6 +176,23 @@ export async function collectUserData(db: AppDb, userId: string): Promise<UserDa
       columns: { moduleId: true, createdAt: true },
       orderBy: (table, { desc }) => [desc(table.createdAt)],
     }),
+    // Antrean surel adalah data yang kami simpan tentang akun ini: apa yang
+    // dikirim, kapan, dan statusnya. `lastError` sengaja tidak ikut — itu teks
+    // galat dari penyedia tentang **pengiriman**, bukan tentang orangnya, dan
+    // membawanya ke berkas bukti hanya menambah kebisingan.
+    db.query.mailOutbox.findMany({
+      where: eq(schema.mailOutbox.toUserId, userId),
+      columns: { kind: true, status: true, payload: true, createdAt: true, sentAt: true },
+      orderBy: (table, { desc }) => [desc(table.createdAt)],
+    }),
+    // Bukti partisipasi kuis harian: hari-hari ketika akun ini menjawab. Bukan
+    // salinan `points_log` — baris ini ada justru ketika poin **tidak** dibayar
+    // (jawaban salah tetap tercatat), jadi ia satu-satunya catatan hari aktif.
+    db.query.dailyActivity.findMany({
+      where: eq(schema.dailyActivity.userId, userId),
+      columns: { windowStart: true, createdAt: true },
+      orderBy: (table, { desc }) => [desc(table.windowStart)],
+    }),
   ]);
 
   return {
@@ -193,6 +214,8 @@ export async function collectUserData(db: AppDb, userId: string): Promise<UserDa
     pengajuan,
     laporan,
     penanda,
+    surel,
+    harian,
   };
 }
 
@@ -200,7 +223,7 @@ export async function collectUserData(db: AppDb, userId: string): Promise<UserDa
  * Bentuk CSV yang dipilih: satu baris per nilai, dengan kolom
  * `kategori,kolom,nilai`.
  *
- * Alasannya praktis. Ekspor ini berisi enam jenis data dengan kolom yang sama
+ * Alasannya praktis. Ekspor ini berisi sembilan jenis data dengan kolom yang sama
  * sekali berbeda (modul punya `downloads`, soal punya `answerKey`, poin punya
  * `delta`). CSV tidak punya konsep beberapa tabel, jadi pilihannya hanya dua:
  * membuang kolom sampai semuanya muat di satu header — yang berarti ekspornya
@@ -266,7 +289,13 @@ export interface AccountDeletionReport {
   userId: string;
   /** URL foto lama, supaya route bisa menghapus objeknya dari penyimpanan. */
   photoUrlCleared: string | null;
-  deleted: { reports: number; pointsLog: number; bookmarks: number };
+  deleted: {
+    reports: number;
+    pointsLog: number;
+    bookmarks: number;
+    mailOutbox: number;
+    dailyActivity: number;
+  };
   /** Baris `submissions` yang catatan reviewer-nya dikosongkan. */
   submissionsFeedbackCleared: number;
   /** Ujian buatan pengguna yang namanya diganti menjadi "Anonim". */
@@ -330,6 +359,26 @@ export async function deleteAccountData(
     .where(eq(schema.bookmarks.userId, userId))
     .returning({ id: schema.bookmarks.id });
 
+  // Surat yang belum terkirim ikut hilang. Bukan karena isinya tentang orangnya
+  // — payload-nya hanya judul lencana, kunci musim, dan angka — tetapi karena
+  // baris `pending` akan **tetap dikirim** oleh cron berikutnya ke alamat
+  // tombstone `deleted+<uuid>@deleted.nawasena.site`. Panggilan penyedia yang
+  // pasti gagal itu tidak berguna, dan antrean kirim bukan arsip yang perlu
+  // dipertahankan setelah orangnya meminta dihapus.
+  const deletedMail = await db
+    .delete(schema.mailOutbox)
+    .where(eq(schema.mailOutbox.toUserId, userId))
+    .returning({ id: schema.mailOutbox.id });
+
+  // "Orang ini belajar pada hari-hari ini" adalah catatan tentang orangnya, bukan
+  // karya yang dibaca siswa lain — kelas yang sama dengan `points_log`, yang juga
+  // dihapus dan bukan dianonimkan. Tidak ada pembaca lain: satu-satunya gunanya
+  // adalah membuktikan partisipasi **akun ini**, dan akun ini sudah tidak ada.
+  const deletedDailyActivity = await db
+    .delete(schema.dailyActivity)
+    .where(eq(schema.dailyActivity.userId, userId))
+    .returning({ windowStart: schema.dailyActivity.windowStart });
+
   const clearedFeedback = await db
     .update(schema.submissions)
     .set({ feedback: null })
@@ -358,6 +407,13 @@ export async function deleteAccountData(
       lastDailyQuizAt: null,
       points: 0,
       seasonPoints: 0,
+      // Kursi Dewan Podium adalah izin, dan izin tidak boleh menempel pada
+      // tombstone. Baris ini tidak bisa lagi dipakai masuk (clerk_id-nya
+      // tombstone), tetapi membiarkan `role`/`season_role_key` hidup berarti
+      // mengandalkan cron berikutnya untuk mencabutnya — dan cron yang belum
+      // jalan adalah izin yang masih berdiri.
+      role: "student",
+      seasonRoleKey: null,
       // Menarik persetujuan sekaligus: tanpa identitas, tidak ada dasar
       // pemrosesan yang tersisa untuk dicatat.
       consentPolicyVersion: null,
@@ -372,6 +428,8 @@ export async function deleteAccountData(
       reports: deletedReports.length,
       pointsLog: deletedPoints.length,
       bookmarks: deletedBookmarks.length,
+      mailOutbox: deletedMail.length,
+      dailyActivity: deletedDailyActivity.length,
     },
     submissionsFeedbackCleared: clearedFeedback.length,
     customExamsAnonymized: anonymizedExams.length,

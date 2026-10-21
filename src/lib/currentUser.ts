@@ -31,6 +31,8 @@ export type CurrentUser = {
   id: string;
   name: string;
   role: Role;
+  /** Non-null when `role` came from the season podium rather than `db:promote`. */
+  seasonRoleKey: string | null;
   /** Null for an account that has never accepted the current policy version. */
   consentPolicyVersion: string | null;
 };
@@ -58,7 +60,13 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
 
   const row = await db.query.users.findFirst({
     where: eq(users.clerkId, clerkId),
-    columns: { id: true, name: true, role: true, consentPolicyVersion: true },
+    columns: {
+      id: true,
+      name: true,
+      role: true,
+      seasonRoleKey: true,
+      consentPolicyVersion: true,
+    },
   });
 
   return row ?? null;

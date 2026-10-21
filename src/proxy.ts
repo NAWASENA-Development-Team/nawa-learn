@@ -32,10 +32,17 @@ const isPublicRoute = createRouteMatcher([
   // a student must not bounce them to a sign-in page.
   '/privacy',
   '/terms',
-  // Scheduled data-retention job. The platform's scheduler has no session, so it
-  // cannot pass the proxy; its own `CRON_SECRET` check is the gate, and it fails
+  // Scheduled jobs. The platform's scheduler has no session, so it cannot pass
+  // the proxy; each route's own `CRON_SECRET` check is the gate, and it fails
   // closed (401) when that secret is unset or wrong.
+  //
+  // Both entries are load-bearing. A cron path missing from this list answers a
+  // 307 to Clerk's hosted sign-in for a request that carries a bearer token and
+  // no cookie — the job then fails silently every night, and nothing in the
+  // response says why. That is the C6/C8 shape: a control that exists, is
+  // documented, and never runs.
   '/api/cron/retention',
+  '/api/cron/season',
   // Crawler-facing metadata (M14b). Public because a crawler is an anonymous
   // visitor with no cookie jar: hidden behind the auth gate, `/robots.txt`
   // answers a 307 to Clerk's hosted sign-in domain, which reads to a search

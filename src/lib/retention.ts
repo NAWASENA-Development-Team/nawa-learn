@@ -24,7 +24,7 @@ export type RetentionDb = AppDb;
 
 export interface RetentionRule {
   /** Nama tabel, dipakai sebagai kunci hasil dan di log. */
-  key: "reports" | "points_log" | "submissions";
+  key: "reports" | "points_log" | "submissions" | "daily_activity" | "mail_outbox";
   /** Nama yang dibaca manusia, dipakai di halaman /privacy. */
   label: string;
   /** Umur maksimum dalam bulan. */
@@ -58,6 +58,20 @@ export const RETENTION_POLICY: readonly RetentionRule[] = [
     windowMonths: 24,
     rationale:
       "Bukti mengapa sebuah modul/soal disetujui atau ditolak; setelah dua tahun tidak lagi diperlukan.",
+  },
+  {
+    key: "daily_activity",
+    label: "Catatan kehadiran kuis harian",
+    windowMonths: 24,
+    rationale:
+      "Satu-satunya pembacanya adalah jendela hari ini (untuk hadiah harian) dan berkas ekspormu. Setelah dua tahun, catatan kehadiran tidak lagi menjawab pertanyaan apa pun.",
+  },
+  {
+    key: "mail_outbox",
+    label: "Catatan pengiriman surel",
+    windowMonths: 1,
+    rationale:
+      "Jejak teknis percobaan kirim (status dan kode kesalahan), bukan isi surel dan bukan alamat. Setelah terkirim tidak diperlukan lagi.",
   },
 ];
 
@@ -137,6 +151,20 @@ async function deleteOlderThan(
         .delete(schema.submissions)
         .where(lt(schema.submissions.submittedAt, cutoff))
         .returning({ id: schema.submissions.id });
+      return removed.length;
+    }
+    case "daily_activity": {
+      const removed = await db
+        .delete(schema.dailyActivity)
+        .where(lt(schema.dailyActivity.windowStart, cutoff))
+        .returning({ windowStart: schema.dailyActivity.windowStart });
+      return removed.length;
+    }
+    case "mail_outbox": {
+      const removed = await db
+        .delete(schema.mailOutbox)
+        .where(lt(schema.mailOutbox.createdAt, cutoff))
+        .returning({ id: schema.mailOutbox.id });
       return removed.length;
     }
   }

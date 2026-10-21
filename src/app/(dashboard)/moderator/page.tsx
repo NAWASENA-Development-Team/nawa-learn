@@ -13,20 +13,25 @@
 // role is read from the same row the check just fetched.
 //
 // Note that this is a *page*, not an API route: a page cannot return a `Response`,
-// which is why it uses `getCurrentUser()` rather than `requireModerator()`. The
-// moderator APIs behind the panel each carry `requireModerator()` themselves, so
+// which is why it uses `getCurrentUser()` rather than `requireReviewer()`. The
+// moderator APIs behind the panel each carry `requireReviewer()` themselves, so
 // this gate is defence in depth rather than the only defence.
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/currentUser";
-import { hasReviewerRole } from "@/lib/authz";
+import { canReview } from "@/lib/authz";
 import ModeratorClient from "@/components/moderator/ModeratorClient";
 
 export default async function ModeratorPage() {
   const currentUser = await getCurrentUser();
 
-  if (!hasReviewerRole(currentUser?.role ?? "guest")) {
+  if (!currentUser || !canReview(currentUser)) {
     notFound();
   }
 
-  return <ModeratorClient />;
+  // `seatKind` is derived on the server from `season_role_key` and passed as a
+  // prop; the client never decides which tabs it is allowed to see. A human
+  // reviewer has a NULL key (granted via `db:promote`), a season seat does not.
+  const seatKind = currentUser.seasonRoleKey === null ? "human" : "seat";
+
+  return <ModeratorClient seatKind={seatKind} />;
 }

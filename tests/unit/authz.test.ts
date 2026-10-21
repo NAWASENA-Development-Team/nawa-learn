@@ -1,4 +1,7 @@
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { withoutComments } from "../helpers/source";
 
 // `authz.ts` imports the database layer, and `src/db/index.ts` eagerly creates a
 // Neon client from DATABASE_URL. Stub both out so the pure authorization policy
@@ -11,9 +14,20 @@ import { hasReviewerRole, requireSession, REVIEWER_ROLES } from "@/lib/authz";
 
 const authMock = vi.mocked(auth);
 
+const root = process.cwd();
+
 // The M2 decision: reviewer access is decided purely by `users.role`. The old
-// hardcoded password and the "top 3 by season points" shortcut are gone, and
-// nothing may quietly re-open them.
+// hardcoded password and the old "top 3 by season points" *lookup* are gone, and
+// nothing may quietly re-open either.
+//
+// M16 did not reopen the second one. A Dewan Podium seat is a reviewer because
+// the season cron wrote `users.role`; `authz.ts` still reads that column and
+// nothing else. The difference is visible in the data: `season_role_key` records
+// *why* the role was granted, and a key from a past season stops counting the
+// moment the calendar turns (`isSeatActive()`). So the ranking is never consulted
+// at authorization time — a permission check that reads the leaderboard would
+// grant a seat to whoever happens to be on top of a query, including a row whose
+// points have not been reset yet.
 describe("hasReviewerRole", () => {
   it("allows moderators and admins", () => {
     expect(hasReviewerRole("moderator")).toBe(true);
@@ -55,5 +69,45 @@ describe("requireSession", () => {
     authMock.mockResolvedValue({ userId: "clerk_abc" } as never);
 
     await expect(requireSession()).resolves.toEqual({ ok: true, clerkId: "clerk_abc" });
+  });
+});
+
+// ─── `requireModerator` tidak boleh kembali ───────────────────────────────────
+//
+// M16 memecah satu penjaga menjadi dua: `requireReviewer` (staf manusia **dan**
+// kursi musim) dan `requireHumanReviewer` (staf manusia saja). `requireModerator`
+// dihapus, bukan dialiaskan — alias adalah cara termudah bagi route baru untuk
+// memakai penjaga yang lebih lebar dari yang dimaksud, dan tidak ada satu pun
+// pesan galat yang akan memberi tahu bahwa itu terjadi.
+//
+// Yang dipindai adalah **kode**, bukan komentar: `withoutComments()` lebih dulu,
+// supaya penjelasan tentang kenapa nama itu dihapus tidak terbaca sebagai
+// pemakaiannya. Tanpa itu, cara termudah membuat tes ini hijau adalah menghapus
+// penjelasannya — persis kebalikan dari yang diinginkan.
+describe("the deleted requireModerator guard", () => {
+  function sourceFiles(dir: string): string[] {
+    return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) return sourceFiles(full);
+      return /\.(ts|tsx)$/.test(entry.name) ? [full] : [];
+    });
+  }
+
+  it("is not exported from authz.ts", () => {
+    const source = withoutComments(readFileSync(path.join(root, "src/lib/authz.ts"), "utf8"));
+    expect(source).not.toMatch(/export\s+(async\s+)?function\s+requireModerator\b/);
+    expect(source).not.toMatch(/export\s+const\s+requireModerator\b/);
+  });
+
+  it("is called nowhere in src/, not even as an alias", () => {
+    const offenders = sourceFiles(path.join(root, "src"))
+      .filter((file) => withoutComments(readFileSync(file, "utf8")).includes("requireModerator"))
+      .map((file) => path.relative(root, file));
+
+    expect(
+      offenders,
+      "requireModerator was deleted in M16. Use requireReviewer (human staff + " +
+        "season seats) or requireHumanReviewer (human staff only).",
+    ).toEqual([]);
   });
 });

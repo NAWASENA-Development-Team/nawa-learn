@@ -133,14 +133,61 @@ describe("collectUserData", () => {
     expect(JSON.stringify(data.penanda)).not.toContain("Modul Budi");
   });
 
-  it("returns an empty array, never a missing key, for a user with no content", async () => {
+  it("includes the transactional mail queued for the account, without the provider's error text", async () => {
+    // A mail row says something about this account: what we decided to tell them,
+    // and when. `lastError` is the provider talking about the *delivery*, not
+    // about the person, so it stays out of the file.
     const user = await seedUser(db, {});
+    const other = await seedUser(db, {});
+    await db.insert(schema.mailOutbox).values([
+      {
+        toUserId: user.id,
+        kind: "badge_unlocked",
+        dedupeKey: `badge:${user.id}:first-step`,
+        payload: { badgeTitle: "Langkah Pertama" },
+        status: "pending",
+        lastError: "provider said no",
+      },
+      {
+        toUserId: other.id,
+        kind: "badge_unlocked",
+        dedupeKey: `badge:${other.id}:first-step`,
+        payload: { badgeTitle: "Langkah Pertama" },
+      },
+    ]);
+
+    const data = await collectUserData(db, user.id);
+
+    expect(data.surel).toHaveLength(1);
+    expect(JSON.stringify(data.surel)).toContain("Langkah Pertama");
+    expect(JSON.stringify(data.surel)).not.toContain("provider said no");
+  });
+
+  it("includes the days this account answered the daily quiz, not only the days it was paid", async () => {
+    // `daily_activity` exists precisely because a paid row cannot stand in for a
+    // day of study: a wrong answer still counts as showing up, and it is the only
+    // record of that day.
+    const user = await seedUser(db, {});
+    await db.insert(schema.dailyActivity).values([
+      { userId: user.id, windowStart: new Date("2026-10-15T00:00:00.000Z") },
+      { userId: user.id, windowStart: new Date("2026-10-16T00:00:00.000Z") },
+    ]);
+
+    const data = await collectUserData(db, user.id);
+
+    expect(data.harian).toHaveLength(2);
+  });
+
+  it("returns an empty array, never a missing key, for a user with no content", async () => {    const user = await seedUser(db, {});
 
     const data = await collectUserData(db, user.id);
 
     expect(data.modul).toEqual([]);
     expect(data.soal).toEqual([]);
     expect(data.poin).toEqual([]);
+    expect(data.penanda).toEqual([]);
+    expect(data.surel).toEqual([]);
+    expect(data.harian).toEqual([]);
   });
 
   it("refuses an id that has no row instead of exporting a half-empty file", async () => {
@@ -164,6 +211,10 @@ describe("deleteAccountData", () => {
         lastDailyQuizAt: new Date(),
         consentPolicyVersion: POLICY_VERSION,
         consentAcceptedAt: new Date(),
+        // Sebuah kursi Dewan Podium yang masih dipegang saat akun dihapus: izin
+        // yang tidak boleh selamat dari anonimisasi.
+        role: "moderator",
+        seasonRoleKey: "2026-Q4",
       })
       .where(eq(schema.users.id, user.id));
 
@@ -185,6 +236,13 @@ describe("deleteAccountData", () => {
       .insert(schema.reports)
       .values({ userId: user.id, issueType: "bug", description: "laporan Budi" });
     await db.insert(schema.bookmarks).values({ userId: user.id, moduleId: seededModule.id });
+    await db.insert(schema.mailOutbox).values({
+      toUserId: user.id,
+      kind: "submission_approved",
+      dedupeKey: `sub:${crypto.randomUUID()}`,
+      payload: { title: "Modul Budi" },
+    });
+    await db.insert(schema.dailyActivity).values({ userId: user.id, windowStart: new Date() });
 
     return { user, seededModule, question, exam, submission };
   }
@@ -198,6 +256,8 @@ describe("deleteAccountData", () => {
     expect(report.deleted.reports).toBe(1);
     expect(report.deleted.pointsLog).toBe(1);
     expect(report.deleted.bookmarks).toBe(1);
+    expect(report.deleted.mailOutbox).toBe(1);
+    expect(report.deleted.dailyActivity).toBe(1);
     expect(report.photoUrlCleared).toContain("blob.vercel-storage.com");
 
     const row = await db.query.users.findFirst({ where: eq(schema.users.id, user.id) });
@@ -216,6 +276,10 @@ describe("deleteAccountData", () => {
     expect(row?.lastDailyQuizAt).toBeNull();
     expect(row?.points).toBe(0);
     expect(row?.seasonPoints).toBe(0);
+    // A privilege must not outlive the account that held it, and must not wait
+    // for the next cron run to disappear.
+    expect(row?.role).toBe("student");
+    expect(row?.seasonRoleKey).toBeNull();
     // Consent is withdrawn with the identity: with no identity there is no
     // processing basis left to record.
     expect(row?.consentPolicyVersion).toBeNull();

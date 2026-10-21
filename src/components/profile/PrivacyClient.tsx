@@ -39,6 +39,8 @@ export interface RetentionRow {
 interface PrivacyClientProps {
   name: string;
   email: string;
+  /** Keadaan tersimpan: apakah pengguna mau menerima surel transaksional. */
+  emailNotifications: boolean;
   policyVersion: string;
   consentVersion: string | null;
   consentAcceptedAt: string | null;
@@ -65,6 +67,7 @@ function formatDate(iso: string | null): string {
 export default function PrivacyClient({
   name,
   email,
+  emailNotifications,
   policyVersion,
   consentVersion,
   consentAcceptedAt,
@@ -74,6 +77,12 @@ export default function PrivacyClient({
   const { success, error: toastError } = useToast();
 
   const [downloading, setDownloading] = useState<"json" | "csv" | null>(null);
+
+  // Preferensi surel. Disimpan sebagai state lokal supaya sakelarnya bergerak
+  // seketika, tetapi **dikembalikan** bila server menolak: sebuah sakelar yang
+  // tetap menyala setelah 429 adalah sakelar yang berbohong.
+  const [notifications, setNotifications] = useState(emailNotifications);
+  const [savingNotifications, setSavingNotifications] = useState(false);
 
   // Penghapusan dua langkah. `step` mengendalikan seberapa jauh pengguna sudah
   // masuk, `typed` adalah frasa yang sedang ia ketik. Tombolnya hanya aktif saat
@@ -122,6 +131,49 @@ export default function PrivacyClient({
       toastError("Gagal mengunduh", "Tidak bisa menghubungi server. Periksa koneksimu.");
     } finally {
       setDownloading(null);
+    }
+  }
+
+  async function handleNotificationsToggle(next: boolean) {
+    if (savingNotifications) return;
+    setSavingNotifications(true);
+
+    // Optimistis, lalu dikembalikan bila gagal. `fetch` hanya menolak pada
+    // kegagalan jaringan, jadi `response.ok` wajib diperiksa — tanpa itu sebuah
+    // 429 akan terlihat seperti "tersimpan".
+    const previous = notifications;
+    setNotifications(next);
+
+    try {
+      const response = await fetch("/api/profile/notifications", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ enabled: next }),
+      });
+
+      if (!response.ok) {
+        setNotifications(previous);
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        toastError(
+          "Gagal menyimpan",
+          response.status === 429
+            ? "Terlalu sering mengubah pengaturan. Tunggu sebentar lagi."
+            : (body.error ?? "Terjadi kesalahan. Coba lagi sebentar lagi."),
+        );
+        return;
+      }
+
+      success(
+        next ? "Kabar surel menyala" : "Kabar surel dimatikan",
+        next
+          ? "Kami akan mengabari saat kirimanmu ditinjau."
+          : "Kamu tidak akan menerima surel dari NAWA-LEARN.",
+      );
+    } catch {
+      setNotifications(previous);
+      toastError("Gagal menyimpan", "Tidak bisa menghubungi server. Periksa koneksimu.");
+    } finally {
+      setSavingNotifications(false);
     }
   }
 
@@ -290,6 +342,41 @@ export default function PrivacyClient({
             <span className="text-[10px] font-bold opacity-80">(Excel)</span>
           </button>
         </div>
+      </section>
+
+      {/* ── Kabar surel ────────────────────────────────────────────────────── */}
+      <section className="mt-5 rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 sm:p-6 shadow-sm">
+        <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+          <Mail className="h-4 w-4 text-nawa-primary dark:text-indigo-400" /> Kabar lewat surel
+        </h2>
+        <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
+          Surel dari NAWA-LEARN hanya berisi kabar tentang akunmu sendiri: kiriman yang
+          disetujui atau ditolak, lencana langka yang terbuka, dan hasil musim. Tidak ada
+          buletin, tidak ada iklan, dan alamatmu tidak pernah dibagikan.
+        </p>
+
+        <label
+          htmlFor="email-notifications"
+          className="mt-4 flex items-start gap-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 p-4 cursor-pointer"
+        >
+          <input
+            type="checkbox"
+            id="email-notifications"
+            checked={notifications}
+            onChange={(event) => void handleNotificationsToggle(event.target.checked)}
+            disabled={savingNotifications}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-indigo-600 cursor-pointer disabled:cursor-wait"
+          />
+          <span className="text-sm">
+            <span className="block font-bold text-zinc-900 dark:text-white">
+              Kirimi saya kabar lewat surel
+            </span>
+            <span className="mt-0.5 block text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+              Kalau dimatikan, semua surel berhenti — termasuk kabar kiriman disetujui.
+              Keputusan dan poinmu tetap tercatat di dalam aplikasi.
+            </span>
+          </span>
+        </label>
       </section>
 
       {/* ── Retensi ────────────────────────────────────────────────────────── */}

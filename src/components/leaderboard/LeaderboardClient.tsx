@@ -11,7 +11,8 @@ import {
   Smile,
   ArrowRight,
   Trophy,
-  Flame
+  Flame,
+  ShieldCheck
 } from "lucide-react";
 import { AVATAR_OPTIONS, AvatarOption } from "@/lib/avatars";
 import { getSpecialtyBadge, SpecialtyStats } from "@/lib/badges";
@@ -41,6 +42,28 @@ interface LeaderboardClientProps {
   loggedInUser: LoggedInUserStats | null;
   totalStudents: number;
   seasonLabel: string;
+}
+
+/**
+ * Penanda kursi Dewan Podium.
+ *
+ * Tiga teratas papan musim memegang kursi moderator selama musim berjalan, dan
+ * itu adalah fakta yang diturunkan (peringkat), bukan gelar yang disimpan. Label
+ * ini hanya memberi tahu pembaca mengapa nama-nama itu muncul di panel peninjau;
+ * tidak ada izin yang dibaca dari sini.
+ *
+ * Syarat `seasonPoints > 0` sama dengan `getPodium()`: pada detik pertama sebuah
+ * musim semua poin masih nol, dan tiga nama teratas belum memenangkan apa pun.
+ * Label di posisi itu akan mengklaim kursi yang tidak ada.
+ */
+function SeatPill({ seasonPoints }: { seasonPoints: number }) {
+  if (seasonPoints <= 0) return null;
+
+  return (
+    <div className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-nawa-primary to-violet-600 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-sm">
+      <ShieldCheck className="h-3 w-3" aria-hidden="true" /> Kursi Dewan
+    </div>
+  );
 }
 
 export default function LeaderboardClient({ 
@@ -130,6 +153,14 @@ export default function LeaderboardClient({
       };
     }
     
+    if (loggedInUser.rank <= 3) {
+      return {
+        text: `Kamu memegang kursi Dewan Podium musim ini (peringkat #${loggedInUser.rank}). Kamu bisa meninjau kiriman teman dan menulis soal kuis harian sampai musim berganti — pertahankan posisimu!`,
+        icon: ShieldCheck,
+        iconBg: "bg-indigo-100 dark:bg-indigo-950/60 text-nawa-primary dark:text-indigo-400"
+      };
+    }
+
     if (isTop10) {
       return {
         text: `Keren! Kamu mantap berada di peringkat 10 besar (#${loggedInUser.rank} sekolah). Sedikit usaha lagi untuk merebut podium teratas!`,
@@ -163,7 +194,7 @@ export default function LeaderboardClient({
             {seasonLabel}
           </div>
           <p className="mt-4 text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
-            Berkompetisilah untuk menjadi kontributor terbaik di musim ini! Juara podium mendapatkan akses spesial Moderator. Poin musim ini tidak memengaruhi total Poin XP yang sudah kamu kumpulkan.
+            Berkompetisilah untuk menjadi kontributor terbaik di musim ini! Tiga teratas memegang kursi Dewan Podium: meninjau modul dan soal teman serta menulis soal kuis harian, sampai musim berganti. Selama menjabat, kursi tidak mengunggah modul atau soal baru. Poin musim ini tidak memengaruhi total Poin XP yang sudah kamu kumpulkan.
           </p>
         </div>
       </div>
@@ -186,6 +217,8 @@ export default function LeaderboardClient({
                 <div className="bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-bold text-[10px] px-3 py-1 rounded-full uppercase tracking-wider border border-zinc-200 dark:border-zinc-700">
                   Peringkat 2
                 </div>
+
+                <SeatPill seasonPoints={u.seasonPoints} />
 
                 {/* Avatar with spinning profile frame */}
                 <div className="relative">
@@ -250,6 +283,8 @@ export default function LeaderboardClient({
                   <Crown className="h-3 w-3" /> Juara 1
                 </div>
 
+                <SeatPill seasonPoints={u.seasonPoints} />
+
                 {/* Avatar with spinning amber frame */}
                 <div className="relative">
                   <div className={`absolute -inset-2.5 rounded-[30px] bg-gradient-to-br ${podiumFrameGradient(1)} animate-[spin_4s_linear_infinite] opacity-80`} />
@@ -312,6 +347,8 @@ export default function LeaderboardClient({
                 <div className="bg-orange-50 dark:bg-orange-950/40 text-orange-900 dark:text-orange-300 font-bold text-[10px] px-3 py-1 rounded-full uppercase tracking-wider border border-orange-200/60 dark:border-orange-900/40">
                   Peringkat 3
                 </div>
+
+                <SeatPill seasonPoints={u.seasonPoints} />
 
                 {/* Avatar with amber frame */}
                 <div className="relative">

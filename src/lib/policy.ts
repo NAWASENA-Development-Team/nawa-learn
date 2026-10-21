@@ -15,11 +15,20 @@
 // Modul ini sengaja tanpa impor apa pun: halaman server, route handler, dan
 // komponen klien semuanya membacanya.
 
-/** Versi kebijakan yang berlaku. Naikkan bila isinya berubah secara material. */
-export const POLICY_VERSION = "1.0";
+/**
+ * Versi kebijakan yang berlaku. Naikkan bila isinya berubah secara material.
+ *
+ * Riwayat:
+ *   1.0 (2026-10-17) — versi pertama.
+ *   2.0 (2026-10-21) — M16: surel transaksional (kiriman ditinjau, lencana
+ *       langka, hasil musim, kabar Dewan Podium) beserta preferensinya.
+ *       Pemakaian data yang baru adalah perubahan material, jadi setiap akun
+ *       diminta menyetujui ulang.
+ */
+export const POLICY_VERSION = "2.0";
 
 /** Tanggal versi ini mulai berlaku (ISO, tampil apa adanya di halaman). */
-export const POLICY_EFFECTIVE_DATE = "2026-10-17";
+export const POLICY_EFFECTIVE_DATE = "2026-10-21";
 
 /** Nama pengendali data yang ditampilkan di halaman kebijakan. */
 export const DATA_CONTROLLER = "OSIS NAWASENA SMAN 2 Jonggol (Divisi ICT)";

@@ -146,6 +146,22 @@ for (const spec of METADATA_PROBES) {
   console.log(`  ${spec.path}: ${result.res.status} ${result.res.headers.get("content-type") ?? "(no type)"}`);
 }
 
+// Cron routes are public *to the proxy* but gated by their own bearer token.
+//
+// The signal that matters is the **absence of a redirect**. A cron path missing
+// from `PUBLIC_ROUTES` answers 307 to Clerk's hosted sign-in for a request that
+// carries an Authorization header and no cookie; the scheduler records a failed
+// job and nothing says why. The probe sends no token, so the route's own gate
+// answers 401 — that is the expected result, and a 3xx is the failure.
+const CRON_PROBES = ["/api/cron/retention", "/api/cron/season"];
+
+const cronResults = [];
+for (const path of CRON_PROBES) {
+  const result = await probe(path);
+  cronResults.push({ path, ...result });
+  console.log(`  ${path}: ${result.res.status} ${result.res.headers.get("location") ?? "(no redirect)"}`);
+}
+
 shutdown();
 
 if (res.status !== 401) {
@@ -188,7 +204,28 @@ for (const { spec, res: metaRes, body } of metadataResults) {
   }
 }
 
+for (const { path, res: cronRes } of cronResults) {
+  const location = cronRes.headers.get("location");
+  if (cronRes.status >= 300 && cronRes.status < 400) {
+    fail(
+      `Expected ${path} to reach its own handler, got ${cronRes.status}` +
+        `${location ? ` → ${location}` : ""}.\n` +
+        `  A 3xx to a sign-in page means the proxy still treats this cron path as\n` +
+        `  private. Add it to PUBLIC_ROUTES in src/proxy.ts: the scheduler has no\n` +
+        `  session, so a path that is not listed never runs — silently, every night.`,
+    );
+  }
+  if (cronRes.status !== 401) {
+    fail(
+      `Expected 401 from ${path} without a bearer token, got ${cronRes.status}.\n` +
+        `  The route must fail closed when the caller cannot prove it is the\n` +
+        `  scheduler. A 200 here means CRON_SECRET is not being checked.`,
+    );
+  }
+}
+
 console.log(
   `\n✔ Proxy is live: unauthenticated ${PROBE_PATH} → 401, CSP nonce ${nonce.slice(0, 8)}…\n` +
-    `✔ Public metadata routes answer without a session: ${METADATA_PROBES.map((p) => p.path).join(", ")}\n`,
+    `✔ Public metadata routes answer without a session: ${METADATA_PROBES.map((p) => p.path).join(", ")}\n` +
+    `✔ Cron routes reach their own gate instead of a sign-in redirect: ${CRON_PROBES.join(", ")}\n`,
 );

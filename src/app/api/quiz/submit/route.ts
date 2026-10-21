@@ -8,9 +8,10 @@
 import { NextResponse } from "next/server";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { pointsLog, questions, users } from "@/db/schema";
+import { dailyActivity, dailyQuizSlot, pointsLog, questions, users } from "@/db/schema";
 import { requireUser } from "@/lib/authz";
 import { flagPointSpike } from "@/lib/abuse";
+import { startOfDailyWindow } from "@/lib/dailyWindow";
 import { checkAndGrantLevelRewards } from "@/lib/levelRewards";
 import { needsSeasonReset } from "@/lib/season";
 import {
@@ -80,6 +81,7 @@ export async function POST(req: Request) {
         id: questions.id,
         answerKey: questions.answerKey,
         difficulty: questions.difficulty,
+        category: questions.category,
         uploaderId: questions.uploaderId,
       })
       .from(questions)
@@ -153,6 +155,40 @@ export async function POST(req: Request) {
           role: sql`CASE WHEN ${users.role} = 'student' THEN 'contributor'::role ELSE ${users.role} END`,
         })
         .where(eq(users.id, user.id));
+    }
+
+    // Bukti partisipasi kuis harian, ditulis **terlepas** dari pembayaran.
+    //
+    // Sebelum M16 `daily-claim` menyimpulkan "sudah mengerjakan" dari baris
+    // `points_log` `quiz_answer`. Baris itu hanya ada bila poin dibayarkan, dan
+    // indeks unik membuangnya ketika soal pernah dijawab — jadi pengguna paling
+    // rajin justru yang pertama kehilangan +25, permanen. Sebuah kejadian tidak
+    // boleh disimpulkan dari catatan pembayarannya.
+    //
+    // Kegagalan menulis baris ini tidak boleh menggagalkan penilaian: poin sudah
+    // dibayarkan di atas, dan jawaban yang benar tetap benar.
+    const inDailySession = rows.some((row) => row.category === "Kuis Harian")
+      ? true
+      : await (async () => {
+          // Slot kurasi hari ini bisa berisi soal dari bank umum (fallback cron),
+          // sehingga kategorinya bukan "Kuis Harian". Satu query tambahan, dan
+          // hanya ketika sesi ini tidak memuat soal kategori itu.
+          const slot = await db.query.dailyQuizSlot.findFirst({
+            where: eq(dailyQuizSlot.windowStart, startOfDailyWindow()),
+            columns: { questionId: true },
+          });
+          return slot ? rows.some((row) => row.id === slot.questionId) : false;
+        })();
+
+    if (inDailySession) {
+      try {
+        await db
+          .insert(dailyActivity)
+          .values({ userId: user.id, windowStart: startOfDailyWindow() })
+          .onConflictDoNothing();
+      } catch (error) {
+        log.error("daily activity write failed", { error });
+      }
     }
 
     const newTotal = dbUser.points + pointsAwarded;

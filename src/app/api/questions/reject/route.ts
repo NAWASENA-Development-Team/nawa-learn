@@ -4,10 +4,12 @@ import { z } from "zod";
 import { db } from "@/db";
 import { questions, submissions } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
-import { requireModerator } from "@/lib/authz";
+import { requireReviewer, isHumanReviewer } from "@/lib/authz";
 import { requestLogger } from "@/lib/logger";
 import { parseJsonBody } from "@/lib/validation";
 import { recordAudit } from "@/lib/auditLog";
+import { isInConflictZone } from "@/lib/seat";
+import { enqueueMail } from "@/lib/mailer";
 
 // A moderation take-down. The client may identify the target either by
 // submission id (the moderation queue) or by question id (the daily-quiz list,
@@ -27,8 +29,8 @@ const rejectSchema = z
 
 export async function POST(req: Request) {
   const log = requestLogger(req);
-  // 1. Authorization: moderator or admin only.
-  const authz = await requireModerator();
+  // 1. Authorization: staf manusia atau pemegang kursi musim yang masih berlaku.
+  const authz = await requireReviewer();
   if (!authz.ok) return authz.response;
   const reviewer = authz.user;
 
@@ -41,7 +43,7 @@ export async function POST(req: Request) {
     let submission = submissionId
       ? await db.query.submissions.findFirst({
           where: eq(submissions.id, submissionId),
-          columns: { id: true, type: true, refId: true },
+          columns: { id: true, type: true, refId: true, submitterId: true },
         })
       : null;
 
@@ -49,7 +51,7 @@ export async function POST(req: Request) {
     if (!submission && questionId) {
       submission = await db.query.submissions.findFirst({
         where: and(eq(submissions.refId, questionId), eq(submissions.type, "question")),
-        columns: { id: true, type: true, refId: true },
+        columns: { id: true, type: true, refId: true, submitterId: true },
       }) ?? null;
     }
 
@@ -61,6 +63,25 @@ export async function POST(req: Request) {
     }
 
     const targetQuestionId = submission.refId;
+
+    // 2b. Penolakan juga penilaian: menolak karya pesaing adalah kekuatan yang
+    // sama besarnya dengan menyetujuinya. Karena itu penjaga yang sama berlaku
+    // (I4 dan I5), sebelum ada satu baris pun diubah.
+    if (submission.submitterId === reviewer.id) {
+      return NextResponse.json(
+        { error: "Tidak dapat meninjau kiriman sendiri", code: "self_review_forbidden" },
+        { status: 403 },
+      );
+    }
+    if (!isHumanReviewer(reviewer) && (await isInConflictZone(db, submission.submitterId))) {
+      return NextResponse.json(
+        {
+          error: "Kiriman ini berasal dari sepuluh besar. Pemegang kursi tidak dapat meninjaunya.",
+          code: "seat_conflict_of_interest",
+        },
+        { status: 403 },
+      );
+    }
 
     // 3. Reject the question and record the reviewer.
     await db.update(questions)
@@ -87,6 +108,22 @@ export async function POST(req: Request) {
       before: { status: "pending" },
       after: { status: "rejected", submissionId: submission.id },
     }, { log });
+
+    // 5. Kabar ke pengirim. Penolakan tanpa penjelasan adalah penolakan yang
+    // membuat orang berhenti mengirim, jadi catatan peninjau ikut dikirim.
+    await enqueueMail(
+      db,
+      {
+        toUserId: submission.submitterId,
+        kind: "submission_rejected",
+        dedupeKey: `sub:${submission.id}`,
+        payload: {
+          title: `Soal`,
+          reason: feedback || "Soal ditolak oleh moderator.",
+        },
+      },
+      log,
+    );
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {

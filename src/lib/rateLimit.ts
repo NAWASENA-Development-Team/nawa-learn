@@ -81,9 +81,14 @@ export const RATE_LIMITS = {
   "profile/export": { perUser: { limit: 3, windowMs: HOUR }, perIp: { limit: 10, windowMs: HOUR } },
   // Deleting an account is a one-way door. Nothing legitimate calls it twice.
   "profile/delete": { perUser: { limit: 3, windowMs: HOUR }, perIp: { limit: 10, windowMs: HOUR } },
+  // One switch, flipped by a human. Generous for a person, bounded for a script.
+  "profile/notifications": { perUser: { limit: 30, windowMs: HOUR }, perIp: { limit: 60, windowMs: HOUR } },
   // The retention job runs on a schedule, not in a loop, and it is guarded by a
   // shared secret rather than a session. The IP bucket is the only real signal.
   "cron/retention": { perUser: { limit: 6, windowMs: HOUR }, perIp: { limit: 12, windowMs: HOUR } },
+  // The season job does the same kind of work on a schedule: a rollover, three
+  // seat changes and one stipend per seat. Same budget shape, same reason.
+  "cron/season": { perUser: { limit: 6, windowMs: HOUR }, perIp: { limit: 12, windowMs: HOUR } },
   // Reading the moderation trail. Reviewer-only, but it is a page through a
   // table that only ever grows, so it gets a budget of its own rather than
   // sharing the read allowance of the public routes.
@@ -221,7 +226,7 @@ export type RateLimitOutcome = { ok: true } | { ok: false; response: Response };
 
 /**
  * Counts the request against every applicable bucket and returns a 429 when one
- * is exhausted. The shape mirrors `requireUser`/`requireModerator` in authz.ts so
+ * is exhausted. The shape mirrors `requireUser`/`requireReviewer` in authz.ts so
  * a route reads the same way:
  *
  *   const limit = await rateLimit(req, "modules/submit", authz.user.id);

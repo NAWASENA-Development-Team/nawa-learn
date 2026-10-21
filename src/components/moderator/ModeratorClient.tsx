@@ -29,9 +29,14 @@ import type {
 
 type ModeratorTab = "modules" | "questions" | "badges" | "daily";
 
-export default function ModeratorClient() {
+export default function ModeratorClient({ seatKind = "human" }: { seatKind?: "human" | "seat" }) {
   const { success, error: toastError, info } = useToast();
   const [activeTab, setActiveTab] = useState<ModeratorTab>("modules");
+  // A season seat may review content and write the daily quiz, but it may not
+  // read the hidden-badge catalogue or the audit log. The two tabs are not
+  // rendered at all rather than disabled: a tab that is visible but refuses is
+  // an invitation to keep trying.
+  const canSeeSecrets = seatKind === "human";
 
   // Modules State
   const [submissions, setSubmissions] = useState<PendingSubmission[]>([]);
@@ -76,12 +81,15 @@ export default function ModeratorClient() {
     // so there is no gate left to clear here — only the four queues to load.
     fetchPendingSubmissions();
     fetchPendingQuestions();
-    fetchHiddenBadges();
+    if (canSeeSecrets) fetchHiddenBadges();
     fetchDailyQuestions();
     // The four fetchers are re-created on every render by design: they close over
     // the toast helpers. Re-running the effect on each render would refetch every
-    // queue forever, so it is deliberately mount-only.
-  }, []);
+    // queue forever, so the fetchers are deliberately left out of this list.
+    // `canSeeSecrets` **is** listed: it is a server prop, and if it ever changes
+    // under a live session (a podium seat revoked mid-season) the secret panel
+    // must stop loading, not keep a stale queue on screen.
+  }, [canSeeSecrets]);
 
   async function fetchHiddenBadges() {
     setIsLoadingBadges(true);
@@ -276,7 +284,14 @@ export default function ModeratorClient() {
         fetchDailyQuestions();
       } else {
         const data = await res.json();
-        toastError("Gagal membuat soal", data.error || "Terjadi kesalahan.");
+        // 409 `daily_slot_taken`: hari ini sudah punya soal kurasi. Pesannya
+        // menyebut siapa yang lebih dulu, karena "gagal" tanpa sebab akan
+        // membuat peninjau berikutnya mencoba lagi dan lagi.
+        if (res.status === 409) {
+          info("Kuis harian hari ini sudah ada", "Soal kurasi hari ini sudah dibuat. Soalmu tidak disimpan.");
+        } else {
+          toastError("Gagal membuat soal", data.error || "Terjadi kesalahan.");
+        }
       }
     } catch {
       toastError("Kesalahan jaringan", "Periksa koneksi internet Anda.");
@@ -349,17 +364,18 @@ export default function ModeratorClient() {
             <BookMarked className="h-4 w-4" /> Draf Soal Latihan CBT ({pendingQuestions.length})
           </button>
 
-          <button
-            onClick={() => setActiveTab("badges")}
-            className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center gap-2 active:scale-[0.98] ${
-              activeTab === "badges"
-                ? "bg-nawa-warning border-nawa-warning text-white shadow-sm"
-                : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            }`}
-          >
-            <Eye className="h-4 w-4" /> Lencana Tersembunyi ({hiddenBadges.length})
-          </button>
-
+          {canSeeSecrets && (
+            <button
+              onClick={() => setActiveTab("badges")}
+              className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center gap-2 active:scale-[0.98] ${
+                activeTab === "badges"
+                  ? "bg-nawa-warning border-nawa-warning text-white shadow-sm"
+                  : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              }`}
+            >
+              <Eye className="h-4 w-4" /> Lencana Tersembunyi ({hiddenBadges.length})
+            </button>
+          )}
           <button
             onClick={() => setActiveTab("daily")}
             className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center gap-2 active:scale-[0.98] ${
@@ -395,7 +411,7 @@ export default function ModeratorClient() {
       )}
 
       {/* 3. HIDDEN BADGES MONITOR TAB */}
-      {activeTab === "badges" && (
+      {canSeeSecrets && activeTab === "badges" && (
         <HiddenBadgesTab
           hiddenBadges={hiddenBadges}
           badgeHolders={badgeHolders}

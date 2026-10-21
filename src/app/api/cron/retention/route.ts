@@ -84,6 +84,8 @@ export async function POST(req: Request) {
       reports: result.deleted.reports,
       pointsLog: result.deleted.points_log,
       submissions: result.deleted.submissions,
+      dailyActivity: result.deleted.daily_activity,
+      mailOutbox: result.deleted.mail_outbox,
     });
 
     return NextResponse.json(result, {

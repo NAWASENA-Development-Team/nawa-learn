@@ -27,8 +27,17 @@ describe("RETENTION_POLICY", () => {
     }
   });
 
-  it("covers the three tables that grow without bound", () => {
+  it("covers exactly the tables that grow without bound", () => {
+    // Daftar ini sengaja ditulis lengkap, bukan `toContain`: menambah tabel yang
+    // tumbuh terus harus memaksa seseorang menyentuh berkas ini dan berpikir
+    // tentang masa simpannya. `mail_outbox` masuk di M16 — ia satu-satunya tabel
+    // di sini yang isinya bukan tentang seseorang, tetapi tetap punya jendela
+    // karena baris terkirim tidak berguna selamanya. `daily_activity` juga M16,
+    // dan masuk justru karena satu-satunya pembacanya adalah jendela hari ini:
+    // catatan kehadiran dua tahun lalu tidak menjawab pertanyaan apa pun.
     expect(RETENTION_POLICY.map((rule) => rule.key).sort()).toEqual([
+      "daily_activity",
+      "mail_outbox",
       "points_log",
       "reports",
       "submissions",

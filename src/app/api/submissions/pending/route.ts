@@ -3,13 +3,13 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { submissions, modules, users } from "@/db/schema";
 import { and, desc, eq } from "drizzle-orm";
-import { requireModerator } from "@/lib/authz";
+import { requireReviewer } from "@/lib/authz";
 import { requestLogger } from "@/lib/logger";
 
 export async function GET(req: Request) {
   const log = requestLogger(req);
-  // The moderation queue is not public: moderator or admin only.
-  const authz = await requireModerator();
+  // The moderation queue is not public: staff or a seated season moderator.
+  const authz = await requireReviewer();
   if (!authz.ok) return authz.response;
 
   try {

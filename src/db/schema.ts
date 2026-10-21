@@ -1,5 +1,5 @@
 // db/schema.ts
-import { pgTable, uuid, varchar, text, timestamp, integer, jsonb, pgEnum, uniqueIndex, index, check } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, text, timestamp, integer, jsonb, pgEnum, uniqueIndex, index, check, boolean, primaryKey } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 // Enums
@@ -38,6 +38,20 @@ export const users = pgTable("users", {
   // Seasonal leaderboard
   seasonPoints: integer("season_points").default(0).notNull(),   // points earned in current season only
   seasonResetAt: timestamp("season_reset_at"),                   // when this user's season points were last reset
+  // ── Dewan Podium (M16) ──────────────────────────────────────────────────────
+  // Asal-usul kursi moderator. `NULL` = diberikan manusia lewat `db:promote`,
+  // tidak pernah dicabut otomatis. Berisi kunci musim ("2026-Q4") bila peran
+  // `moderator` ini berasal dari tiga teratas papan peringkat.
+  //
+  // Masa jabatan **tidak** disimpan di sini: kursi sah hanya bila kunci ini sama
+  // dengan `getSeasonKey()` saat ini. Jadi kursi berakhir karena kalender
+  // berganti, bukan karena ada job yang kebetulan berjalan — cron hanya
+  // merapikan `role` agar tidak tertinggal.
+  seasonRoleKey: varchar("season_role_key", { length: 16 }),
+  // Surel transaksional (M16c). Default true: notifikasi persetujuan adalah
+  // bagian dari janji platform, bukan kampanye pemasaran. Diperiksa **saat
+  // kirim**, bukan saat enqueue, supaya mematikan setelah baris masuk berlaku.
+  emailNotifications: boolean("email_notifications").default(true).notNull(),
   // Maintained by a database trigger, not by application code, so it stays
   // truthful even for updates that forget to set it.
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -243,4 +257,92 @@ export const auditLog = pgTable("audit_log", {
   index("audit_log_entity_idx").on(table.entity, table.entityId),
   index("audit_log_actor_created_idx").on(table.actorId, table.createdAt.desc()),
   index("audit_log_created_idx").on(table.createdAt.desc()),
+]);
+
+// ── Dewan Podium (M16) ────────────────────────────────────────────────────────
+// Empat tabel di bawah ini adalah *arsip* dan *bukti*, bukan sumber izin.
+// Satu-satunya sumber izin tetap `users.role`; kursi musim dikenali dari
+// `users.season_role_key` + kunci musim berjalan. Karena itu tidak ada tabel
+// "seat" yang harus dijaga konsisten dengan papan peringkat.
+
+/**
+ * Arsip podium satu musim.
+ *
+ * Ditulis **sebelum** reset poin (angkanya hilang setelah rollover), dan
+ * `PRIMARY KEY (season_key, place)` membuat pengarsipan idempoten: cron yang
+ * berjalan dua kali tidak bisa menulis podium yang sama dengan isi berbeda.
+ * Tabel ini tidak pernah dibaca untuk memutuskan izin — hanya untuk laporan dan
+ * surel "hasil musim".
+ */
+export const seasonPodium = pgTable("season_podium", {
+  seasonKey: varchar("season_key", { length: 16 }).notNull(),
+  place: integer("place").notNull(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  points: integer("points").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.seasonKey, table.place] }),
+  check("season_podium_place_range", sql`${table.place} BETWEEN 1 AND 3`),
+]);
+
+/**
+ * Satu soal kurasi per jendela harian.
+ *
+ * Sebelum M16 `api/questions/daily-create` menyisipkan soal tanpa memeriksa apa
+ * pun, jadi tiga moderator yang membuat soal pukul 03:00 menghasilkan tiga soal.
+ * `window_start` sebagai primary key membuat "satu hari, satu slot" menjadi
+ * kenyataan di database, bukan harapan di kode. `author_id` NULL berarti slot
+ * diisi fallback cron dari bank soal.
+ */
+export const dailyQuizSlot = pgTable("daily_quiz_slot", {
+  windowStart: timestamp("window_start").primaryKey(),
+  questionId: uuid("question_id").references(() => questions.id).notNull(),
+  authorId: uuid("author_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+/**
+ * Bukti partisipasi kuis harian, terpisah dari buku besar poin.
+ *
+ * `daily-claim` dulu menyimpulkan "sudah mengerjakan" dari baris `points_log`
+ * `quiz_answer`. Baris itu hanya ada bila poin benar-benar dibayarkan, dan
+ * indeks unik membuangnya bila soal itu pernah dijawab — jadi pengguna paling
+ * rajin justru yang pertama kehilangan +25, permanen.
+ *
+ * Prinsipnya umum: **jangan menyimpulkan sebuah kejadian dari catatan
+ * pembayarannya.** `quiz/submit` menulis baris di sini setiap kali soal kuis
+ * harian dikirim, dibayar maupun tidak.
+ */
+export const dailyActivity = pgTable("daily_activity", {
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  windowStart: timestamp("window_start").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.userId, table.windowStart] }),
+]);
+
+/**
+ * Outbox surel transaksional.
+ *
+ * Alamat surel **tidak** disimpan di sini: hanya `to_user_id`, dan alamatnya
+ * dibaca dari `users.email` saat kirim. Satu salinan PII, bukan dua — alasan
+ * yang sama dengan `AuditSnapshot` yang hanya menyimpan skalar.
+ *
+ * `dedupe_key` unik adalah idempotensinya: approve yang dikirim ulang (klik
+ * ganda, retry jaringan) tidak menghasilkan dua surel.
+ */
+export const mailOutbox = pgTable("mail_outbox", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  toUserId: uuid("to_user_id").references(() => users.id).notNull(),
+  kind: varchar("kind", { length: 40 }).notNull(),
+  dedupeKey: varchar("dedupe_key", { length: 120 }).notNull().unique(),
+  payload: jsonb("payload").$type<Record<string, unknown>>().default({}).notNull(),
+  status: varchar("status", { length: 16 }).default("pending").notNull(), // pending|sent|failed|skipped
+  attempts: integer("attempts").default(0).notNull(),
+  lastError: text("last_error"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  sentAt: timestamp("sent_at"),
+}, (table) => [
+  // Cron mengosongkan antrean percobaan ulang dengan `WHERE status='pending'`.
+  index("mail_outbox_pending_idx").on(table.status, table.createdAt),
 ]);

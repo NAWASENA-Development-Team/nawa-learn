@@ -7,33 +7,21 @@
 //      which two concurrent requests could both pass.
 // Now the bonus requires a *graded* attempt recorded by /api/quiz/submit, and
 // the once-per-day rule is enforced by the unique index on points_log.
+//
+// M16 mengubah **sumber buktinya**, bukan syaratnya. Bukti partisipasi sekarang
+// dibaca dari `daily_activity`, bukan dari `points_log`. Baris `points_log`
+// `quiz_answer` hanya ada bila poin benar-benar dibayarkan, dan indeks unik
+// membuangnya ketika soal itu pernah dijawab — jadi pengguna paling rajin justru
+// yang pertama kehilangan +25, permanen. Sebuah kejadian tidak boleh disimpulkan
+// dari catatan pembayarannya.
 import { NextResponse } from "next/server";
-import { and, eq, gte, sql } from "drizzle-orm";
-import { createHash } from "node:crypto";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { pointsLog, questions, users } from "@/db/schema";
+import { dailyActivity, pointsLog, users } from "@/db/schema";
 import { requireUser } from "@/lib/authz";
 import { requestLogger } from "@/lib/logger";
 import { rateLimit } from "@/lib/rateLimit";
-
-const DAILY_REWARD = 25;
-// 03:00 WIB === 20:00 UTC of the previous day.
-const RESET_HOUR_UTC = 20;
-
-function startOfDailyWindow(now: Date): Date {
-  const start = new Date(now);
-  if (start.getUTCHours() < RESET_HOUR_UTC) {
-    start.setUTCDate(start.getUTCDate() - 1);
-  }
-  start.setUTCHours(RESET_HOUR_UTC, 0, 0, 0);
-  return start;
-}
-
-/** Stable UUID-shaped key so the DB unique index can enforce "once per window". */
-function deterministicUuid(input: string): string {
-  const h = createHash("sha1").update(input).digest("hex");
-  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
-}
+import { DAILY_REWARD, deterministicUuid, startOfDailyWindow } from "@/lib/dailyWindow";
 
 export async function POST(req: Request) {
   const log = requestLogger(req);
@@ -48,19 +36,17 @@ export async function POST(req: Request) {
     const now = new Date();
     const windowStart = startOfDailyWindow(now);
 
-    // Proof of participation: at least one graded answer on a Kuis Harian
+    // Proof of participation: at least one graded answer on a daily-quiz
     // question since the reset. Those rows are written by /api/quiz/submit
-    // after grading against the database, so they cannot be forged client-side.
+    // after grading against the database, whether or not points were paid, so
+    // they cannot be forged client-side and cannot run out.
     const proof = await db
-      .select({ id: pointsLog.id })
-      .from(pointsLog)
-      .innerJoin(questions, eq(pointsLog.refId, questions.id))
+      .select({ userId: dailyActivity.userId })
+      .from(dailyActivity)
       .where(
         and(
-          eq(pointsLog.userId, user.id),
-          eq(pointsLog.action, "quiz_answer"),
-          eq(questions.category, "Kuis Harian"),
-          gte(pointsLog.createdAt, windowStart),
+          eq(dailyActivity.userId, user.id),
+          eq(dailyActivity.windowStart, windowStart),
         ),
       )
       .limit(1);
@@ -107,3 +93,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
   }
 }
+

@@ -10,7 +10,7 @@
 //
 // Usage:
 //
-//   const authz = await requireModerator();
+//   const authz = await requireReviewer();
 //   if (!authz.ok) return authz.response;
 //   const reviewer = authz.user;   // provisioned DB user, role already verified
 
@@ -19,6 +19,7 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
+import { getSeasonKey } from "@/lib/season";
 
 export type Role = "guest" | "student" | "contributor" | "moderator" | "admin";
 
@@ -31,6 +32,8 @@ export type SessionUser = {
   name: string;
   role: Role;
   points: number;
+  /** Non-null when `role` was granted by the season podium, not by a human. */
+  seasonRoleKey: string | null;
 };
 
 export type AuthzOk = { ok: true; user: SessionUser };
@@ -45,6 +48,41 @@ export type SessionResult = SessionOk | AuthzFail;
  */
 export function hasReviewerRole(role: string): boolean {
   return (REVIEWER_ROLES as readonly string[]).includes(role);
+}
+
+/**
+ * Kursi sah hanya bila kuncinya adalah musim berjalan.
+ *
+ * Inilah yang membuat masa jabatan berakhir **tanpa** bantuan cron: begitu
+ * kalender melewati batas kuartal, kunci yang tersimpan tidak lagi sama dengan
+ * `getSeasonKey()`, sehingga tidak ada kursi yang bisa menjadi permanen.
+ */
+export function isSeatActive(user: { seasonRoleKey: string | null }): boolean {
+  return user.seasonRoleKey !== null && user.seasonRoleKey === getSeasonKey();
+}
+
+/**
+ * Boleh membuka panel moderasi: staf manusia (`season_role_key IS NULL`) atau
+ * pemegang kursi yang masih berlaku.
+ *
+ * Dipakai halaman (yang tidak bisa memakai `requireReviewer()` karena page tidak
+ * dapat mengembalikan `Response`) dan `Navbar`, supaya tautan "Moderator" tidak
+ * muncul untuk kursi yang sudah kedaluwarsa.
+ */
+export function canReview(user: { role: string; seasonRoleKey: string | null }): boolean {
+  if (!hasReviewerRole(user.role)) return false;
+  return user.seasonRoleKey === null || isSeatActive(user);
+}
+
+/**
+ * Staf manusia — diberikan lewat `db:promote`, tidak pernah dicabut mesin.
+ *
+ * Ini pembeda untuk kapabilitas yang **tidak** boleh dipegang kursi: melihat
+ * `requirement` lencana rahasia dan membaca `audit_log`. Kursi adalah amanah
+ * satu musim, bukan jabatan kepercayaan penuh.
+ */
+export function isHumanReviewer(user: SessionUser): boolean {
+  return hasReviewerRole(user.role) && user.seasonRoleKey === null;
 }
 
 /**
@@ -80,7 +118,14 @@ export async function requireUser(): Promise<AuthzResult> {
 
   const user = await db.query.users.findFirst({
     where: eq(users.clerkId, session.clerkId),
-    columns: { id: true, clerkId: true, name: true, role: true, points: true },
+    columns: {
+      id: true,
+      clerkId: true,
+      name: true,
+      role: true,
+      points: true,
+      seasonRoleKey: true,
+    },
   });
 
   if (!user) {
@@ -112,7 +157,48 @@ export async function requireRole(roles: readonly Role[]): Promise<AuthzResult> 
   return result;
 }
 
-/** Requires a moderator or an admin. */
-export function requireModerator(): Promise<AuthzResult> {
-  return requireRole(REVIEWER_ROLES);
+/**
+ * Reviewer = staf manusia **atau** pemegang kursi musim yang masih berlaku.
+ *
+ * Ini penjaga untuk pekerjaan moderasi sehari-hari: antrean, setujui, tolak,
+ * dan menulis soal kuis harian. `requireModerator()` sengaja **dihapus**, bukan
+ * disisakan sebagai alias — alias adalah cara termudah bagi route baru untuk
+ * diam-diam memakai penjaga yang lebih lebar dari yang dimaksud.
+ */
+export async function requireReviewer(): Promise<AuthzResult> {
+  const result = await requireUser();
+  if (!result.ok) return result;
+
+  if (!canReview(result.user)) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "Forbidden", code: "reviewer_required" },
+        { status: 403 },
+      ),
+    };
+  }
+  return result;
+}
+
+/**
+ * Reviewer manusia saja — tanpa kursi musim.
+ *
+ * Dipakai untuk dua hal yang tidak boleh dipegang pemegang kursi: melihat
+ * `requirement` lencana rahasia dan membaca `audit_log`.
+ */
+export async function requireHumanReviewer(): Promise<AuthzResult> {
+  const result = await requireUser();
+  if (!result.ok) return result;
+
+  if (!isHumanReviewer(result.user)) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "Forbidden", code: "human_reviewer_required" },
+        { status: 403 },
+      ),
+    };
+  }
+  return result;
 }

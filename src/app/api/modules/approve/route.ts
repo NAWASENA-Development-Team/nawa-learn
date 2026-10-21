@@ -4,12 +4,15 @@ import { z } from "zod";
 import { db } from "@/db";
 import { modules, submissions, users, pointsLog } from "@/db/schema";
 import { and, eq, sql } from "drizzle-orm";
-import { requireModerator } from "@/lib/authz";
+import { requireReviewer, isHumanReviewer } from "@/lib/authz";
 import { checkAndGrantLevelRewards } from "@/lib/levelRewards";
 import { needsSeasonReset } from "@/lib/season";
+import { isInConflictZone } from "@/lib/seat";
 import { requestLogger } from "@/lib/logger";
 import { parseJsonBody } from "@/lib/validation";
 import { recordAudit } from "@/lib/auditLog";
+import { notifyUnlockedBadges } from "@/lib/badgeMail";
+import { enqueueMail } from "@/lib/mailer";
 
 // The client only picks *which* submission to act on.
 // `moduleId` and `submitterId` are resolved from the submission row in the
@@ -25,8 +28,8 @@ const MODULE_APPROVAL_POINTS = 50;
 
 export async function POST(req: Request) {
   const log = requestLogger(req);
-  // 1. Authorization: moderator or admin only.
-  const authz = await requireModerator();
+  // 1. Authorization: staf manusia atau pemegang kursi musim yang masih berlaku.
+  const authz = await requireReviewer();
   if (!authz.ok) return authz.response;
   const reviewer = authz.user;
 
@@ -50,6 +53,31 @@ export async function POST(req: Request) {
 
     const moduleId = submission.refId;
     const submitterId = submission.submitterId;
+
+    // 2b. Dua penolakan yang harus terjadi **sebelum** poin ditulis.
+    //
+    // Menyetujui karya sendiri adalah cara termudah mengubah unggahan menjadi
+    // poin. Penjaga ini wajib meski kursi tidak boleh mengunggah: submission yang
+    // masuk sebelum promosi tetap ada di antrean, dan tanpa penjaga ini seorang
+    // kursi bisa menyetujui karyanya sendiri.
+    if (submitterId === reviewer.id) {
+      return NextResponse.json(
+        { error: "Tidak dapat meninjau kiriman sendiri", code: "self_review_forbidden" },
+        { status: 403 },
+      );
+    }
+
+    // Zona konflik (I5): pemegang kursi tidak menyentuh karya sepuluh besar.
+    // Staf manusia tidak diperiksa — ia pemutus akhir.
+    if (!isHumanReviewer(reviewer) && (await isInConflictZone(db, submitterId))) {
+      return NextResponse.json(
+        {
+          error: "Kiriman ini berasal dari sepuluh besar. Pemegang kursi tidak dapat meninjaunya.",
+          code: "seat_conflict_of_interest",
+        },
+        { status: 403 },
+      );
+    }
 
     // Get submitter's current points for the level reward check
     const submitter = await db.query.users.findFirst({
@@ -79,10 +107,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Submission already reviewed" }, { status: 409 });
     }
 
-    // 4. Publish the module.
-    await db.update(modules)
+    // 4. Publish the module. Judulnya dikembalikan karena dipakai surel di bawah
+    // — satu query, bukan dua.
+    const published = await db.update(modules)
       .set({ status: "approved" })
-      .where(eq(modules.id, moduleId));
+      .where(eq(modules.id, moduleId))
+      .returning({ title: modules.title });
 
     // 5. Log the points award.
     await db.insert(pointsLog).values({
@@ -123,6 +153,23 @@ export async function POST(req: Request) {
 
     // 9. Check and grant level rewards.
     const levelRewards = await checkAndGrantLevelRewards(submitterId, submitter.points, newPoints);
+
+    // 10. Notifikasi. Best effort dan tidak pernah melempar: persetujuan sudah
+    // terjadi, dan surel yang gagal tidak boleh membatalkannya.
+    await enqueueMail(
+      db,
+      {
+        toUserId: submitterId,
+        kind: "submission_approved",
+        dedupeKey: `sub:${submissionId}`,
+        payload: {
+          title: published[0]?.title ?? "Modulmu",
+          points: MODULE_APPROVAL_POINTS,
+        },
+      },
+      log,
+    );
+    await notifyUnlockedBadges(db, submitterId, log);
 
     return NextResponse.json({
       success: true,
