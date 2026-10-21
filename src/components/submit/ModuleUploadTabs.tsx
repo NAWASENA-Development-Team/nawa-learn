@@ -304,10 +304,12 @@ export function ModuleUploadTabs({
 
                   <input
                     type="file"
+                    id="module-file-input"
+                    aria-label="Pilih file modul untuk diunggah"
                     ref={fileInputRef}
                     onChange={handleLocalFileChange}
                     accept={ACCEPTED_MODULE_FILE_TYPES}
-                    className="hidden"
+                    className="sr-only"
                   />
                 </div>
               ) : (
@@ -339,6 +341,7 @@ export function ModuleUploadTabs({
                     <button
                       type="button"
                       onClick={clearLocalFile}
+                      aria-label="Hapus file yang sudah diunggah"
                       className="p-1.5 text-zinc-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg transition-all"
                     >
                       <Trash2 className="h-4.5 w-4.5" />
@@ -382,11 +385,12 @@ export function ModuleUploadTabs({
                   </div>
 
                   <div className="w-full relative mt-2 text-left">
-                    <label className="block text-[11px] font-bold text-zinc-400 mb-1">Link Berbagi Google Drive</label>
+                    <label htmlFor="module-drive-url" className="block text-[11px] font-bold text-zinc-400 mb-1">Link Berbagi Google Drive</label>
                     <div className="relative">
                       <LinkIcon className="absolute left-3 top-3 h-4 w-4 text-zinc-400" />
                       <input
                         type="url"
+                        id="module-drive-url"
                         value={directDriveUrl}
                         onChange={(e) => handleDirectDriveUrlChange(e.target.value)}
                         className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 pl-10 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-500 dark:text-white transition-all placeholder-zinc-400"
@@ -413,6 +417,7 @@ export function ModuleUploadTabs({
                   <button
                     type="button"
                     onClick={clearDriveFile}
+                    aria-label="Hapus tautan Google Drive"
                     className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg transition-all"
                   >
                     <Trash2 className="h-4.5 w-4.5" />

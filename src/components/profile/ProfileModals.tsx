@@ -85,9 +85,10 @@ export function EditProfileModal({ bio, motto, onClose }: EditProfileModalProps)
         <div className="space-y-4">
           {/* Motto Belajar input */}
           <div>
-            <label className="block text-xs font-bold text-zinc-400 mb-1.5 uppercase">Motto Belajar</label>
+            <label htmlFor="profile-motto" className="block text-xs font-bold text-zinc-400 mb-1.5 uppercase">Motto Belajar</label>
             <input
               type="text"
+              id="profile-motto"
               value={editMotto}
               onChange={(e) => setEditMotto(e.target.value)}
               className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 px-3.5 py-2.5 text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white placeholder-zinc-400"
@@ -99,7 +100,7 @@ export function EditProfileModal({ bio, motto, onClose }: EditProfileModalProps)
           {/* Bio description */}
           <div>
             <div className="flex justify-between items-center mb-1.5">
-              <label className="block text-xs font-bold text-zinc-400 uppercase">Bio Singkat</label>
+              <label htmlFor="profile-bio" className="block text-xs font-bold text-zinc-400 uppercase">Bio Singkat</label>
               <button
                 type="button"
                 onClick={() => setEditBio(PLAYFUL_BIOS[Math.floor(Math.random() * PLAYFUL_BIOS.length)])}
@@ -109,6 +110,7 @@ export function EditProfileModal({ bio, motto, onClose }: EditProfileModalProps)
               </button>
             </div>
             <textarea
+              id="profile-bio"
               value={editBio}
               onChange={(e) => setEditBio(e.target.value)}
               className="w-full h-24 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 px-3.5 py-2.5 text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white placeholder-zinc-400 resize-none"
@@ -209,7 +211,7 @@ export function StatusModal({ items, isLoading, onClose }: StatusModalProps) {
               <p className="text-xs text-zinc-400 font-medium">Lacak status kontribusi modul dan soal Anda</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-zinc-500 hover:text-white transition-colors">
+          <button onClick={onClose} aria-label="Tutup dialog" className="text-zinc-500 hover:text-white transition-colors">
             <XCircle className="h-6 w-6" />
           </button>
         </div>
@@ -299,7 +301,7 @@ export function ReportModal({ onClose }: { onClose: () => void }) {
             <div className="h-10 w-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center border border-red-500/30">
               <Flag className="h-5 w-5" />
             </div>
-            <button onClick={onClose} className="text-zinc-500 hover:text-white transition-colors">
+            <button onClick={onClose} aria-label="Tutup dialog" className="text-zinc-500 hover:text-white transition-colors">
               <XCircle className="h-6 w-6" />
             </button>
           </div>
@@ -311,8 +313,9 @@ export function ReportModal({ onClose }: { onClose: () => void }) {
 
         <div className="p-6 space-y-5">
           <div>
-            <label className="text-xs font-bold text-zinc-400 block mb-2 uppercase tracking-wider">Kategori Isu</label>
+            <label htmlFor="report-type" className="text-xs font-bold text-zinc-400 block mb-2 uppercase tracking-wider">Kategori Isu</label>
             <select
+              id="report-type"
               value={reportType}
               onChange={(e) => setReportType(e.target.value)}
               className="w-full bg-zinc-800 border border-zinc-700 text-sm text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500/50"
@@ -324,8 +327,9 @@ export function ReportModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div>
-            <label className="text-xs font-bold text-zinc-400 block mb-2 uppercase tracking-wider">Deskripsi Lengkap</label>
+            <label htmlFor="report-description" className="text-xs font-bold text-zinc-400 block mb-2 uppercase tracking-wider">Deskripsi Lengkap</label>
             <textarea
+              id="report-description"
               value={reportDesc}
               onChange={(e) => setReportDesc(e.target.value)}
               rows={4}

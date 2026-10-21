@@ -160,6 +160,7 @@ export function CreateExamModal({ onClose, onExamCreated }: CreateExamModalProps
           </div>
           <button
             onClick={onClose}
+            aria-label="Tutup pembuatan ujian"
             className="h-8 w-8 flex items-center justify-center rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer"
           >
             <X className="h-4 w-4" />
@@ -176,9 +177,10 @@ export function CreateExamModal({ onClose, onExamCreated }: CreateExamModalProps
         {createStep === "meta" && (
           <div className="p-6 space-y-4">
             <div>
-              <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">Judul Ujian *</label>
+              <label htmlFor="exam-title" className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">Judul Ujian *</label>
               <input
                 type="text"
+                id="exam-title"
                 value={examMeta.title}
                 onChange={(e) => setExamMeta((p) => ({ ...p, title: e.target.value }))}
                 placeholder="Contoh: Simulasi UTBK Matematika Dasar Kelas 12"
@@ -187,9 +189,10 @@ export function CreateExamModal({ onClose, onExamCreated }: CreateExamModalProps
             </div>
 
             <div>
-              <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">Mata Pelajaran *</label>
+              <label htmlFor="exam-subject" className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">Mata Pelajaran *</label>
               <input
                 type="text"
+                id="exam-subject"
                 value={examMeta.subject}
                 onChange={(e) => setExamMeta((p) => ({ ...p, subject: e.target.value }))}
                 placeholder="Contoh: Matematika, Fisika, Biologi…"
@@ -199,8 +202,9 @@ export function CreateExamModal({ onClose, onExamCreated }: CreateExamModalProps
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">Kategori</label>
+                <label htmlFor="exam-category" className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">Kategori</label>
                 <select
+                  id="exam-category"
                   value={examMeta.category}
                   onChange={(e) => setExamMeta((p) => ({ ...p, category: e.target.value }))}
                   className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer"
@@ -210,8 +214,9 @@ export function CreateExamModal({ onClose, onExamCreated }: CreateExamModalProps
               </div>
 
               <div>
-                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">Tingkat Kesulitan</label>
+                <label htmlFor="exam-difficulty" className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">Tingkat Kesulitan</label>
                 <select
+                  id="exam-difficulty"
                   value={examMeta.difficulty}
                   onChange={(e) => setExamMeta((p) => ({ ...p, difficulty: e.target.value }))}
                   className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer"
@@ -223,9 +228,10 @@ export function CreateExamModal({ onClose, onExamCreated }: CreateExamModalProps
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">Durasi (menit)</label>
+                <label htmlFor="exam-duration" className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">Durasi (menit)</label>
                 <input
                   type="number"
+                  id="exam-duration"
                   min={5} max={180}
                   value={examMeta.durationMinutes}
                   onChange={(e) => setExamMeta((p) => ({ ...p, durationMinutes: Math.min(180, Math.max(5, Number(e.target.value))) }))}
@@ -235,9 +241,10 @@ export function CreateExamModal({ onClose, onExamCreated }: CreateExamModalProps
               </div>
 
               <div>
-                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">Jumlah Soal</label>
+                <label htmlFor="exam-question-count" className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">Jumlah Soal</label>
                 <input
                   type="number"
+                  id="exam-question-count"
                   min={1} max={5}
                   value={examMeta.questionCount}
                   onChange={(e) => setExamMeta((p) => ({ ...p, questionCount: Math.min(5, Math.max(1, Number(e.target.value))) }))}
@@ -293,9 +300,10 @@ export function CreateExamModal({ onClose, onExamCreated }: CreateExamModalProps
 
             {/* Question text */}
             <div>
-              <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">Teks Soal *</label>
+              <label htmlFor="exam-question-text" className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">Teks Soal *</label>
               <textarea
                 rows={3}
+                id="exam-question-text"
                 value={examDrafts[examQIdx]?.text ?? ""}
                 onChange={(e) => updateDraft("text", e.target.value)}
                 placeholder="Tulis pertanyaan di sini…"
@@ -318,6 +326,7 @@ export function CreateExamModal({ onClose, onExamCreated }: CreateExamModalProps
                     </span>
                     <input
                       type="text"
+                      aria-label={`Opsi ${key}`}
                       value={examDrafts[examQIdx]?.[fieldKey] ?? ""}
                       onChange={(e) => updateDraft(fieldKey, e.target.value)}
                       placeholder={`Opsi ${key}…`}
@@ -347,9 +356,10 @@ export function CreateExamModal({ onClose, onExamCreated }: CreateExamModalProps
 
             {/* Explanation text */}
             <div className="pt-2">
-              <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">Pembahasan (Opsional)</label>
+              <label htmlFor="exam-explanation" className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">Pembahasan (Opsional)</label>
               <textarea
                 rows={2}
+                id="exam-explanation"
                 value={examDrafts[examQIdx]?.explanation ?? ""}
                 onChange={(e) => updateDraft("explanation", e.target.value)}
                 placeholder="Pembahasan untuk soal ini... (Bisa pakai LaTeX)"

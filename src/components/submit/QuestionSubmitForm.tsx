@@ -202,8 +202,9 @@ export function QuestionSubmitForm() {
 
         {/* Question text input */}
         <div>
-          <label className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1.5">Pertanyaan Soal Kuis</label>
+          <label htmlFor="question-text" className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1.5">Pertanyaan Soal Kuis</label>
           <textarea
+            id="question-text"
             value={questionText}
             onChange={(e) => setQuestionText(e.target.value)}
             className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-500 dark:text-white transition-all placeholder-zinc-400 min-h-[120px] shadow-inner"
@@ -214,8 +215,9 @@ export function QuestionSubmitForm() {
 
         {/* Explanation text input */}
         <div>
-          <label className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1.5">Pembahasan Singkat (Opsional)</label>
+          <label htmlFor="question-explanation" className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1.5">Pembahasan Singkat (Opsional)</label>
           <textarea
+            id="question-explanation"
             value={questionExplanation}
             onChange={(e) => setQuestionExplanation(e.target.value)}
             className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white transition-all placeholder-zinc-400 min-h-[100px] shadow-inner"
@@ -227,8 +229,9 @@ export function QuestionSubmitForm() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {/* Subject Selector */}
           <div>
-            <label className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1.5">Mata Pelajaran</label>
+            <label htmlFor="question-subject" className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1.5">Mata Pelajaran</label>
             <select
+              id="question-subject"
               value={questionSubject}
               onChange={(e) => setQuestionSubject(e.target.value)}
               className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white cursor-pointer"
@@ -243,8 +246,9 @@ export function QuestionSubmitForm() {
 
           {/* Category Selector */}
           <div>
-            <label className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1.5">Kategori Ujian</label>
+            <label htmlFor="question-category" className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1.5">Kategori Ujian</label>
             <select
+              id="question-category"
               value={questionCategory}
               onChange={(e) => setQuestionCategory(e.target.value)}
               className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white cursor-pointer"
@@ -258,10 +262,10 @@ export function QuestionSubmitForm() {
         </div>
 
         {/* Difficulty + Point Preview */}
-        <div>
-          <label className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-2">
+        <fieldset>
+          <legend className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-2">
             Tingkat Kesulitan Soal
-          </label>
+          </legend>
           <div className="grid grid-cols-3 gap-3">
             {DIFFICULTY_CHOICES.map((d) => (
               <button
@@ -283,7 +287,7 @@ export function QuestionSubmitForm() {
           <p className="mt-2 text-[11px] text-zinc-400 dark:text-zinc-500">
             Poin diberikan ke akunmu saat soal disetujui moderator. Soal lebih sulit = lebih banyak Poin XP!
           </p>
-        </div>
+        </fieldset>
 
         {/* Options A-E */}
         <div className="space-y-4">
@@ -302,6 +306,8 @@ export function QuestionSubmitForm() {
               </span>
               <input
                 type="text"
+                id={`question-option-${idx}`}
+                aria-label={`Opsi ${String.fromCharCode(65 + idx)}`}
                 value={opt.val}
                 onChange={(e) => opt.set(e.target.value)}
                 className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white transition-all shadow-inner"
@@ -314,8 +320,9 @@ export function QuestionSubmitForm() {
 
         {/* Correct answer key selector */}
         <div>
-          <label className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1.5">Kunci Jawaban Benar</label>
+          <label htmlFor="question-answer-key" className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1.5">Kunci Jawaban Benar</label>
           <select
+            id="question-answer-key"
             value={questionAnswerKey}
             onChange={(e) => setQuestionAnswerKey(e.target.value)}
             className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white cursor-pointer"

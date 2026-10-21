@@ -368,6 +368,7 @@ export default function LeaderboardClient({
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-400" />
           <input 
             type="text" 
+            aria-label="Cari kontributor sekolah"
             placeholder="Cari kontributor sekolah..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}

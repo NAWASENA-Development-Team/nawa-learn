@@ -249,6 +249,7 @@ export default function ModulesLibraryClient({
             <Search className="absolute left-3.5 top-3 h-5 w-5 text-zinc-400" />
             <input 
               type="text" 
+              aria-label="Cari judul modul"
               placeholder="Cari judul modul..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -491,6 +492,7 @@ export default function ModulesLibraryClient({
                   setSelectedReaderModule(null);
                   setPrintSuccess(false);
                 }}
+                aria-label="Tutup pembaca modul"
                 className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-all shrink-0 cursor-pointer"
               >
                 <X className="h-5 w-5" />

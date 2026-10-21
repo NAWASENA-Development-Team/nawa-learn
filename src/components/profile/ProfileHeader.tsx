@@ -245,7 +245,8 @@ export function ProfileHeader({
             {isOwnProfile && !customPhoto && (
               <button
                 onClick={onSelectAvatar}
-                className="absolute -bottom-2 -right-2 bg-nawa-primary hover:bg-nawa-primary-hover text-white p-2 rounded-xl border border-white/20 shadow-md transition-all scale-90 opacity-0 group-hover:opacity-100 group-hover:scale-100 cursor-pointer"
+                aria-label="Ganti lencana avatar"
+                className="absolute -bottom-2 -right-2 bg-nawa-primary hover:bg-nawa-primary-hover text-white p-2 rounded-xl border border-white/20 shadow-md transition-all scale-90 opacity-0 group-hover:opacity-100 group-hover:scale-100 focus-visible:opacity-100 focus-visible:scale-100 cursor-pointer"
                 title="Ganti Lencana Avatar"
               >
                 <Edit3 className="h-4.5 w-4.5" />
@@ -255,7 +256,8 @@ export function ProfileHeader({
             {isOwnProfile && user.rank <= 10 && customPhoto && (
               <button
                 onClick={handleRemovePhoto}
-                className="absolute -bottom-2 -right-2 bg-red-600 hover:bg-red-700 text-white p-2 rounded-xl border border-white/20 shadow-md transition-all scale-90 opacity-0 group-hover:opacity-100 group-hover:scale-100 cursor-pointer"
+                aria-label="Hapus foto profil"
+                className="absolute -bottom-2 -right-2 bg-red-600 hover:bg-red-700 text-white p-2 rounded-xl border border-white/20 shadow-md transition-all scale-90 opacity-0 group-hover:opacity-100 group-hover:scale-100 focus-visible:opacity-100 focus-visible:scale-100 cursor-pointer"
                 title="Hapus Foto"
               >
                 <XCircle className="h-4 w-4" />
@@ -365,9 +367,11 @@ export function ProfileHeader({
                 <input
                   ref={photoInputRef}
                   type="file"
+                  id="profile-photo-input"
+                  aria-label="Unggah foto profil custom"
                   accept={ACCEPTED_AVATAR_TYPES}
                   onChange={handlePhotoUpload}
-                  className="hidden"
+                  className="sr-only"
                 />
                 <button
                   onClick={() => photoInputRef.current?.click()}

@@ -181,8 +181,9 @@ export function ModuleSubmitForm() {
       >
         {/* Step 1: Judul Modul */}
         <div>
-          <label className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1.5">Judul Modul Pembelajaran</label>
+          <label htmlFor="module-title" className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1.5">Judul Modul Pembelajaran</label>
           <input
+            id="module-title"
             {...register("title")}
             className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-500 dark:text-white transition-all placeholder-zinc-400 dark:placeholder-zinc-600 shadow-inner"
             placeholder="e.g. Ringkasan Rumus Turunan Matematika Peminatan Kelas XI"
@@ -193,8 +194,8 @@ export function ModuleSubmitForm() {
         {/* Step 2: Subject, Grade & Category Selector */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {/* Kelas Selector */}
-          <div>
-            <label className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1.5">Pilih Kelas</label>
+          <fieldset>
+            <legend className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1.5">Pilih Kelas</legend>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {["X", "XI", "XII", "Umum"].map((gradeOption) => (
                 <button
@@ -212,11 +213,11 @@ export function ModuleSubmitForm() {
               ))}
             </div>
             {errors.grade && <p className="text-red-500 text-xs font-semibold mt-1.5 flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" /> {errors.grade.message}</p>}
-          </div>
+          </fieldset>
 
           {/* Kategori Selector */}
-          <div>
-            <label className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1.5">Kategori Materi</label>
+          <fieldset>
+            <legend className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1.5">Kategori Materi</legend>
             <div className="grid grid-cols-3 gap-2">
               {[
                 { value: "UTBK", label: "Materi UTBK" },
@@ -238,12 +239,12 @@ export function ModuleSubmitForm() {
               ))}
             </div>
             {errors.category && <p className="text-red-500 text-xs font-semibold mt-1.5 flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" /> {errors.category.message}</p>}
-          </div>
+          </fieldset>
         </div>
 
         {/* Step 3: Mata Pelajaran Grid Selector */}
-        <div>
-          <label className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-2">Pilih Mata Pelajaran</label>
+        <fieldset>
+          <legend className="block text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-2">Pilih Mata Pelajaran</legend>
 
           <div className="flex flex-wrap gap-2 mb-3">
             {SUBJECTS.map((subj) => (
@@ -264,6 +265,7 @@ export function ModuleSubmitForm() {
 
           <div className="flex gap-2">
             <input
+              aria-label="Mata pelajaran khusus"
               value={selectedSubject && !SUBJECTS.includes(selectedSubject) ? selectedSubject : ""}
               onChange={(e) => handleSubjectSelect(e.target.value)}
               className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-500 dark:text-white transition-all placeholder-zinc-400 shadow-inner"
@@ -271,7 +273,7 @@ export function ModuleSubmitForm() {
             />
           </div>
           {errors.subject && <p className="text-red-500 text-xs font-semibold mt-1.5 flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" /> {errors.subject.message}</p>}
-        </div>
+        </fieldset>
 
         {/* Step 4: Advance File Attachment Tabs */}
         <ModuleUploadTabs

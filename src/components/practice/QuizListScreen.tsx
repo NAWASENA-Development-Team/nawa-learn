@@ -201,6 +201,7 @@ export function QuizListScreen({
                     {quiz.isCustom && (
                       <button
                         onClick={(e) => onDeleteCustomExam(quiz.id, e)}
+                        aria-label={`Hapus ujian ${quiz.title}`}
                         className="h-8 w-8 flex items-center justify-center rounded-xl border border-red-200 dark:border-red-900/40 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all cursor-pointer"
                         title="Hapus ujian ini"
                       >

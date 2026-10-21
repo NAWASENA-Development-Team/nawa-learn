@@ -44,6 +44,7 @@ export function DrivePickerModal({ onSelect, onClose }: DrivePickerModalProps) {
           </div>
           <button
             onClick={onClose}
+            aria-label="Tutup pemilih Google Drive"
             className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-all"
           >
             <X className="h-5 w-5" />
@@ -56,6 +57,7 @@ export function DrivePickerModal({ onSelect, onClose }: DrivePickerModalProps) {
             <Search className="absolute left-3 top-2.5 h-4.5 w-4.5 text-zinc-400" />
             <input
               type="text"
+              aria-label="Cari file modul di Google Drive"
               placeholder="Cari file modul Anda..."
               value={driveSearch}
               onChange={(e) => setDriveSearch(e.target.value)}

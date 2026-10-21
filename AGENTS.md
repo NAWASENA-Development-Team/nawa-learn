@@ -455,6 +455,19 @@ Every one of these was a real defect surfaced by turning the gate on, and each i
   - Keep the pairing: `source(none)` without a `@source` ships **zero** utility CSS — a page with no styling, far worse than phantom rules. `tests/unit/design-tokens.test.ts` asserts both halves and that no `@source` points at `*.md`.
   - Corollary for every sweep: verify against the **emitted** CSS, not the script's own count. A bulk rename reported "done" while nine occurrences stayed behind, and the build output was the only thing that said so.
 
+### Accessibility is a gated property now, not a claim
+- **Every form control has a name, and a test refuses to let that regress.** `tests/unit/a11y.test.ts` reads the source (comments stripped via `withoutComments()`) and fails if an `<input>`/`<textarea>`/`<select>` has neither `aria-label` nor an `id` that some `<label htmlFor>` in the same file actually points at. **An `id` alone does not count** — the first version of the test accepted it and stayed green over a control whose label had just been removed. `id` is only a name when something references it.
+- Group headings that look like labels but govern a set of buttons (grade picker, category picker, A–E options) must be `<fieldset>` + `<legend>`, not `htmlFor` pointing at nothing.
+- **Icon-only buttons must have a name.** Same file, same scan: a `<button>` whose children contain no text needs `aria-label`/`aria-labelledby` (`title` and an inner `alt` also count, but `aria-label` is the clearer choice). Twelve buttons were silent before M15d.
+- `placeholder` is **not** a label. It disappears the moment someone types, which is exactly when the field matters.
+- **`tests/a11y/axe.test.tsx` runs axe-core inside `npm run test`.** Components are rendered with `renderToStaticMarkup`, mounted into the jsdom document the test already owns, and audited against `wcag2a`/`wcag2aa`/`wcag21a`/`wcag21aa`.
+  - Render into the **global** `document`, never into a fresh `new JSDOM(...)`: axe validates its context against the global `Node` class, so a separate jsdom instance answers `axe.run arguments are invalid` instead of auditing anything.
+  - That file carries `// @vitest-environment jsdom`; the suite default stays `node` so PGlite is not dragged through a fake DOM. `vitest.config.mts` includes `tests/**/*.test.tsx` for this one reason.
+  - **Why jsdom and not Playwright:** every real defect sits behind the auth gate (`/submit`, `/practice`, `/profile`, `/moderator`), while `PUBLIC_ROUTES` exposes five pages and the CI job is hermetic by design (`ci-gates.test.ts` fails if `secrets.*` returns). A browser job would audit the marketing pages and report green over forms it never loaded — C6/C8 for a third time. No secrets, no server, no browser download.
+  - The harness has **permanent self-tests** proving it is not vacuously green: `<div aria-label>` without a role must yield `aria-prohibited-attr`, and `<input type="text">` with no name must yield `label`. If someone breaks `audit()`, those fail before any component test does.
+- **`color-contrast` is disabled on purpose, with the reason in the file.** jsdom computes no layout, so axe reports every text node as *incomplete*. Contrast, touch-target size and responsive layout still need a browser; screen-reader behaviour (NVDA/JAWS/VoiceOver) still needs a human. None of those is claimed as covered — `docs/AUDIT-AND-ROADMAP.md` M15d lists them as open.
+- `<div onClick>` is **not** caught by any gate here. The Google Drive file rows in `DrivePickerModal` are still unreachable by keyboard; that is recorded as debt, not as done.
+
 ## Interface strings
 
 ### One catalogue, typed paths, no dependency

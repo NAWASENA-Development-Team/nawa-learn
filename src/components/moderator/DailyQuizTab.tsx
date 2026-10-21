@@ -57,8 +57,9 @@ export function DailyQuizTab({
         <form onSubmit={onCreateQuestion} className="space-y-4">
           {/* Question Text */}
           <div>
-            <label className="block text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1.5">Pertanyaan</label>
+            <label htmlFor="daily-question-text" className="block text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1.5">Pertanyaan</label>
             <textarea
+              id="daily-question-text"
               value={dailyForm.questionText}
               onChange={(e) => onFormChange(f => ({ ...f, questionText: e.target.value }))}
               placeholder="Tulis pertanyaan di sini..."
@@ -71,8 +72,9 @@ export function DailyQuizTab({
           {/* Subject + Difficulty Row */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1.5">Mata Pelajaran</label>
+              <label htmlFor="daily-question-subject" className="block text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1.5">Mata Pelajaran</label>
               <select
+                id="daily-question-subject"
                 value={dailyForm.subject}
                 onChange={(e) => onFormChange(f => ({ ...f, subject: e.target.value }))}
                 className="w-full px-3 py-2 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm focus:ring-2 focus:ring-nawa-success"
@@ -93,8 +95,9 @@ export function DailyQuizTab({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1.5">Tingkat Kesulitan</label>
+              <label htmlFor="daily-question-difficulty" className="block text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1.5">Tingkat Kesulitan</label>
               <select
+                id="daily-question-difficulty"
                 value={dailyForm.difficulty}
                 onChange={(e) => onFormChange(f => ({ ...f, difficulty: e.target.value as Difficulty }))}
                 className="w-full px-3 py-2 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm focus:ring-2 focus:ring-nawa-success"
@@ -107,8 +110,8 @@ export function DailyQuizTab({
           </div>
 
           {/* Options */}
-          <div className="space-y-2">
-            <label className="block text-xs font-bold text-zinc-600 dark:text-zinc-400">Pilihan Jawaban</label>
+          <fieldset className="space-y-2">
+            <legend className="block text-xs font-bold text-zinc-600 dark:text-zinc-400">Pilihan Jawaban</legend>
             {(["A", "B", "C", "D", "E"] as const).map((key) => {
               const fieldKey = `option${key}` as "optionA" | "optionB" | "optionC" | "optionD" | "optionE";
               const isRequired = key !== "E";
@@ -128,6 +131,7 @@ export function DailyQuizTab({
                   </button>
                   <input
                     type="text"
+                    aria-label={`Opsi ${key}${key === "E" ? " (opsional)" : ""}`}
                     value={dailyForm[fieldKey]}
                     onChange={(e) => onFormChange(f => ({ ...f, [fieldKey]: e.target.value }))}
                     placeholder={`Opsi ${key}${key === "E" ? " (opsional)" : ""}`}
@@ -141,7 +145,7 @@ export function DailyQuizTab({
               );
             })}
             <p className="text-[10px] text-zinc-400 mt-1">Klik huruf untuk menjadikannya kunci jawaban yang benar.</p>
-          </div>
+          </fieldset>
 
           <button
             type="submit"
@@ -189,6 +193,7 @@ export function DailyQuizTab({
                 </div>
                 <button
                   onClick={() => onDeleteQuestion(q.id)}
+                  aria-label={`Hapus soal nomor ${idx + 1}`}
                   className="shrink-0 h-8 w-8 rounded-lg border border-red-200 dark:border-red-900 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 active:scale-[0.98] flex items-center justify-center transition-colors cursor-pointer"
                   title="Hapus soal ini"
                 >

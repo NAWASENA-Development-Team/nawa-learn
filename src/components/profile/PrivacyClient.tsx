@@ -359,10 +359,11 @@ export default function PrivacyClient({
               di bawah ini.
             </p>
 
-            <label className="mt-3 block">
+            <label htmlFor="delete-account-confirmation" className="mt-3 block">
               <span className="sr-only">Frasa konfirmasi</span>
               <input
                 type="text"
+                id="delete-account-confirmation"
                 value={typed}
                 onChange={(event) => setTyped(event.target.value)}
                 autoComplete="off"

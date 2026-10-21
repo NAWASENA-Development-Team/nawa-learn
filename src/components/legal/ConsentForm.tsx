@@ -108,9 +108,10 @@ export default function ConsentForm() {
         </div>
 
         <form onSubmit={handleSubmit} className="mt-6">
-          <label className="flex items-start gap-3 cursor-pointer rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-4 transition-colors hover:border-indigo-300 dark:hover:border-nawa-primary-hover">
+          <label htmlFor="consent-accept" className="flex items-start gap-3 cursor-pointer rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-4 transition-colors hover:border-indigo-300 dark:hover:border-nawa-primary-hover">
             <input
               type="checkbox"
+              id="consent-accept"
               checked={checked}
               onChange={(event) => setChecked(event.target.checked)}
               className="mt-0.5 h-5 w-5 shrink-0 rounded border-zinc-300 text-nawa-primary accent-nawa-primary cursor-pointer"

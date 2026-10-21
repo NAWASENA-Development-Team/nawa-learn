@@ -185,6 +185,11 @@ function ToastCard({
 function ToastContainer({ toasts, onDismiss }: { toasts: ToastItem[]; onDismiss: (id: string) => void }) {
   return (
     <div
+      // `aria-label` pada `<div>` polos tidak sah (axe: `aria-prohibited-attr`):
+      // sebuah nama hanya boleh diberikan kepada elemen yang punya peran. Region
+      // bernama adalah peran yang paling dekat dengan maksud aslinya — satu
+      // landmark "Notifikasi" yang bisa dituju pembaca layar.
+      role="region"
       aria-label="Notifikasi"
       className="fixed top-20 right-4 z-[9999] flex flex-col gap-2.5 w-[calc(100vw-2rem)] sm:w-auto pointer-events-none"
     >

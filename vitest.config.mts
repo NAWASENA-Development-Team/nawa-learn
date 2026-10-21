@@ -11,7 +11,11 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["tests/**/*.test.ts"],
+    // `.tsx` ikut agar axe bisa merender komponen sungguhan (lihat
+    // `tests/a11y/axe.test.tsx`). Berkas itu membawa docblock
+    // `// @vitest-environment jsdom` sendiri, jadi default tetap `node` — PGlite
+    // dan seluruh test integrasi tidak dibebani DOM palsu.
+    include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
     // Resets the in-memory rate-limit counters before every test; see the file.
     setupFiles: ["tests/setup.ts"],
     // Integration tests boot a real Postgres (PGlite) for each file, which is
