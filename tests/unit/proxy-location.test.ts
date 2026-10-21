@@ -111,4 +111,31 @@ describe("cron routes and the proxy allowlist", () => {
 
     expect(listed).toEqual(cronRoutePaths());
   });
+
+  // ─── Dan probe runtime-nya harus memakai metode yang benar ──────────────────
+  // Dua gerbang di atas menjaga allowlist, tetapi keduanya hanya membaca sumber.
+  // Probe runtime-lah yang membuktikan jalurnya benar-benar sampai ke handler,
+  // dan probe itu punya satu cara gagal yang tidak terlihat dari sini: metode
+  // HTTP yang salah.
+  //
+  // Kedua route cron menjawab `405` untuk `GET` dengan sengaja — sebuah `GET`
+  // bisa dipicu prefetcher, crawler, atau tab yang tidak sengaja dibuka, dan
+  // kedua job ini mengubah peran pengguna atau menghapus baris. Probe `GET`
+  // karenanya dijawab penjaga metode dan **tidak pernah sampai ke gerbang
+  // bearer**, lalu gagal dengan pesan yang menuduh gerbangnya hilang padahal
+  // gerbangnya sehat. Itu persis yang memerahkan run CI pertama M16: satu-satunya
+  // langkah yang merah adalah probe runtime, dan kodenya benar.
+  it("probes the cron routes with POST, the method their own gate expects", () => {
+    const script = withoutComments(readFileSync(path.join(root, "scripts/verify-proxy.mjs"), "utf8"));
+
+    expect(
+      script,
+      "scripts/verify-proxy.mjs must send POST to the cron probes: both routes " +
+        "answer 405 to GET by design, so a GET probe never reaches the bearer gate.",
+    ).toMatch(/probe\(\s*path\s*,\s*"POST"\s*\)/);
+
+    // The default must stay GET so a metadata probe is not silently turned into
+    // a mutation against some future route.
+    expect(script).toMatch(/function probe\(pathname, method = "GET"\)/);
+  });
 });

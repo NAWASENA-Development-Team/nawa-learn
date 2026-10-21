@@ -131,8 +131,9 @@ const METADATA_PROBES = [
   },
 ];
 
-async function probe(pathname) {
+async function probe(pathname, method = "GET") {
   const r = await fetch(`http://${HOST}:${PORT}${pathname}`, {
+    method,
     redirect: "manual",
     signal: AbortSignal.timeout(10_000),
   });
@@ -153,13 +154,21 @@ for (const spec of METADATA_PROBES) {
 // carries an Authorization header and no cookie; the scheduler records a failed
 // job and nothing says why. The probe sends no token, so the route's own gate
 // answers 401 — that is the expected result, and a 3xx is the failure.
+//
+// **It must be POST, not GET.** Both cron routes are POST-only on purpose (a GET
+// can be fired by a prefetcher or a stray tab, and both jobs are destructive or
+// privilege-changing), so a GET probe is answered 405 by the route's own handler
+// and never reaches the bearer gate at all. The first version of this probe used
+// the default GET and failed in CI for exactly that reason — a 405 read as "the
+// gate is missing" when the gate was fine. POST is also the method the scheduler
+// really uses, so this is the closer probe of the two.
 const CRON_PROBES = ["/api/cron/retention", "/api/cron/season"];
 
 const cronResults = [];
 for (const path of CRON_PROBES) {
-  const result = await probe(path);
+  const result = await probe(path, "POST");
   cronResults.push({ path, ...result });
-  console.log(`  ${path}: ${result.res.status} ${result.res.headers.get("location") ?? "(no redirect)"}`);
+  console.log(`  ${path}: POST → ${result.res.status} ${result.res.headers.get("location") ?? "(no redirect)"}`);
 }
 
 shutdown();
@@ -208,7 +217,7 @@ for (const { path, res: cronRes } of cronResults) {
   const location = cronRes.headers.get("location");
   if (cronRes.status >= 300 && cronRes.status < 400) {
     fail(
-      `Expected ${path} to reach its own handler, got ${cronRes.status}` +
+      `Expected POST ${path} to reach its own handler, got ${cronRes.status}` +
         `${location ? ` → ${location}` : ""}.\n` +
         `  A 3xx to a sign-in page means the proxy still treats this cron path as\n` +
         `  private. Add it to PUBLIC_ROUTES in src/proxy.ts: the scheduler has no\n` +
@@ -217,7 +226,7 @@ for (const { path, res: cronRes } of cronResults) {
   }
   if (cronRes.status !== 401) {
     fail(
-      `Expected 401 from ${path} without a bearer token, got ${cronRes.status}.\n` +
+      `Expected 401 from POST ${path} without a bearer token, got ${cronRes.status}.\n` +
         `  The route must fail closed when the caller cannot prove it is the\n` +
         `  scheduler. A 200 here means CRON_SECRET is not being checked.`,
     );
