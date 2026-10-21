@@ -10,13 +10,15 @@ export default function NawaIcon({ className }: { className?: string }) {
       aria-hidden="true"
     >
       <style>{`
-        .ni-core { fill: #4f46e5; } /* indigo-600 */
-        .ni-layers { fill: rgba(79, 70, 229, 0.75); }
-        .ni-dots { fill: rgba(79, 70, 229, 0.40); }
+        /* Mengikuti token brand di globals.css — mengganti warna primer di
+           DESIGN.md kini ikut mengganti logo, tanpa menyentuh berkas ini. */
+        .ni-core { fill: var(--color-nawa-primary, #4f46e5); }
+        .ni-layers { fill: rgb(79 70 229 / 0.75); }
+        .ni-dots { fill: rgb(79 70 229 / 0.40); }
 
         .dark .ni-core { fill: #FFFFFF; }
-        .dark .ni-layers { fill: rgba(255, 255, 255, 0.75); }
-        .dark .ni-dots { fill: rgba(255, 255, 255, 0.40); }
+        .dark .ni-layers { fill: rgb(255 255 255 / 0.75); }
+        .dark .ni-dots { fill: rgb(255 255 255 / 0.40); }
       `}</style>
 
       <defs>

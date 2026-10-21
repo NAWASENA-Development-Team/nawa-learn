@@ -269,7 +269,7 @@ export function ModuleUploadTabs({
               }}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
                 activeUploadTab === tab.id
-                  ? "bg-white dark:bg-zinc-800 text-indigo-600 dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-700/50"
+                  ? "bg-white dark:bg-zinc-800 text-nawa-primary dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-700/50"
                   : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 hover:bg-zinc-100/50 dark:hover:bg-zinc-800/40"
               }`}
             >
@@ -289,7 +289,7 @@ export function ModuleUploadTabs({
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-zinc-200 dark:border-zinc-800 hover:border-indigo-500 dark:hover:border-indigo-600 bg-zinc-50 dark:bg-zinc-950/40 rounded-xl py-8 px-4 cursor-pointer flex flex-col items-center justify-center group transition-all duration-300 relative overflow-hidden"
+                  className="border-2 border-dashed border-zinc-200 dark:border-zinc-800 hover:border-indigo-500 dark:hover:border-nawa-primary bg-zinc-50 dark:bg-zinc-950/40 rounded-xl py-8 px-4 cursor-pointer flex flex-col items-center justify-center group transition-all duration-300 relative overflow-hidden"
                 >
                   {/* Interactive upload icon */}
                   <div className="h-12 w-12 rounded-full bg-indigo-50 dark:bg-indigo-950/50 text-indigo-500 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
@@ -315,20 +315,20 @@ export function ModuleUploadTabs({
                   {isUploading && (
                     <div className="absolute inset-x-0 bottom-0 h-1 bg-zinc-200 dark:bg-zinc-800">
                       <div
-                        className="h-full bg-indigo-600 transition-all duration-300"
+                        className="h-full bg-nawa-primary transition-all duration-300"
                         style={{ width: `${uploadProgress}%` }}
                       />
                     </div>
                   )}
 
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-indigo-100 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                    <div className="h-10 w-10 rounded-lg bg-indigo-100 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900/60 flex items-center justify-center text-nawa-primary dark:text-indigo-400">
                       <FileText className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 truncate">{localFile.name}</p>
                       {isUploading ? (
-                        <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-0.5 flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> {uploadProgress}% - {uploadStateText}</p>
+                        <p className="text-xs text-nawa-primary dark:text-indigo-400 mt-0.5 flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> {uploadProgress}% - {uploadStateText}</p>
                       ) : (
                         <p className="text-[10px] text-zinc-500 mt-0.5">{(localFile.size / 1024 / 1024).toFixed(2)} MB • Berhasil diunggah</p>
                       )}
@@ -437,7 +437,7 @@ export function ModuleUploadTabs({
                   <button
                     type="button"
                     onClick={startCamera}
-                    className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-3 rounded-xl text-xs font-bold flex items-center gap-2 transition-all hover:scale-[1.01] shadow-md border border-indigo-500"
+                    className="bg-nawa-primary hover:bg-indigo-500 text-white px-5 py-3 rounded-xl text-xs font-bold flex items-center gap-2 transition-all hover:scale-[1.01] shadow-md border border-indigo-500"
                   >
                     <Camera className="h-4.5 w-4.5" />
                     Aktifkan Kamera Live
@@ -503,7 +503,7 @@ export function ModuleUploadTabs({
                       alt="Captured snapshot"
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute top-2 right-2 bg-emerald-500 text-white text-[9px] px-2 py-0.5 rounded-full font-bold">
+                    <div className="absolute top-2 right-2 bg-nawa-success text-white text-[9px] px-2 py-0.5 rounded-full font-bold">
                       PREVIEW
                     </div>
                   </div>
@@ -523,8 +523,8 @@ export function ModuleUploadTabs({
                       disabled={isUploading}
                       className={`flex-1 text-white py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all shadow-md disabled:opacity-60 disabled:cursor-wait ${
                         photoAttached
-                          ? "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/10 border border-emerald-600"
-                          : "bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/10 border border-indigo-600"
+                          ? "bg-emerald-600 hover:bg-nawa-success shadow-nawa-success/10 border border-emerald-600"
+                          : "bg-nawa-primary hover:bg-indigo-500 shadow-indigo-500/10 border border-nawa-primary"
                       }`}
                     >
                       {photoAttached ? (
@@ -547,7 +547,7 @@ export function ModuleUploadTabs({
         {contentUrl && (
           <div className="px-5 py-3 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/40 flex items-center justify-between text-left">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              <CheckCircle2 className="h-4 w-4 text-nawa-success" />
               <span className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400">File berhasil dilampirkan</span>
             </div>
             <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 truncate max-w-[150px] sm:max-w-xs">{contentUrl}</span>

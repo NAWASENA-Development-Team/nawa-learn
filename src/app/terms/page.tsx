@@ -92,7 +92,7 @@ export default function TermsPage() {
 
       <LegalSection number={7} title="Privasi">
         <p>
-          Cara kami memperlakukan datamu diatur di <Link className="font-bold text-indigo-600 hover:underline dark:text-indigo-400" href={POLICY_PATHS.privacy}>Kebijakan Privasi</Link>,
+          Cara kami memperlakukan datamu diatur di <Link className="font-bold text-nawa-primary hover:underline dark:text-indigo-400" href={POLICY_PATHS.privacy}>Kebijakan Privasi</Link>,
           yang merupakan bagian dari ketentuan ini.
         </p>
       </LegalSection>
@@ -106,7 +106,7 @@ export default function TermsPage() {
 
       <LegalSection number={9} title="Kontak">
         <p>
-          Pertanyaan, laporan pelanggaran, atau keberatan: <a className="font-bold text-indigo-600 hover:underline dark:text-indigo-400" href={`mailto:${PRIVACY_CONTACT_EMAIL}`}>{PRIVACY_CONTACT_EMAIL}</a>,
+          Pertanyaan, laporan pelanggaran, atau keberatan: <a className="font-bold text-nawa-primary hover:underline dark:text-indigo-400" href={`mailto:${PRIVACY_CONTACT_EMAIL}`}>{PRIVACY_CONTACT_EMAIL}</a>,
           atau Divisi ICT OSIS NAWASENA SMAN 2 Jonggol.
         </p>
       </LegalSection>

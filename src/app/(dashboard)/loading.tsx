@@ -8,7 +8,7 @@ export default function DashboardLoading() {
       <div className="relative">
         <div className="absolute inset-0 bg-indigo-500 blur-xl opacity-20 rounded-full animate-pulse" aria-hidden />
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-4 rounded-2xl shadow-sm relative z-10 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-indigo-600 dark:text-indigo-400" aria-hidden />
+          <Loader2 className="h-8 w-8 animate-spin text-nawa-primary dark:text-indigo-400" aria-hidden />
         </div>
       </div>
       <div className="text-center">

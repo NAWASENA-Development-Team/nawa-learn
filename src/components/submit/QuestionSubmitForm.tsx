@@ -141,17 +141,17 @@ export function QuestionSubmitForm() {
 
             <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 mb-6 relative border border-emerald-200">
               <CheckCircle2 className="h-10 w-10 animate-bounce" />
-              <Sparkles className="h-5 w-5 text-amber-500 absolute -top-1 -right-1 animate-pulse" />
+              <Sparkles className="h-5 w-5 text-nawa-warning absolute -top-1 -right-1 animate-pulse" />
             </div>
 
             <h3 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2">Soal Berhasil Dikirim!</h3>
             <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mb-4 leading-relaxed">
-              Soal mata pelajaran <span className="font-bold text-indigo-600 dark:text-indigo-400">&quot;{questionSubject}&quot;</span> telah masuk ke antrean moderator.
+              Soal mata pelajaran <span className="font-bold text-nawa-primary dark:text-indigo-400">&quot;{questionSubject}&quot;</span> telah masuk ke antrean moderator.
             </p>
 
             {/* Pending notice */}
             <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-xl p-3 mb-4 text-left flex gap-2.5 items-start">
-              <Clock className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+              <Clock className="h-4 w-4 text-nawa-warning shrink-0 mt-0.5" />
               <div>
                 <p className="text-[11px] font-extrabold text-amber-800 dark:text-amber-300">Menunggu persetujuan moderator</p>
                 <p className="text-[10px] text-amber-700 dark:text-amber-400 mt-0.5 leading-snug">
@@ -163,7 +163,7 @@ export function QuestionSubmitForm() {
             <div className="bg-zinc-50 dark:bg-zinc-950 p-3 border border-zinc-200 dark:border-zinc-800 rounded-xl mb-5 flex items-center justify-between text-left">
               <div>
                 <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium">POIN SAAT DISETUJUI</p>
-                <p className="text-base font-bold text-indigo-600 dark:text-indigo-400">
+                <p className="text-base font-bold text-nawa-primary dark:text-indigo-400">
                   {questionDifficulty === "mudah" ? "+15" : questionDifficulty === "sulit" ? "+40" : "+25"} Poin XP
                 </p>
               </div>
@@ -182,7 +182,7 @@ export function QuestionSubmitForm() {
               <button
                 type="button"
                 onClick={() => setShowQuestionSuccess(false)}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-xl transition-all duration-200 shadow-md shadow-indigo-600/10 hover:shadow-lg active:scale-95 cursor-pointer text-xs"
+                className="w-full bg-nawa-primary hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-xl transition-all duration-200 shadow-md shadow-nawa-primary/10 hover:shadow-lg active:scale-95 cursor-pointer text-xs"
               >
                 Buat Soal Lain
               </button>
@@ -333,7 +333,7 @@ export function QuestionSubmitForm() {
         <button
           type="submit"
           disabled={isQuestionSubmitting}
-          className="w-full bg-indigo-600 text-white py-3.5 rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:pointer-events-none font-bold transition-all duration-200 text-xs sm:text-sm shadow-lg shadow-indigo-600/10 hover:shadow-xl hover:scale-[1.005] active:scale-95 flex items-center justify-center gap-2 cursor-pointer border border-indigo-700"
+          className="w-full bg-nawa-primary text-white py-3.5 rounded-xl hover:bg-nawa-primary-hover disabled:opacity-50 disabled:pointer-events-none font-bold transition-all duration-200 text-xs sm:text-sm shadow-lg shadow-nawa-primary/10 hover:shadow-xl hover:scale-[1.005] active:scale-95 flex items-center justify-center gap-2 cursor-pointer border border-nawa-primary-hover"
         >
           {isQuestionSubmitting ? (
             <>

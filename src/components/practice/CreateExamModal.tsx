@@ -168,8 +168,8 @@ export function CreateExamModal({ onClose, onExamCreated }: CreateExamModalProps
 
         {/* Step indicator */}
         <div className="px-6 pt-4 flex items-center gap-3">
-          <div className={`h-2 flex-1 rounded-full ${createStep === "meta" ? "bg-indigo-600" : "bg-indigo-600"}`} />
-          <div className={`h-2 flex-1 rounded-full ${createStep === "questions" ? "bg-indigo-600" : "bg-zinc-200 dark:bg-zinc-700"}`} />
+          <div className={`h-2 flex-1 rounded-full ${createStep === "meta" ? "bg-nawa-primary" : "bg-nawa-primary"}`} />
+          <div className={`h-2 flex-1 rounded-full ${createStep === "questions" ? "bg-nawa-primary" : "bg-zinc-200 dark:bg-zinc-700"}`} />
         </div>
 
         {/* ── Step 1: Metadata ── */}
@@ -249,7 +249,7 @@ export function CreateExamModal({ onClose, onExamCreated }: CreateExamModalProps
 
             {/* Poin XP info */}
             <div className={`p-3.5 rounded-2xl border flex items-center gap-3 text-xs ${getDifficultyStyle(examMeta.difficulty)}`}>
-              <Award className="h-5 w-5 shrink-0 text-amber-500" />
+              <Award className="h-5 w-5 shrink-0 text-nawa-warning" />
               <div>
                 <p className="font-bold">Hadiah Poin XP ujian ini:</p>
                 <p>
@@ -268,7 +268,7 @@ export function CreateExamModal({ onClose, onExamCreated }: CreateExamModalProps
               </button>
               <button
                 onClick={handleMetaNext}
-                className="flex-[2] py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white text-sm font-bold transition-all shadow-sm cursor-pointer flex items-center justify-center gap-2"
+                className="flex-[2] py-2.5 rounded-xl bg-nawa-primary hover:bg-nawa-primary-hover active:scale-[0.98] text-white text-sm font-bold transition-all shadow-sm cursor-pointer flex items-center justify-center gap-2"
               >
                 Lanjut: Isi Soal <ChevronRight className="h-4 w-4" />
               </button>
@@ -286,7 +286,7 @@ export function CreateExamModal({ onClose, onExamCreated }: CreateExamModalProps
             </div>
             <div className="h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden mb-4">
               <div
-                className="h-full bg-indigo-600 rounded-full transition-all"
+                className="h-full bg-nawa-primary rounded-full transition-all"
                 style={{ width: `${((examQIdx + 1) / examDrafts.length) * 100}%` }}
               />
             </div>
@@ -311,7 +311,7 @@ export function CreateExamModal({ onClose, onExamCreated }: CreateExamModalProps
                   <div key={key} className="flex items-center gap-2">
                     <span className={`h-7 w-7 shrink-0 rounded-full flex items-center justify-center text-xs font-black border ${
                       examDrafts[examQIdx]?.answerKey === key
-                        ? "bg-indigo-600 text-white border-indigo-600"
+                        ? "bg-nawa-primary text-white border-nawa-primary"
                         : "bg-zinc-50 dark:bg-zinc-900 text-zinc-500 border-zinc-200 dark:border-zinc-700"
                     }`}>
                       {key}
@@ -327,8 +327,8 @@ export function CreateExamModal({ onClose, onExamCreated }: CreateExamModalProps
                       onClick={() => updateDraft("answerKey", key)}
                       className={`shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer active:scale-[0.98] flex items-center gap-1 ${
                         examDrafts[examQIdx]?.answerKey === key
-                          ? "bg-indigo-600 text-white border-indigo-600"
-                          : "bg-white dark:bg-zinc-900 text-zinc-500 border-zinc-200 dark:border-zinc-800 hover:border-indigo-400 hover:text-indigo-600"
+                          ? "bg-nawa-primary text-white border-nawa-primary"
+                          : "bg-white dark:bg-zinc-900 text-zinc-500 border-zinc-200 dark:border-zinc-800 hover:border-indigo-400 hover:text-nawa-primary"
                       }`}
                       title={`Jadikan opsi ${key} sebagai kunci jawaban`}
                     >
@@ -342,7 +342,7 @@ export function CreateExamModal({ onClose, onExamCreated }: CreateExamModalProps
 
             <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
               Pilih tombol <span className="font-bold text-indigo-500">Kunci Jawaban</span> di samping opsi yang benar.
-              Kunci aktif: <span className="font-black text-indigo-600 dark:text-indigo-400">Opsi {examDrafts[examQIdx]?.answerKey}</span>
+              Kunci aktif: <span className="font-black text-nawa-primary dark:text-indigo-400">Opsi {examDrafts[examQIdx]?.answerKey}</span>
             </p>
 
             {/* Explanation text */}
@@ -370,7 +370,7 @@ export function CreateExamModal({ onClose, onExamCreated }: CreateExamModalProps
               {examQIdx < examDrafts.length - 1 ? (
                 <button
                   onClick={() => saveDraftAndGo("next")}
-                  className="flex-[2] py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white text-sm font-bold transition-all shadow-sm cursor-pointer flex items-center justify-center gap-1.5"
+                  className="flex-[2] py-2.5 rounded-xl bg-nawa-primary hover:bg-nawa-primary-hover active:scale-[0.98] text-white text-sm font-bold transition-all shadow-sm cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   Soal Berikutnya <ChevronRight className="h-4 w-4" />
                 </button>
@@ -399,7 +399,7 @@ export function CreateExamModal({ onClose, onExamCreated }: CreateExamModalProps
                     onClick={() => setExamQIdx(i)}
                     className={`h-7 w-7 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
                       i === examQIdx
-                        ? "bg-indigo-600 border-indigo-600 text-white"
+                        ? "bg-nawa-primary border-nawa-primary text-white"
                         : d.text.trim()
                           ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-900/40 text-emerald-600"
                           : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 text-zinc-500"

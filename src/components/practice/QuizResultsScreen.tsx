@@ -52,7 +52,7 @@ export function QuizResultsScreen({
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-2xl p-6 sm:p-10 text-center relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 mb-6 border border-indigo-100 dark:border-indigo-900/30">
+        <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-nawa-primary dark:text-indigo-400 mb-6 border border-indigo-100 dark:border-indigo-900/30">
           <Award className="h-8 w-8" />
         </div>
 
@@ -64,10 +64,10 @@ export function QuizResultsScreen({
         {/* Score circle */}
         <div className="my-8 relative inline-flex items-center justify-center">
           <div className="h-40 w-40 rounded-full border-8 border-zinc-100 dark:border-zinc-800 flex flex-col items-center justify-center bg-zinc-50 dark:bg-zinc-950">
-            <span className="text-4xl sm:text-5xl font-black text-indigo-600 dark:text-indigo-400">{finalScore}</span>
+            <span className="text-4xl sm:text-5xl font-black text-nawa-primary dark:text-indigo-400">{finalScore}</span>
             <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mt-1">SCORE</span>
           </div>
-          <div className="absolute -top-1 -right-1 bg-indigo-50 border border-indigo-200 p-1.5 rounded-lg text-indigo-600 animate-bounce">
+          <div className="absolute -top-1 -right-1 bg-indigo-50 border border-indigo-200 p-1.5 rounded-lg text-nawa-primary animate-bounce">
             <Sparkles className="h-4 w-4" />
           </div>
         </div>
@@ -86,7 +86,7 @@ export function QuizResultsScreen({
           </div>
           <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 rounded-2xl text-left">
             <span className="text-[10px] font-bold text-indigo-500 uppercase">Sisa Waktu Ujian</span>
-            <h4 className="text-2xl font-black text-indigo-600 dark:text-indigo-400 mt-1">
+            <h4 className="text-2xl font-black text-nawa-primary dark:text-indigo-400 mt-1">
               {Math.floor(timeLeft / 60)}m {timeLeft % 60}s
             </h4>
             <p className="text-xs text-zinc-500 mt-1">Manajemen Waktu</p>
@@ -97,8 +97,8 @@ export function QuizResultsScreen({
         <div className="max-w-2xl mx-auto mb-6 space-y-3">
           {pointsLoading ? (
             <div className="p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/30 flex items-center gap-3">
-              <div className="h-5 w-5 rounded-full border-2 border-indigo-300 border-t-indigo-600 animate-spin shrink-0" />
-              <p className="text-sm font-bold text-indigo-700 dark:text-indigo-300">Menghitung Poin kamu...</p>
+              <div className="h-5 w-5 rounded-full border-2 border-indigo-300 border-t-nawa-primary animate-spin shrink-0" />
+              <p className="text-sm font-bold text-nawa-primary-hover dark:text-indigo-300">Menghitung Poin kamu...</p>
             </div>
           ) : notRewardable ? (
             <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center gap-3">
@@ -222,7 +222,7 @@ export function QuizResultsScreen({
             return (
               <div key={q.id} className={`p-5 rounded-2xl border ${isCorrect ? "bg-emerald-50/50 dark:bg-emerald-950/10 border-emerald-200 dark:border-emerald-900/30" : "bg-red-50/50 dark:bg-red-950/10 border-red-200 dark:border-red-900/30"}`}>
                 <div className="flex gap-3 items-start mb-4">
-                  <span className={`shrink-0 h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold text-white mt-0.5 ${isCorrect ? "bg-emerald-500" : "bg-red-500"}`}>
+                  <span className={`shrink-0 h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold text-white mt-0.5 ${isCorrect ? "bg-nawa-success" : "bg-red-500"}`}>
                     {idx + 1}
                   </span>
                   <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
@@ -263,7 +263,7 @@ export function QuizResultsScreen({
         <div className="flex flex-col sm:flex-row justify-center gap-4 border-t border-zinc-100 dark:border-zinc-800/80 pt-8">
           <button
             onClick={onRestart}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 text-sm transition-all shadow-md shadow-indigo-600/10 hover:shadow-lg active:scale-95 cursor-pointer border border-indigo-700"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-nawa-primary hover:bg-nawa-primary-hover text-white font-bold py-3 px-6 text-sm transition-all shadow-md shadow-nawa-primary/10 hover:shadow-lg active:scale-95 cursor-pointer border border-nawa-primary-hover"
           >
             <RotateCcw className="h-4 w-4" /> Ulangi Latihan CBT
           </button>

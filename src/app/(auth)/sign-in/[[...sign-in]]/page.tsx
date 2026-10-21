@@ -3,10 +3,11 @@ import { SignIn } from "@clerk/nextjs";
 import Link from "next/link";
 import { Sparkles, Trophy, Zap, BookOpen, Target, Flame } from "lucide-react";
 import { Metadata } from "next";
+import { t } from "@/i18n/t";
 
 export const metadata: Metadata = {
-  title: "Masuk | NAWA-LEARN SMAN 2 Jonggol",
-  description: "Masuk ke akun NAWA-LEARN SMAN 2 Jonggol untuk melanjutkan belajar, mengunggah modul, dan mengerjakan soal latihan.",
+  title: t("auth.signIn.metaTitle"),
+  description: t("auth.signIn.metaDescription"),
 };
 
 export default function SignInPage() {
@@ -19,16 +20,16 @@ export default function SignInPage() {
         <div className="absolute bottom-[10%] right-[5%] w-96 h-96 rounded-full bg-purple-500/5 blur-3xl" />
         {/* Floating badges — desktop only */}
         <div className="absolute top-[20%] right-[10%] hidden xl:flex items-center gap-2.5 bg-white/90 dark:bg-zinc-900/90 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl px-4 py-2.5 shadow-sm rotate-3">
-          <Trophy className="h-4 w-4 text-amber-500" />
-          <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">Peringkat #1</span>
+          <Trophy className="h-4 w-4 text-nawa-warning" />
+          <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">{t("auth.signIn.badgeRank")}</span>
         </div>
         <div className="absolute bottom-[20%] left-[6%] hidden xl:flex items-center gap-2.5 bg-white/90 dark:bg-zinc-900/90 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl px-4 py-2.5 shadow-sm -rotate-6">
           <Zap className="h-4 w-4 text-indigo-500" />
-          <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">Latih Soal CBT</span>
+          <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">{t("auth.signIn.badgeBank")}</span>
         </div>
         <div className="absolute top-[45%] left-[3%] hidden xl:flex items-center gap-2.5 bg-white/90 dark:bg-zinc-900/90 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl px-4 py-2.5 shadow-sm rotate-6">
-          <BookOpen className="h-4 w-4 text-emerald-500" />
-          <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">240+ Modul Belajar</span>
+          <BookOpen className="h-4 w-4 text-nawa-success" />
+          <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">{t("auth.signIn.badgeModules")}</span>
         </div>
       </div>
 
@@ -38,7 +39,7 @@ export default function SignInPage() {
         {/* ── Mobile: compact header above form ─────────────────────────── */}
         <div className="lg:hidden mb-6 text-center">
           <Link href="/" className="inline-flex items-center gap-2 mb-4">
-            <div className="h-8 w-8 rounded-xl bg-indigo-600 flex items-center justify-center shadow-sm">
+            <div className="h-8 w-8 rounded-xl bg-nawa-primary flex items-center justify-center shadow-sm">
               <Sparkles className="h-4 w-4 text-white" />
             </div>
             <span className="font-extrabold text-xl tracking-tight text-zinc-900 dark:text-white">
@@ -46,17 +47,17 @@ export default function SignInPage() {
             </span>
           </Link>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-zinc-950 dark:text-white leading-tight">
-            Siap belajar jadi lebih seru?
+            {t("auth.signIn.mobileHeading")}
           </h2>
           <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto">
-            Platform belajar kolaboratif OSIS NAWASENA SMAN 2 Jonggol.
+            {t("auth.signIn.mobileSubheading")}
           </p>
           {/* Feature pills — compact horizontal scroll on mobile */}
           <div className="mt-4 flex gap-2 overflow-x-auto pb-1 justify-center flex-wrap">
             {[
-              { icon: Sparkles, text: "Modul gratis", color: "text-indigo-500" },
-              { icon: Target, text: "Bank soal CBT", color: "text-amber-500" },
-              { icon: Flame, text: "Leaderboard", color: "text-rose-500" },
+              { icon: Sparkles, text: t("auth.signIn.featureFree"), color: "text-indigo-500" },
+              { icon: Target, text: t("auth.signIn.featureBank"), color: "text-nawa-warning" },
+              { icon: Flame, text: t("auth.signIn.featureBoard"), color: "text-nawa-error" },
             ].map((f, i) => (
               <span key={i} className="inline-flex items-center gap-1.5 shrink-0 bg-zinc-100/80 dark:bg-zinc-800/80 border border-zinc-200/60 dark:border-zinc-700 rounded-full px-3 py-1 text-xs font-bold text-zinc-700 dark:text-zinc-300">
                 <f.icon className={`h-3.5 w-3.5 ${f.color}`} /> {f.text}
@@ -72,7 +73,7 @@ export default function SignInPage() {
           <div className="hidden lg:flex lg:col-span-5 flex-col justify-between h-full space-y-8 pr-6">
             <div className="space-y-4">
               <Link href="/" className="inline-flex items-center gap-2">
-                <div className="h-8 w-8 rounded-xl bg-indigo-600 flex items-center justify-center shadow-sm">
+                <div className="h-8 w-8 rounded-xl bg-nawa-primary flex items-center justify-center shadow-sm">
                   <Sparkles className="h-4 w-4 text-white" />
                 </div>
                 <span className="font-extrabold text-xl tracking-tight text-zinc-900 dark:text-white">
@@ -80,17 +81,17 @@ export default function SignInPage() {
                 </span>
               </Link>
               <h2 className="text-4xl xl:text-5xl font-black leading-tight tracking-tight text-zinc-950 dark:text-white">
-                Siap buat belajar jadi lebih terarah?
+                {t("auth.signIn.desktopHeading")}
               </h2>
               <p className="text-zinc-600 dark:text-zinc-400 text-base leading-relaxed">
-                Platform belajar kolaboratif yang dirancang oleh OSIS NAWASENA khusus untuk seluruh siswa dan guru SMAN 2 Jonggol.
+                {t("auth.signIn.desktopSubheading")}
               </p>
             </div>
             <div className="space-y-3">
               {[
-                { icon: Sparkles, text: "Akses ratusan modul terverifikasi gratis", color: "text-indigo-500" },
-                { icon: Target, text: "Asah kemampuanmu lewat ribuan bank soal CBT", color: "text-amber-500" },
-                { icon: Flame, text: "Kumpulkan Poin XP & rebut takhta leaderboard!", color: "text-rose-500" },
+                { icon: Sparkles, text: t("auth.signIn.perkModules"), color: "text-indigo-500" },
+                { icon: Target, text: t("auth.signIn.perkBank"), color: "text-nawa-warning" },
+                { icon: Flame, text: t("auth.signIn.perkPoints"), color: "text-nawa-error" },
               ].map((item, idx) => (
                 <div key={idx} className="flex items-center gap-3 p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200/80 dark:border-zinc-800 shadow-sm transition-all">
                   <div className="h-7 w-7 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200/60 dark:border-zinc-700/60 flex items-center justify-center shrink-0">
@@ -101,7 +102,7 @@ export default function SignInPage() {
               ))}
             </div>
             <p className="text-xs font-semibold text-zinc-400 dark:text-zinc-500">
-              Dikelola oleh OSIS NAWASENA SMAN 2 Jonggol · Divisi ICT
+              {t("auth.signIn.managedBy")}
             </p>
           </div>
 
@@ -124,12 +125,12 @@ export default function SignInPage() {
                     socialButtonsBlockButtonText: "font-bold text-sm",
                     dividerLine: "bg-zinc-100 dark:bg-zinc-800",
                     dividerText: "text-xs font-bold text-zinc-400 dark:text-zinc-500 px-3 bg-white dark:bg-zinc-950",
-                    formButtonPrimary: "bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl py-3 font-extrabold text-sm shadow-sm transition-all active:scale-[0.98] dark:bg-indigo-500 dark:hover:bg-indigo-600",
+                    formButtonPrimary: "bg-nawa-primary hover:bg-nawa-primary-hover text-white rounded-2xl py-3 font-extrabold text-sm shadow-sm transition-all active:scale-[0.98] dark:bg-indigo-500 dark:hover:bg-nawa-primary",
                     formFieldInput: "rounded-2xl border-zinc-200 dark:border-zinc-800 bg-transparent text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 py-3 text-sm transition-all",
                     formFieldLabel: "text-xs font-bold text-zinc-500 dark:text-zinc-400 mb-1.5",
-                    footerActionLink: "text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 font-extrabold text-sm transition-colors",
+                    footerActionLink: "text-nawa-primary hover:text-nawa-primary-hover dark:text-indigo-400 dark:hover:text-indigo-300 font-extrabold text-sm transition-colors",
                     footerActionText: "text-zinc-500 dark:text-zinc-400 font-semibold text-sm",
-                    formFieldAction: "text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 font-bold text-xs",
+                    formFieldAction: "text-nawa-primary hover:text-nawa-primary-hover dark:text-indigo-400 dark:hover:text-indigo-300 font-bold text-xs",
                   }
                 }}
               />

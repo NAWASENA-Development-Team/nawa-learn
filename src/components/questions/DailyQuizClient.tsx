@@ -146,7 +146,7 @@ export default function DailyQuizClient({ initialQuestions }: DailyQuizClientPro
         <BrainCircuit className="h-16 w-16 text-zinc-300 mx-auto mb-4" />
         <h2 className="text-2xl font-bold text-zinc-800 dark:text-zinc-200">Belum Ada Soal</h2>
         <p className="text-zinc-500 mt-2 mb-6">Tunggu kontributor mengunggah soal latihan terlebih dahulu.</p>
-        <Link href="/questions/practice" className="text-indigo-600 font-bold hover:underline">
+        <Link href="/questions/practice" className="text-nawa-primary font-bold hover:underline">
           Kembali ke Latihan Reguler
         </Link>
       </div>
@@ -156,7 +156,7 @@ export default function DailyQuizClient({ initialQuestions }: DailyQuizClientPro
   if (isFinished) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-20 text-center animate-in zoom-in duration-500">
-        <Trophy className="h-24 w-24 text-amber-500 mx-auto mb-6 drop-shadow-xl" />
+        <Trophy className="h-24 w-24 text-nawa-warning mx-auto mb-6 drop-shadow-xl" />
         <h2 className="text-4xl font-black text-zinc-900 dark:text-white mb-4">Sesi Kuis Selesai!</h2>
         <p className="text-lg text-zinc-600 dark:text-zinc-400 mb-6 max-w-lg mx-auto">
           Luar biasa! Kamu telah menguasai {totalQuestions} soal di sesi ini. Otakmu makin tajam!
@@ -177,7 +177,7 @@ export default function DailyQuizClient({ initialQuestions }: DailyQuizClientPro
         <div className="flex justify-center gap-4">
           <button 
             onClick={() => window.location.reload()}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl font-bold transition-all active:scale-95 shadow-lg shadow-indigo-500/30"
+            className="flex items-center gap-2 bg-nawa-primary hover:bg-nawa-primary-hover text-white px-6 py-3 rounded-2xl font-bold transition-all active:scale-95 shadow-lg shadow-indigo-500/30"
           >
             <RotateCcw className="h-5 w-5" /> Latihan Lagi
           </button>
@@ -234,7 +234,7 @@ export default function DailyQuizClient({ initialQuestions }: DailyQuizClientPro
           {/* Card Top Banner (shows red/green if revealed) */}
           <div className={`h-2 w-full transition-colors duration-300 ${
             !revealed ? "bg-indigo-500" :
-            revealed.correct ? "bg-emerald-500" : "bg-red-500"
+            revealed.correct ? "bg-nawa-success" : "bg-red-500"
           }`} />
 
           <div className="p-6 sm:p-8">
@@ -254,8 +254,8 @@ export default function DailyQuizClient({ initialQuestions }: DailyQuizClientPro
 
                 if (revealed) {
                   if (isCorrectAnswer) {
-                    btnClass = "border-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-100 ring-1 ring-emerald-500";
-                    checkIcon = <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />;
+                    btnClass = "border-nawa-success bg-emerald-50/70 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-100 ring-1 ring-nawa-success";
+                    checkIcon = <CheckCircle2 className="h-5 w-5 text-nawa-success shrink-0" />;
                   } else if (isSelected && !isCorrectAnswer) {
                     btnClass = "border-red-500 bg-red-50/70 dark:bg-red-950/30 text-red-900 dark:text-red-100 ring-1 ring-red-500";
                     checkIcon = <XCircle className="h-5 w-5 text-red-500 shrink-0" />;
@@ -263,7 +263,7 @@ export default function DailyQuizClient({ initialQuestions }: DailyQuizClientPro
                     btnClass = "border-zinc-200 dark:border-zinc-800 opacity-40";
                   }
                 } else if (isSelected) {
-                  btnClass = "border-indigo-600 bg-indigo-50/70 dark:bg-indigo-950/40 ring-1 ring-indigo-600";
+                  btnClass = "border-nawa-primary bg-indigo-50/70 dark:bg-indigo-950/40 ring-1 ring-nawa-primary";
                 }
 
                 return (
@@ -277,7 +277,7 @@ export default function DailyQuizClient({ initialQuestions }: DailyQuizClientPro
                       <span className={`h-6 w-6 rounded-md flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 ${
                         revealed && isCorrectAnswer ? "bg-emerald-600 text-white" :
                         revealed && isSelected && !isCorrectAnswer ? "bg-red-600 text-white" :
-                        isSelected ? "bg-indigo-600 text-white" :
+                        isSelected ? "bg-nawa-primary text-white" :
                         "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
                       }`}>
                         {key}
@@ -307,7 +307,7 @@ export default function DailyQuizClient({ initialQuestions }: DailyQuizClientPro
               <button
                 onClick={handleCheck}
                 disabled={!selectedOption || isChecking}
-                className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-md active:scale-95 flex items-center gap-2"
+                className="bg-nawa-primary hover:bg-nawa-primary-hover disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-md active:scale-95 flex items-center gap-2"
               >
                 {isChecking ? "Memeriksa..." : "Cek Jawaban"} <CheckCircle2 className="h-4 w-4" />
               </button>

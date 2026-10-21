@@ -20,7 +20,7 @@ export default function RootLoading() {
           layar ia tidak membawa informasi apa pun. */}
       <div className="flex flex-col items-center gap-4" role="status">
         <div
-          className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-300 border-t-indigo-600 dark:border-zinc-700 dark:border-t-indigo-400"
+          className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-300 border-t-nawa-primary dark:border-zinc-700 dark:border-t-indigo-400"
           aria-hidden
         />
         <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">Memuat…</p>

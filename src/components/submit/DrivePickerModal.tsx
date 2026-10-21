@@ -71,14 +71,14 @@ export function DrivePickerModal({ onSelect, onClose }: DrivePickerModalProps) {
               <div
                 key={idx}
                 onClick={() => onSelect(file)}
-                className="p-3 border border-zinc-100 dark:border-zinc-800 hover:border-indigo-400 dark:hover:border-indigo-600 hover:bg-indigo-50/10 dark:hover:bg-indigo-950/20 rounded-xl cursor-pointer flex items-center justify-between group transition-all duration-200"
+                className="p-3 border border-zinc-100 dark:border-zinc-800 hover:border-indigo-400 dark:hover:border-nawa-primary hover:bg-indigo-50/10 dark:hover:bg-indigo-950/20 rounded-xl cursor-pointer flex items-center justify-between group transition-all duration-200"
               >
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-zinc-50 dark:bg-zinc-800/80 flex items-center justify-center border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-950 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  <div className="h-10 w-10 rounded-lg bg-zinc-50 dark:bg-zinc-800/80 flex items-center justify-center border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-950 group-hover:text-nawa-primary dark:group-hover:text-indigo-400 transition-colors">
                     <FileText className="h-5 w-5" />
                   </div>
                   <div className="text-left">
-                    <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">{file.name}</p>
+                    <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 group-hover:text-nawa-primary dark:group-hover:text-indigo-400 transition-colors line-clamp-1">{file.name}</p>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 text-[10px] px-1.5 py-0.5 rounded font-bold">{file.type}</span>
                       <span className="text-[10px] text-zinc-400 dark:text-zinc-500">{file.size}</span>
@@ -98,7 +98,7 @@ export function DrivePickerModal({ onSelect, onClose }: DrivePickerModalProps) {
         {/* Footer */}
         <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 flex items-center justify-between text-xs text-zinc-400">
           <span>Google Drive API v3 (Simulator)</span>
-          <span className="flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5 text-emerald-500" /> Terenkripsi Aman</span>
+          <span className="flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5 text-nawa-success" /> Terenkripsi Aman</span>
         </div>
       </div>
     </div>

@@ -103,7 +103,7 @@ export function EditProfileModal({ bio, motto, onClose }: EditProfileModalProps)
               <button
                 type="button"
                 onClick={() => setEditBio(PLAYFUL_BIOS[Math.floor(Math.random() * PLAYFUL_BIOS.length)])}
-                className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold hover:underline cursor-pointer"
+                className="text-[10px] text-nawa-primary dark:text-indigo-400 font-bold hover:underline cursor-pointer"
               >
                 Acak Bio
               </button>
@@ -132,7 +132,7 @@ export function EditProfileModal({ bio, motto, onClose }: EditProfileModalProps)
           <button
             type="button"
             onClick={handleSaveProfile}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs transition-all shadow-md cursor-pointer border border-indigo-700"
+            className="bg-nawa-primary hover:bg-nawa-primary-hover text-white font-bold py-2.5 px-5 rounded-xl text-xs transition-all shadow-md cursor-pointer border border-nawa-primary-hover"
           >
             Simpan Perubahan
           </button>
@@ -167,7 +167,7 @@ export function AvatarPickerModal({ selectedAvatar, onSelect, onClose }: AvatarP
               onClick={() => onSelect(av)}
               className={`group aspect-square rounded-2xl bg-gradient-to-br ${av.bg} flex flex-col items-center justify-center shadow-md border-2 transition-all hover:scale-110 active:scale-95 cursor-pointer overflow-hidden ${
                 selectedAvatar.svg === av.svg
-                  ? "border-indigo-600 scale-105 shadow-lg shadow-indigo-600/10"
+                  ? "border-nawa-primary scale-105 shadow-lg shadow-nawa-primary/10"
                   : "border-transparent"
               }`}
               title={av.label}
@@ -235,9 +235,9 @@ export function StatusModal({ items, isLoading, onClose }: StatusModalProps) {
                     <h4 className="text-sm font-bold text-zinc-200 leading-snug">{item.title}</h4>
                   </div>
                   <span className={`shrink-0 text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider border ${
-                    item.status === "approved" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                    item.status === "approved" ? "bg-nawa-success/10 text-emerald-400 border-nawa-success/20" :
                     item.status === "rejected" ? "bg-red-500/10 text-red-400 border-red-500/20" :
-                    "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                    "bg-nawa-warning/10 text-amber-400 border-nawa-warning/20"
                   }`}>
                     {item.status}
                   </span>
@@ -398,22 +398,22 @@ export function CertificateModal({ user, onClose }: { user: UserProfile; onClose
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/90 backdrop-blur-md p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-300">
-      <div id="certificate-container" className="max-w-3xl w-full bg-white text-zinc-900 border-8 border-amber-500/80 p-6 sm:p-10 rounded-2xl shadow-2xl relative flex flex-col items-center justify-between text-center select-none overflow-hidden my-8 animate-in zoom-in-95 duration-300">
+      <div id="certificate-container" className="max-w-3xl w-full bg-white text-zinc-900 border-8 border-nawa-warning/80 p-6 sm:p-10 rounded-2xl shadow-2xl relative flex flex-col items-center justify-between text-center select-none overflow-hidden my-8 animate-in zoom-in-95 duration-300">
         {/* Elegant Background watermarks / borders */}
         <div className="absolute top-0 right-0 w-32 h-32 border-r-4 border-t-4 border-amber-200 rounded-tr-lg" />
         <div className="absolute bottom-0 left-0 w-32 h-32 border-l-4 border-b-4 border-amber-200 rounded-bl-lg" />
         <div className="absolute inset-4 border border-zinc-200 rounded" />
         <div className="absolute inset-5 border border-dashed border-amber-300 rounded" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] bg-amber-500/[0.03] rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] bg-nawa-warning/[0.03] rounded-full blur-3xl pointer-events-none" />
 
         {/* Logo and Header info */}
         <div className="relative z-10 flex flex-col items-center">
           <span className="text-5xl mb-3">🕊️</span>
-          <p className="text-[10px] font-black tracking-[0.25em] text-indigo-700 uppercase">OSIS NAWASENA SMAN 2 JONGGOL</p>
+          <p className="text-[10px] font-black tracking-[0.25em] text-nawa-primary-hover uppercase">OSIS NAWASENA SMAN 2 JONGGOL</p>
           <h2 className="font-extrabold text-2xl sm:text-3xl tracking-tight text-zinc-800 mt-2 font-serif">
             SERTIFIKAT APRESIASI
           </h2>
-          <div className="h-0.5 w-24 bg-gradient-to-r from-transparent via-amber-500 to-transparent my-3" />
+          <div className="h-0.5 w-24 bg-gradient-to-r from-transparent via-nawa-warning to-transparent my-3" />
           <p className="text-[11px] text-zinc-500 italic font-medium font-sans">
             Diberikan penghargaan setinggi-tingginya kepada kontributor berprestasi:
           </p>
@@ -444,7 +444,7 @@ export function CertificateModal({ user, onClose }: { user: UserProfile; onClose
             </div>
             <div className="bg-indigo-50 border border-indigo-200 px-4 py-2 rounded-xl text-center shadow-sm">
               <p className="text-[10px] text-indigo-800 font-bold uppercase tracking-wider">Level Scholar</p>
-              <p className="text-xl font-black text-indigo-700 mt-0.5">LEVEL {level}</p>
+              <p className="text-xl font-black text-nawa-primary-hover mt-0.5">LEVEL {level}</p>
             </div>
           </div>
 
@@ -455,7 +455,7 @@ export function CertificateModal({ user, onClose }: { user: UserProfile; onClose
         <div className="relative z-10 w-full grid grid-cols-2 gap-4 mt-8 pt-6 border-t border-zinc-100 max-w-xl text-xs">
           <div className="flex flex-col items-center">
             <p className="text-zinc-400 font-semibold uppercase text-[9px] tracking-wider">KABINET NAWASENA</p>
-            <div className="h-12 flex items-center justify-center font-mono italic text-indigo-600/40 select-none text-base font-bold my-1">
+            <div className="h-12 flex items-center justify-center font-mono italic text-nawa-primary/40 select-none text-base font-bold my-1">
               ~ Ketua OSIS Nawasena ~
             </div>
             <p className="font-extrabold text-zinc-800 border-t border-zinc-200 pt-1 w-44 text-sm">Cecillia Natasya Sonthani</p>
@@ -464,7 +464,7 @@ export function CertificateModal({ user, onClose }: { user: UserProfile; onClose
 
           <div className="flex flex-col items-center">
             <p className="text-zinc-400 font-semibold uppercase text-[9px] tracking-wider">NAWASENA TEAM</p>
-            <div className="h-12 flex items-center justify-center font-mono italic text-indigo-600/40 select-none text-base font-bold my-1">
+            <div className="h-12 flex items-center justify-center font-mono italic text-nawa-primary/40 select-none text-base font-bold my-1">
               ~ Team Developer ~
             </div>
             <p className="font-extrabold text-zinc-800 border-t border-zinc-200 pt-1 w-44 text-sm">Maulana Ferdi Irawan</p>
@@ -484,7 +484,7 @@ export function CertificateModal({ user, onClose }: { user: UserProfile; onClose
           <button
             onClick={handleDownloadCertificate}
             disabled={isDownloading}
-            className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 px-5 rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer border border-indigo-700"
+            className="bg-nawa-primary hover:bg-nawa-primary-hover disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 px-5 rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer border border-nawa-primary-hover"
           >
             <Download className={`h-4 w-4 ${isDownloading ? "animate-bounce" : ""}`} />
             {isDownloading ? "Menyiapkan PDF..." : "Unduh Sertifikat"}

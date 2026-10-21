@@ -1,7 +1,54 @@
-@import "tailwindcss";
+/* ── Content sources: explicit, not automatic ──────────────────────────────
+   Tailwind v4's automatic detection scans the whole project — including
+   markdown — so a class name quoted in `DESIGN.md` or in a roadmap note
+   emitted real CSS: `from-indigo-600 to-violet-600` in a prose sentence about
+   buttons produced `.from-indigo-600` and `.to-violet-600` that no component
+   used. Harmless bytes, but it makes "is the rename finished?" unanswerable by
+   grepping the build output, and it turns the design doc into a hidden
+   content source.
 
-/* -- Enable class-based dark mode for Tailwind v4 -- */
+   Scoping the sources makes the docs safe to write honestly (an old class name
+   in a migration note no longer ships CSS) and makes the scan predictable.
+   `tests/unit/design-tokens.test.ts` fails if this restriction is removed. */
+@import "tailwindcss" source(none);
+@source "../../src/**/*.{ts,tsx}";
+
+/* ── Enable class-based dark mode for Tailwind v4 ── */
 @custom-variant dark (&:where(.dark, .dark *));
+
+/* ── Design tokens: DESIGN.md made enforceable ─────────────────────────────
+   Every value below mirrors `colors:` in the DESIGN.md frontmatter, and
+   `tests/unit/design-tokens.test.ts` parses that frontmatter and fails if the
+   two drift. Changing a brand colour is now a one-place edit: update
+   DESIGN.md, update this block, and every `bg-nawa-primary` in the app
+   follows. BEFORE this, DESIGN.md was "a dictionary, not a guard" — it could
+   describe a palette that the components never actually used.
+
+   Only the brand colours (primary/secondary/success/error/warning) were
+   MIGRATED to these names. The neutrals (zinc-*) deliberately stay raw:
+   `zinc-800` is a border, a button background AND a text colour in different
+   places, so a bulk rename to `bg-nawa-border-dark` would be wrong in two of
+   them. They are declared here for parity with the doc, not for migration. */
+@theme {
+  --color-nawa-primary: #4f46e5;
+  --color-nawa-primary-hover: #4338ca;
+  --color-nawa-secondary: #7c3aed;
+  --color-nawa-secondary-hover: #6d28d9;
+  --color-nawa-success: #10b981;
+  --color-nawa-error: #f43f5e;
+  --color-nawa-warning: #f59e0b;
+
+  --color-nawa-surface-light: #ffffff;
+  --color-nawa-surface-light-muted: #f4f4f5;
+  --color-nawa-surface-dark: #09090b;
+  --color-nawa-surface-dark-card: #18181b;
+  --color-nawa-border-light: #e4e4e7;
+  --color-nawa-border-dark: #27272a;
+  --color-nawa-text-light-primary: #18181b;
+  --color-nawa-text-light-muted: #71717a;
+  --color-nawa-text-dark-primary: #ffffff;
+  --color-nawa-text-dark-muted: #a1a1aa;
+}
 
 html {
   scroll-behavior: smooth;

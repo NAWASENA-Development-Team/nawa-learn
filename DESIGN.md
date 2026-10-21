@@ -213,9 +213,9 @@ Forms are friendly, soft, and modern, using generous corner radii that soften hi
 
 - **Primary Action**:
   - Shape: `rounded-xl` (`12px`) or `rounded-2xl` (`16px`)
-  - Fill: Linear gradient `from-indigo-600 to-violet-600` (`#4f46e5` → `#7c3aed`), text `#ffffff`, font weight `700`.
+  - Fill: Linear gradient `from-nawa-primary to-nawa-secondary` (`#4f46e5` → `#7c3aed`), text `#ffffff`, font weight `700`.
   - Padding: `12px 24px` (or `16px 32px` on Hero CTA).
-  - Shadow: `shadow-md shadow-indigo-500/25` expanding to `shadow-indigo-500/40` on hover.
+  - Shadow: `shadow-md shadow-indigo-500/25` expanding to `shadow-indigo-500/40` on hover. (#6366f1 — sengaja lebih terang dari brand #4f46e5 agar glow terlihat.)
   - Transitions: `transition-all duration-200`, `hover:-translate-y-0.5`, `active:scale-[0.98]`.
 - **Secondary / Outline**:
   - Shape: `rounded-xl` (`12px`)

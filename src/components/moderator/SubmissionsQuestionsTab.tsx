@@ -53,7 +53,7 @@ export function SubmissionsQuestionsTab({
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 dark:border-zinc-800/80 pb-3">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {q.subject && (
-                    <span className="text-[10px] bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-extrabold px-2.5 py-0.5 rounded">
+                    <span className="text-[10px] bg-indigo-50 dark:bg-indigo-950/40 text-nawa-primary dark:text-indigo-400 font-extrabold px-2.5 py-0.5 rounded">
                       {q.subject}
                     </span>
                   )}

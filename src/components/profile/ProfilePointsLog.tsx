@@ -10,12 +10,12 @@ export function ProfilePointsLog({ logs }: { logs: PointLog[] }) {
   return (
     <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-sm relative overflow-hidden">
       {/* Subtle background glow */}
-      <div className="absolute -top-32 -right-32 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -top-32 -right-32 w-64 h-64 bg-nawa-warning/5 rounded-full blur-3xl pointer-events-none" />
 
       <div className="mb-8 pb-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between relative z-10">
         <div>
           <h3 className="text-xl font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-            <span className="p-1.5 bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl">
+            <span className="p-1.5 bg-amber-100 dark:bg-nawa-warning/20 text-amber-600 dark:text-amber-400 rounded-xl">
               <Clock className="w-5 h-5" />
             </span>
             Jejak Petualanganmu
@@ -35,7 +35,7 @@ export function ProfilePointsLog({ logs }: { logs: PointLog[] }) {
           </p>
         </div>
       ) : (
-        <div className="relative border-l-2 border-amber-500/20 dark:border-amber-500/20 pl-6 sm:pl-8 space-y-6 sm:space-y-8 max-w-3xl text-left ml-4 sm:ml-6">
+        <div className="relative border-l-2 border-nawa-warning/20 dark:border-nawa-warning/20 pl-6 sm:pl-8 space-y-6 sm:space-y-8 max-w-3xl text-left ml-4 sm:ml-6">
           {logs.map((log) => {
             // Determine format
             let actionText = log.action.replace(/_/g, " ");
@@ -52,8 +52,8 @@ export function ProfilePointsLog({ logs }: { logs: PointLog[] }) {
             } else if (log.action === "module_approved") {
               actionText = "Modul Berhasil Disetujui";
               ActionIcon = BookOpen;
-              iconColor = "text-emerald-500 dark:text-emerald-400";
-              iconBg = "bg-emerald-100 dark:bg-emerald-900/30 border-emerald-500/20";
+              iconColor = "text-nawa-success dark:text-emerald-400";
+              iconBg = "bg-emerald-100 dark:bg-emerald-900/30 border-nawa-success/20";
             } else if (log.action === "question_approved") {
               actionText = "Soal CBT Berhasil Disetujui";
               ActionIcon = Edit3;
@@ -62,8 +62,8 @@ export function ProfilePointsLog({ logs }: { logs: PointLog[] }) {
             } else if (log.action.includes("rejected")) {
               actionText = log.action.includes("module") ? "Modul Ditolak" : "Soal Ditolak";
               ActionIcon = XCircle;
-              iconColor = "text-rose-500 dark:text-rose-400";
-              iconBg = "bg-rose-100 dark:bg-rose-900/30 border-rose-500/20";
+              iconColor = "text-nawa-error dark:text-rose-400";
+              iconBg = "bg-rose-100 dark:bg-rose-900/30 border-nawa-error/20";
             } else if (log.action === "module_downloaded") {
               actionText = "Seseorang Mengunduh Modulmu";
               ActionIcon = Share2;
@@ -72,19 +72,19 @@ export function ProfilePointsLog({ logs }: { logs: PointLog[] }) {
             } else if (log.action === "daily_login") {
               actionText = "Login Harian";
               ActionIcon = Calendar;
-              iconColor = "text-amber-500 dark:text-amber-400";
-              iconBg = "bg-amber-100 dark:bg-amber-900/30 border-amber-500/20";
+              iconColor = "text-nawa-warning dark:text-amber-400";
+              iconBg = "bg-amber-100 dark:bg-amber-900/30 border-nawa-warning/20";
             }
 
             const isPositive = log.delta > 0;
-            const pointColor = isPositive ? "text-amber-500 dark:text-amber-400" : "text-rose-500 dark:text-rose-400";
+            const pointColor = isPositive ? "text-nawa-warning dark:text-amber-400" : "text-nawa-error dark:text-rose-400";
             const pointBg = isPositive ? "bg-amber-100/50 dark:bg-amber-950/50 border-amber-200 dark:border-amber-900/50" : "bg-rose-100/50 dark:bg-rose-950/50 border-rose-200 dark:border-rose-900/50";
 
             return (
               <div key={log.id} className="relative group">
                 {/* Timeline bullet */}
                 <span className={`absolute -left-[33px] sm:-left-[41px] top-4 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full ring-4 ring-white dark:ring-zinc-900
-                  ${isPositive ? "bg-gradient-to-br from-amber-400 to-amber-600 shadow-sm shadow-amber-500/50" : "bg-gradient-to-br from-rose-400 to-rose-600 shadow-sm shadow-rose-500/50"}
+                  ${isPositive ? "bg-gradient-to-br from-amber-400 to-amber-600 shadow-sm shadow-nawa-warning/50" : "bg-gradient-to-br from-rose-400 to-rose-600 shadow-sm shadow-nawa-error/50"}
                   transition-transform duration-300 group-hover:scale-125`}
                 />
 
@@ -108,7 +108,7 @@ export function ProfilePointsLog({ logs }: { logs: PointLog[] }) {
                   </div>
 
                   <div className={`shrink-0 self-start sm:self-auto px-4 py-2 rounded-xl border ${pointBg} flex items-center gap-1.5`}>
-                    <Star className={`w-3.5 h-3.5 ${pointColor} ${isPositive ? "fill-amber-500/50" : "fill-rose-500/50"}`} />
+                    <Star className={`w-3.5 h-3.5 ${pointColor} ${isPositive ? "fill-nawa-warning/50" : "fill-nawa-error/50"}`} />
                     <span className={`font-black text-sm sm:text-base ${pointColor}`}>
                       {isPositive ? `+${log.delta}` : log.delta} Poin
                     </span>

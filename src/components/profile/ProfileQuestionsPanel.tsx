@@ -13,7 +13,7 @@ export function ProfileQuestionsPanel({ questions }: { questions: UserQuestion[]
       <div className="flex items-center justify-between mb-6 pb-4 border-b border-zinc-100 dark:border-zinc-800">
         <div>
           <h3 className="text-lg font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-            <HelpCircle className="h-5 w-5 text-emerald-500" /> Soal Latihan Yang Kamu Buat
+            <HelpCircle className="h-5 w-5 text-nawa-success" /> Soal Latihan Yang Kamu Buat
           </h3>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
             Daftar pertanyaan dan soal latihan ujian yang telah kamu tambahkan ke bank soal sekolah.
@@ -21,7 +21,7 @@ export function ProfileQuestionsPanel({ questions }: { questions: UserQuestion[]
         </div>
         <Link
           href="/submit"
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-md cursor-pointer"
+          className="bg-nawa-primary hover:bg-nawa-primary-hover text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-md cursor-pointer"
         >
           + Buat Soal Baru
         </Link>
@@ -36,7 +36,7 @@ export function ProfileQuestionsPanel({ questions }: { questions: UserQuestion[]
           </p>
           <Link
             href="/submit"
-            className="mt-4 inline-flex items-center gap-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 dark:hover:bg-indigo-900 text-indigo-600 dark:text-indigo-400 text-xs px-4.5 py-2.5 rounded-xl font-bold border border-indigo-100 dark:border-indigo-900 transition-all cursor-pointer"
+            className="mt-4 inline-flex items-center gap-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 dark:hover:bg-indigo-900 text-nawa-primary dark:text-indigo-400 text-xs px-4.5 py-2.5 rounded-xl font-bold border border-indigo-100 dark:border-indigo-900 transition-all cursor-pointer"
           >
             Buat Soal Latihan Sekarang <ArrowRight className="h-3.5 w-3.5" />
           </Link>
@@ -46,9 +46,9 @@ export function ProfileQuestionsPanel({ questions }: { questions: UserQuestion[]
           {questions.map((q) => (
             <div
               key={q.id}
-              className="group relative bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 hover:border-emerald-400 dark:hover:border-emerald-500 transition-all duration-300 shadow-sm hover:shadow-md flex flex-col h-full overflow-hidden text-left"
+              className="group relative bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 hover:border-emerald-400 dark:hover:border-nawa-success transition-all duration-300 shadow-sm hover:shadow-md flex flex-col h-full overflow-hidden text-left"
             >
-              <div className="absolute -right-8 -top-8 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none group-hover:bg-emerald-500/15 transition-all" />
+              <div className="absolute -right-8 -top-8 w-24 h-24 bg-nawa-success/5 rounded-full blur-2xl pointer-events-none group-hover:bg-nawa-success/15 transition-all" />
 
               <div className="flex justify-between items-start gap-4 mb-4 relative z-10">
                 <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[10px] font-black tracking-wider uppercase border shadow-sm
@@ -84,7 +84,7 @@ export function ProfileQuestionsPanel({ questions }: { questions: UserQuestion[]
 
               <div className="mt-auto pt-4 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-[10px] text-zinc-500 font-semibold relative z-10">
                 <span className="flex items-center gap-1.5 text-zinc-700 dark:text-zinc-400 bg-white dark:bg-zinc-900 px-2.5 py-1 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-sm">
-                  <HelpCircle className="h-3.5 w-3.5 text-emerald-500" /> Kuis CBT
+                  <HelpCircle className="h-3.5 w-3.5 text-nawa-success" /> Kuis CBT
                 </span>
                 <span>{new Date(q.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</span>
               </div>

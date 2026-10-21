@@ -62,7 +62,7 @@ export default function ConsentForm() {
     <div className="min-h-screen w-full flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4 py-10">
       <div className="w-full max-w-xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl shadow-xl p-6 sm:p-8">
         <div className="flex items-center gap-3">
-          <div className="h-11 w-11 rounded-2xl bg-indigo-600 dark:bg-indigo-500 flex items-center justify-center shadow-sm shrink-0">
+          <div className="h-11 w-11 rounded-2xl bg-nawa-primary dark:bg-indigo-500 flex items-center justify-center shadow-sm shrink-0">
             <ShieldCheck className="h-5 w-5 text-white" />
           </div>
           <div>
@@ -87,7 +87,7 @@ export default function ConsentForm() {
             href={POLICY_PATHS.privacy}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center justify-between gap-2 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-sm font-bold text-zinc-700 dark:text-zinc-200 transition-colors hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+            className="flex items-center justify-between gap-2 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-sm font-bold text-zinc-700 dark:text-zinc-200 transition-colors hover:border-indigo-400 hover:text-nawa-primary dark:hover:text-indigo-400"
           >
             <span className="flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-indigo-500" /> Kebijakan Privasi
@@ -98,7 +98,7 @@ export default function ConsentForm() {
             href={POLICY_PATHS.terms}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center justify-between gap-2 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-sm font-bold text-zinc-700 dark:text-zinc-200 transition-colors hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+            className="flex items-center justify-between gap-2 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-sm font-bold text-zinc-700 dark:text-zinc-200 transition-colors hover:border-indigo-400 hover:text-nawa-primary dark:hover:text-indigo-400"
           >
             <span className="flex items-center gap-2">
               <FileText className="h-4 w-4 text-indigo-500" /> Ketentuan Layanan
@@ -108,12 +108,12 @@ export default function ConsentForm() {
         </div>
 
         <form onSubmit={handleSubmit} className="mt-6">
-          <label className="flex items-start gap-3 cursor-pointer rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-4 transition-colors hover:border-indigo-300 dark:hover:border-indigo-700">
+          <label className="flex items-start gap-3 cursor-pointer rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-4 transition-colors hover:border-indigo-300 dark:hover:border-nawa-primary-hover">
             <input
               type="checkbox"
               checked={checked}
               onChange={(event) => setChecked(event.target.checked)}
-              className="mt-0.5 h-5 w-5 shrink-0 rounded border-zinc-300 text-indigo-600 accent-indigo-600 cursor-pointer"
+              className="mt-0.5 h-5 w-5 shrink-0 rounded border-zinc-300 text-nawa-primary accent-nawa-primary cursor-pointer"
             />
             <span className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
               Saya sudah membaca dan <strong>menyetujui</strong> Kebijakan Privasi dan
@@ -125,7 +125,7 @@ export default function ConsentForm() {
           <button
             type="submit"
             disabled={!checked || isSubmitting}
-            className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-800 disabled:cursor-not-allowed text-white px-5 py-3 text-sm font-extrabold shadow-sm transition-all active:scale-[0.98] cursor-pointer"
+            className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-nawa-primary hover:bg-nawa-primary-hover disabled:bg-zinc-300 dark:disabled:bg-zinc-800 disabled:cursor-not-allowed text-white px-5 py-3 text-sm font-extrabold shadow-sm transition-all active:scale-[0.98] cursor-pointer"
           >
             {isSubmitting ? (
               <>
@@ -142,7 +142,7 @@ export default function ConsentForm() {
           privasi profil. Pertanyaan soal data:{" "}
           <a
             href={`mailto:${PRIVACY_CONTACT_EMAIL}`}
-            className="font-bold text-indigo-600 hover:underline dark:text-indigo-400"
+            className="font-bold text-nawa-primary hover:underline dark:text-indigo-400"
           >
             {PRIVACY_CONTACT_EMAIL}
           </a>

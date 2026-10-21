@@ -229,7 +229,7 @@ export function ProfileHeader({
           {/* Avatar frame ring for ranked players */}
           {avatarFrame && (
             <div className={`absolute -inset-1.5 rounded-[28px] bg-gradient-to-br ${
-              user.rank <= 3 ? "from-amber-400 via-yellow-300 to-amber-500" :
+              user.rank <= 3 ? "from-amber-400 via-yellow-300 to-nawa-warning" :
               user.rank <= 10 ? "from-purple-400 via-fuchsia-400 to-purple-600" :
               "from-cyan-400 via-blue-400 to-cyan-600"
             } ${user.rank <= 3 ? "animate-[spin_4s_linear_infinite]" : ""} opacity-80`} />
@@ -245,7 +245,7 @@ export function ProfileHeader({
             {isOwnProfile && !customPhoto && (
               <button
                 onClick={onSelectAvatar}
-                className="absolute -bottom-2 -right-2 bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-xl border border-white/20 shadow-md transition-all scale-90 opacity-0 group-hover:opacity-100 group-hover:scale-100 cursor-pointer"
+                className="absolute -bottom-2 -right-2 bg-nawa-primary hover:bg-nawa-primary-hover text-white p-2 rounded-xl border border-white/20 shadow-md transition-all scale-90 opacity-0 group-hover:opacity-100 group-hover:scale-100 cursor-pointer"
                 title="Ganti Lencana Avatar"
               >
                 <Edit3 className="h-4.5 w-4.5" />
@@ -266,7 +266,7 @@ export function ProfileHeader({
 
           {/* Rank indicator badge */}
           {user.rank <= 3 && (
-            <span className="absolute -top-3 -left-3 bg-amber-500 text-zinc-950 px-2.5 py-0.5 rounded-lg text-[10px] font-black tracking-wider uppercase border border-amber-300 shadow-md">
+            <span className="absolute -top-3 -left-3 bg-nawa-warning text-zinc-950 px-2.5 py-0.5 rounded-lg text-[10px] font-black tracking-wider uppercase border border-amber-300 shadow-md">
               #{user.rank}
             </span>
           )}
@@ -278,12 +278,12 @@ export function ProfileHeader({
             <h1 className="text-3xl sm:text-4xl font-black tracking-tight flex items-center gap-2 flex-wrap justify-center md:justify-start">
               {user.name}
               {user.role === "admin" && (
-                <span className="bg-rose-500 text-white px-2.5 py-1 rounded-lg text-xs font-black tracking-wider uppercase border border-rose-400 flex items-center gap-1 shadow-sm">
+                <span className="bg-nawa-error text-white px-2.5 py-1 rounded-lg text-xs font-black tracking-wider uppercase border border-rose-400 flex items-center gap-1 shadow-sm">
                   <Shield className="h-3.5 w-3.5" /> ADMIN
                 </span>
               )}
               {user.role === "moderator" && (
-                <span className="bg-amber-500 text-white px-2.5 py-1 rounded-lg text-xs font-black tracking-wider uppercase border border-amber-400 flex items-center gap-1 shadow-sm">
+                <span className="bg-nawa-warning text-white px-2.5 py-1 rounded-lg text-xs font-black tracking-wider uppercase border border-amber-400 flex items-center gap-1 shadow-sm">
                   <UserCheck className="h-3.5 w-3.5" /> REVIEWER
                 </span>
               )}
@@ -353,7 +353,7 @@ export function ProfileHeader({
             {user.points > 0 && (
               <button
                 onClick={onOpenCertificate}
-                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-zinc-950 px-4 py-2.5 text-xs font-black shadow-lg shadow-amber-500/20 border border-amber-300/30 transition-all hover:scale-[1.02] active:scale-95 cursor-pointer"
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-nawa-warning to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-zinc-950 px-4 py-2.5 text-xs font-black shadow-lg shadow-nawa-warning/20 border border-amber-300/30 transition-all hover:scale-[1.02] active:scale-95 cursor-pointer"
               >
                 <Award className="h-4 w-4" /> Lihat Sertifikat Kontributor
               </button>
@@ -408,7 +408,7 @@ export function ProfileHeader({
                 {/* UU PDP: hak ekspor & hapus harus punya pintunya sendiri. */}
                 <Link
                   href="/profile/privacy"
-                  className="inline-flex items-center gap-2 rounded-xl bg-zinc-800/80 hover:bg-emerald-900/40 border border-zinc-700/80 hover:border-emerald-500/50 text-emerald-300 px-4 py-2.5 text-xs font-bold transition-all hover:scale-[1.02] active:scale-95 cursor-pointer"
+                  className="inline-flex items-center gap-2 rounded-xl bg-zinc-800/80 hover:bg-emerald-900/40 border border-zinc-700/80 hover:border-nawa-success/50 text-emerald-300 px-4 py-2.5 text-xs font-bold transition-all hover:scale-[1.02] active:scale-95 cursor-pointer"
                 >
                   <ShieldCheck className="h-4 w-4" /> Privasi &amp; Data
                 </Link>

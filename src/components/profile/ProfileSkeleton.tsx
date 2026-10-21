@@ -62,7 +62,7 @@ export default function ProfileSkeleton() {
 
       <div className="fixed bottom-10 right-10 flex items-center justify-center p-4 bg-white dark:bg-zinc-900 rounded-full shadow-lg border border-zinc-200 dark:border-zinc-800">
         <Loader2
-          className="h-6 w-6 animate-spin text-indigo-600"
+          className="h-6 w-6 animate-spin text-nawa-primary"
           aria-hidden
         />
       </div>

@@ -172,7 +172,7 @@ export default function ProfileClient({
           onClick={() => setActiveTab("summary")}
           className={`shrink-0 whitespace-nowrap flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer snap-start ${
             activeTab === "summary"
-              ? "bg-white dark:bg-zinc-900 text-indigo-600 dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-800"
+              ? "bg-white dark:bg-zinc-900 text-nawa-primary dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-800"
               : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
           }`}
         >
@@ -182,7 +182,7 @@ export default function ProfileClient({
           onClick={() => setActiveTab("modules")}
           className={`shrink-0 whitespace-nowrap flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer snap-start ${
             activeTab === "modules"
-              ? "bg-white dark:bg-zinc-900 text-indigo-600 dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-800"
+              ? "bg-white dark:bg-zinc-900 text-nawa-primary dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-800"
               : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
           }`}
         >
@@ -192,7 +192,7 @@ export default function ProfileClient({
           onClick={() => setActiveTab("questions")}
           className={`shrink-0 whitespace-nowrap flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer snap-start ${
             activeTab === "questions"
-              ? "bg-white dark:bg-zinc-900 text-indigo-600 dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-800"
+              ? "bg-white dark:bg-zinc-900 text-nawa-primary dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-800"
               : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
           }`}
         >
@@ -202,7 +202,7 @@ export default function ProfileClient({
           onClick={() => setActiveTab("logs")}
           className={`shrink-0 whitespace-nowrap flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer snap-start ${
             activeTab === "logs"
-              ? "bg-white dark:bg-zinc-900 text-indigo-600 dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-800"
+              ? "bg-white dark:bg-zinc-900 text-nawa-primary dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-800"
               : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
           }`}
         >

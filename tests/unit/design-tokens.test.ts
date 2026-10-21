@@ -55,8 +55,15 @@ function sourceFiles(dir: string = SRC_DIR, found: string[] = []): string[] {
   return found;
 }
 
+// CSS butuh pembaca komentar sendiri. `withoutComments()` menganggap urutan
+// `/*` + `*/` di dalam string glob `@source "../../src/**/*.{ts,tsx}"` sebagai
+// blok komentar, lalu memakan segalanya sampai `*/` berikutnya — termasuk
+// `@custom-variant dark` yang berada di antaranya. Untuk CSS, komentar selalu
+// didahului whitespace, `{`, `}` atau `;`, jadi pembuka yang menempel pada
+// huruf (seperti di dalam glob) tidak dianggap komentar.
 function globalsCss(): string {
-  return withoutComments(readFileSync(GLOBALS_CSS, "utf8"));
+  return readFileSync(GLOBALS_CSS, "utf8")
+    .replace(/(^|[\s{};])\/\*[\s\S]*?\*\//g, "$1");
 }
 
 describe("skala warna Tailwind", () => {
@@ -103,5 +110,90 @@ describe("fokus keyboard", () => {
     // sebelum M15 tidak ada satu pun kelas `focus-visible:` di `src` — penanda
     // fokus hilang begitu sebuah kontrol memakai `focus:outline-none`.
     expect(css).toMatch(/:focus-visible\s*\{[^}]*outline:\s*2px solid #4f46e5/);
+  });
+});
+
+/**
+ * `colors:` dari frontmatter `DESIGN.md`, diparsing tanpa dependensi YAML.
+ * Frontmatter ini sengaja dipakai sebagai **sumber kebenaran**: jika seseorang
+ * mengubah palet di dokumen, tes ini gagal sampai `@theme` mengikutinya —
+ * begitulah `DESIGN.md` berhenti menjadi kamus dan menjadi penjaga.
+ */
+function designPalette(): Map<string, string> {
+  const md = readFileSync(path.join(process.cwd(), "DESIGN.md"), "utf8");
+  const frontmatter = md.split(/^---$/m)[1] ?? "";
+  const palette = new Map<string, string>();
+
+  let inColors = false;
+  for (const line of frontmatter.split(/\r?\n/)) {
+    if (/^colors:/.test(line)) { inColors = true; continue; }
+    if (inColors && /^\S/.test(line)) break; // blok berikutnya (typography, dst.)
+    if (!inColors) continue;
+
+    const entry = line.match(/^\s{2}([\w-]+):\s*"(#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}))"/);
+    if (entry) palette.set(entry[1], entry[2].toLowerCase());
+  }
+
+  expect(palette.size, "DESIGN.md frontmatter must list its colours").toBeGreaterThan(0);
+  return palette;
+}
+
+describe("blok @theme", () => {
+  it("setiap warna di DESIGN.md ada di @theme dengan nilai yang persis sama", () => {
+    const css = globalsCss();
+    // Ambil hanya blok @theme yang pertama (yang ada `--color-*`-nya).
+    const themeBlock = css.match(/@theme\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(themeBlock, "globals.css must declare an @theme block").not.toBe("");
+
+    const missing: string[] = [];
+    const wrong: string[] = [];
+
+    for (const [name, hex] of designPalette()) {
+      // Nama di dokumen dipakai mentah dengan prefiks `nawa-`:
+      // `primary` -> `--color-nawa-primary`, `surface-dark` -> `--color-nawa-surface-dark`.
+      const token = `--color-nawa-${name}`;
+      const declared = themeBlock.match(
+        new RegExp(`${token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}:\\s*(#[0-9a-fA-F]{3,6})`),
+      );
+
+      if (!declared) missing.push(`${name} (${token})`);
+      else if (declared[1].toLowerCase() !== hex) {
+        wrong.push(`${name}: DESIGN.md ${hex} vs @theme ${declared[1]}`);
+      }
+    }
+
+    expect(missing).toEqual([]);
+    expect(wrong).toEqual([]);
+  });
+
+  it("warna brand benar-benar dipakai, bukan sekadar dideklarasikan", () => {
+    // Blok @theme tanpa pemakaian adalah "penulis tanpa pembaca" — pola yang
+    // membuat M5 menghapus tabel bookmarks. Setelah migrasi, `bg-nawa-primary`
+    // harus muncul di sekurang-kurangnya satu berkas.
+    const users = sourceFiles().filter((f) =>
+      /(?:bg|text|border|ring|from|to|via)-nawa-(?:primary|secondary|success|error|warning)/
+        .test(readFileSync(f, "utf8")));
+    expect(users.length, "no component uses the nawa-* brand tokens").toBeGreaterThan(0);
+  });
+});
+
+describe("sumber konten Tailwind", () => {
+  it("dibatasi ke src/, supaya nama kelas di markdown tidak ikut jadi CSS", () => {
+    const css = globalsCss();
+
+    // Deteksi otomatis Tailwind v4 memindai seluruh proyek, **termasuk
+    // markdown**. Akibatnya `from-indigo-600 to-violet-600` yang dikutip di
+    // catatan migrasi `DESIGN.md` benar-benar memancarkan `.from-indigo-600` dan
+    // `.to-violet-600` ke bundel, padahal tidak ada komponen yang memakainya —
+    // dan itu membuat "apakah rename-nya selesai?" mustahil dijawab dengan
+    // menggrep keluaran build.
+    expect(css, "auto-detection must be disabled").toMatch(/@import\s+"tailwindcss"\s+source\(none\)/);
+    expect(css, "@source must point at the real component tree").toMatch(
+      /@source\s+"[^"]*src\/\*\*\/\*\.\{ts,tsx\}"/,
+    );
+    // Kalau `source(none)` dihapus tanpa mengembalikan `@source`, seluruh CSS
+    // utilitas hilang dan halaman tampil tanpa gaya — kegagalan yang jauh lebih
+    // mahal daripada beberapa aturan hantu. Keduanya harus ada bersamaan.
+    expect(css).not.toMatch(/@source\s+"[^"]*\.md"/);
   });
 });

@@ -127,24 +127,24 @@ export function ModuleSubmitForm() {
           <div className="max-w-md w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-8 rounded-2xl shadow-2xl text-center relative overflow-hidden animate-in fade-in zoom-in duration-300">
             {/* Ambient glows */}
             <div className="absolute -top-12 -left-12 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl" />
-            <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl" />
+            <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-nawa-success/10 rounded-full blur-2xl" />
 
             <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 mb-6 relative">
               <CheckCircle2 className="h-10 w-10 animate-bounce" />
-              <Sparkles className="h-5 w-5 text-amber-500 absolute -top-1 -right-1 animate-pulse" />
+              <Sparkles className="h-5 w-5 text-nawa-warning absolute -top-1 -right-1 animate-pulse" />
             </div>
 
             <h3 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2">Kontribusi Terkirim!</h3>
             <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6">
-              Terima kasih pejuang NAWA-LEARN! Modul <span className="font-semibold text-indigo-600 dark:text-indigo-400">&quot;{submittedModuleName}&quot;</span> telah masuk dalam antrean moderasi.
+              Terima kasih pejuang NAWA-LEARN! Modul <span className="font-semibold text-nawa-primary dark:text-indigo-400">&quot;{submittedModuleName}&quot;</span> telah masuk dalam antrean moderasi.
             </p>
 
             <div className="bg-zinc-50 dark:bg-zinc-950 p-4 border border-zinc-200 dark:border-zinc-800 rounded-xl mb-6 flex items-center justify-between text-left">
               <div>
                 <p className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">POTENSI HADIAH</p>
-                <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400">+50 Poin XP</p>
+                <p className="text-lg font-bold text-nawa-primary dark:text-indigo-400">+50 Poin XP</p>
               </div>
-              <div className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 text-xs px-2.5 py-1 rounded-md font-semibold border border-indigo-100 dark:border-indigo-950">
+              <div className="bg-indigo-50 dark:bg-indigo-950/40 text-nawa-primary dark:text-indigo-400 text-xs px-2.5 py-1 rounded-md font-semibold border border-indigo-100 dark:border-indigo-950">
                 Peringkat Siswa
               </div>
             </div>
@@ -153,7 +153,7 @@ export function ModuleSubmitForm() {
               <button
                 type="button"
                 onClick={() => setShowCelebration(false)}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-xl transition-all duration-200 shadow-md shadow-indigo-600/10 hover:shadow-lg hover:scale-[1.01] cursor-pointer"
+                className="w-full bg-nawa-primary hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-xl transition-all duration-200 shadow-md shadow-nawa-primary/10 hover:shadow-lg hover:scale-[1.01] cursor-pointer"
               >
                 Kirim Modul Lain
               </button>
@@ -203,7 +203,7 @@ export function ModuleSubmitForm() {
                   onClick={() => handleGradeSelect(gradeOption)}
                   className={`py-2 rounded-xl text-xs font-bold border transition-all duration-200 ${
                     selectedGrade === gradeOption
-                      ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/10 scale-[1.02]"
+                      ? "bg-nawa-primary border-nawa-primary text-white shadow-md shadow-nawa-primary/10 scale-[1.02]"
                       : "border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
                   }`}
                 >
@@ -229,7 +229,7 @@ export function ModuleSubmitForm() {
                   onClick={() => handleCategorySelect(categoryOption.value)}
                   className={`py-2 rounded-xl text-xs font-bold border transition-all duration-200 ${
                     selectedCategory === categoryOption.value
-                      ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/10 scale-[1.02]"
+                      ? "bg-nawa-primary border-nawa-primary text-white shadow-md shadow-nawa-primary/10 scale-[1.02]"
                       : "border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
                   }`}
                 >
@@ -253,7 +253,7 @@ export function ModuleSubmitForm() {
                 onClick={() => handleSubjectSelect(subj)}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-150 ${
                   selectedSubject === subj
-                    ? "bg-indigo-50 dark:bg-indigo-950/40 border-indigo-500 text-indigo-600 dark:text-indigo-400 font-bold scale-[1.02]"
+                    ? "bg-indigo-50 dark:bg-indigo-950/40 border-indigo-500 text-nawa-primary dark:text-indigo-400 font-bold scale-[1.02]"
                     : "border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400"
                 }`}
               >
@@ -285,7 +285,7 @@ export function ModuleSubmitForm() {
         <button
           type="submit"
           disabled={isSubmitting || !currentContentUrl}
-          className="w-full bg-indigo-600 text-white py-3.5 rounded-xl hover:bg-indigo-500 disabled:opacity-50 disabled:pointer-events-none font-bold transition-all duration-200 text-sm shadow-lg shadow-indigo-600/10 hover:shadow-xl hover:scale-[1.005] active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+          className="w-full bg-nawa-primary text-white py-3.5 rounded-xl hover:bg-indigo-500 disabled:opacity-50 disabled:pointer-events-none font-bold transition-all duration-200 text-sm shadow-lg shadow-nawa-primary/10 hover:shadow-xl hover:scale-[1.005] active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
         >
           {isSubmitting ? (
             <>

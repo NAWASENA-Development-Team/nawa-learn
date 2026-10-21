@@ -312,7 +312,7 @@ export default function ModeratorClient() {
       {/* Header Panel */}
       <div className="mb-8 pb-6 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 p-6 sm:p-7 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm">
         <div className="flex items-start gap-4">
-          <div className="h-11 w-11 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5">
+          <div className="h-11 w-11 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-nawa-primary dark:text-indigo-400 shrink-0 mt-0.5">
             <ShieldCheck className="h-6 w-6" />
           </div>
           <div>
@@ -331,7 +331,7 @@ export default function ModeratorClient() {
             onClick={() => setActiveTab("modules")}
             className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center gap-2 active:scale-[0.98] ${
               activeTab === "modules"
-                ? "bg-indigo-600 border-indigo-600 text-white shadow-sm"
+                ? "bg-nawa-primary border-nawa-primary text-white shadow-sm"
                 : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
             }`}
           >
@@ -342,7 +342,7 @@ export default function ModeratorClient() {
             onClick={() => setActiveTab("questions")}
             className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center gap-2 active:scale-[0.98] ${
               activeTab === "questions"
-                ? "bg-indigo-600 border-indigo-600 text-white shadow-sm"
+                ? "bg-nawa-primary border-nawa-primary text-white shadow-sm"
                 : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
             }`}
           >
@@ -353,7 +353,7 @@ export default function ModeratorClient() {
             onClick={() => setActiveTab("badges")}
             className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center gap-2 active:scale-[0.98] ${
               activeTab === "badges"
-                ? "bg-amber-500 border-amber-500 text-white shadow-sm"
+                ? "bg-nawa-warning border-nawa-warning text-white shadow-sm"
                 : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
             }`}
           >

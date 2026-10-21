@@ -23,7 +23,7 @@ export function ProfileModulesPanel({ modules }: { modules: UserModule[] }) {
         </div>
         <Link
           href="/submit"
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-md cursor-pointer"
+          className="bg-nawa-primary hover:bg-nawa-primary-hover text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-md cursor-pointer"
         >
           + Unggah Modul Baru
         </Link>
@@ -38,7 +38,7 @@ export function ProfileModulesPanel({ modules }: { modules: UserModule[] }) {
           </p>
           <Link
             href="/submit"
-            className="mt-4 inline-flex items-center gap-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 dark:hover:bg-indigo-900 text-indigo-600 dark:text-indigo-400 text-xs px-4.5 py-2.5 rounded-xl font-bold border border-indigo-100 dark:border-indigo-900 transition-all cursor-pointer"
+            className="mt-4 inline-flex items-center gap-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 dark:hover:bg-indigo-900 text-nawa-primary dark:text-indigo-400 text-xs px-4.5 py-2.5 rounded-xl font-bold border border-indigo-100 dark:border-indigo-900 transition-all cursor-pointer"
           >
             Mulai Berbagi Sekarang <ArrowRight className="h-3.5 w-3.5" />
           </Link>
@@ -51,14 +51,14 @@ export function ProfileModulesPanel({ modules }: { modules: UserModule[] }) {
 
               <div className="flex justify-between items-start mb-4 relative z-10">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center shadow-sm">
+                  <div className="h-10 w-10 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-nawa-primary dark:text-indigo-400 rounded-xl flex items-center justify-center shadow-sm">
                     <BookOpen className="h-5 w-5" />
                   </div>
                   <div>
                     <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">{mod.subject}</span>
                     <div className="flex gap-1.5 mt-0.5">
                       <span className="text-[9px] bg-zinc-200 dark:bg-zinc-800 px-1.5 py-0.5 rounded font-bold text-zinc-600 dark:text-zinc-400">{mod.grade}</span>
-                      <span className="text-[9px] bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 px-1.5 py-0.5 rounded font-bold">{mod.category}</span>
+                      <span className="text-[9px] bg-indigo-100 dark:bg-indigo-900/50 text-nawa-primary-hover dark:text-indigo-400 px-1.5 py-0.5 rounded font-bold">{mod.category}</span>
                     </div>
                   </div>
                 </div>
@@ -81,7 +81,7 @@ export function ProfileModulesPanel({ modules }: { modules: UserModule[] }) {
                 </div>
               </div>
 
-              <h4 className="font-extrabold text-sm text-zinc-900 dark:zinc-100 mb-2 line-clamp-2 leading-snug relative z-10 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              <h4 className="font-extrabold text-sm text-zinc-900 dark:zinc-100 mb-2 line-clamp-2 leading-snug relative z-10 group-hover:text-nawa-primary dark:group-hover:text-indigo-400 transition-colors">
                 {mod.title}
               </h4>
 

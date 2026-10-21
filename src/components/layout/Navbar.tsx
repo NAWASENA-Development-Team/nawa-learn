@@ -20,6 +20,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import NawaIcon from "@/components/icons/NawaIcon";
+import { t } from "@/i18n/t";
 
 // Local helper: call document.startViewTransition safely without conflicting
 // with any existing TS lib declarations (which may differ in optionality).
@@ -91,11 +92,11 @@ function ThemeToggle({ compact = false }: { compact?: boolean }) {
   return (
     <button
       ref={btnRef}
-      aria-label={isDark ? "Ganti ke mode terang" : "Ganti ke mode gelap"}
+      aria-label={isDark ? t("nav.toLight") : t("nav.toDark")}
       onClick={handleToggle}
       className={`relative inline-flex items-center justify-center rounded-xl border cursor-pointer
         ${compact ? "h-8 w-8" : "h-9 w-9"}
-        border-zinc-200 bg-white/80 text-zinc-500 hover:border-indigo-300 hover:text-indigo-600
+        border-zinc-200 bg-white/80 text-zinc-500 hover:border-indigo-300 hover:text-nawa-primary
         dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-400 dark:hover:border-indigo-500 dark:hover:text-indigo-400`}
     >
       <Sun  className={`absolute h-4 w-4 transition-all duration-300 ${isDark ? "scale-0 opacity-0 rotate-90" : "scale-100 opacity-100"}`} />
@@ -106,14 +107,14 @@ function ThemeToggle({ compact = false }: { compact?: boolean }) {
 
 // ── Nav items ─────────────────────────────────────────────────────────────────
 const NAV_ITEMS = [
-  { href: "/modules",            label: "Modul",        icon: BookOpen },
-  { href: "/questions/practice", label: "Latihan Soal", icon: ClipboardList },
-  { href: "/leaderboard",        label: "Peringkat",    icon: Trophy },
-  { href: "/submit",             label: "Upload",       icon: Upload },
-  { href: "/profile",            label: "Profil Saya",  icon: User },
+  { href: "/modules",            label: t("nav.modules"),       icon: BookOpen },
+  { href: "/questions/practice", label: t("nav.practice"),      icon: ClipboardList },
+  { href: "/leaderboard",        label: t("nav.leaderboard"),   icon: Trophy },
+  { href: "/submit",             label: t("nav.submit"),        icon: Upload },
+  { href: "/profile",            label: t("nav.profile"),       icon: User },
   // UU PDP: hak subjek data harus bisa ditemukan, bukan hanya ada. Tautannya
   // sengaja ada di navigasi utama, bukan terkubur di dalam halaman profil.
-  { href: "/profile/privacy",    label: "Privasi",       icon: ShieldCheck },
+  { href: "/profile/privacy",    label: t("nav.privacy"),       icon: ShieldCheck },
 ];
 
 // ── Main Navbar ───────────────────────────────────────────────────────────────
@@ -161,7 +162,7 @@ export default function Navbar({ isModerator = false }: { isModerator?: boolean 
 
             <Show when="signed-in">
               <div className="hidden md:flex items-center gap-1">
-                {[...NAV_ITEMS, ...(isModerator ? [{ href: "/moderator", label: "Moderator", icon: Shield }] : [])].map(({ href, label, icon: Icon }) => {
+                {[...NAV_ITEMS, ...(isModerator ? [{ href: "/moderator", label: t("nav.moderator"), icon: Shield }] : [])].map(({ href, label, icon: Icon }) => {
                   const active = isActive(href);
                   return (
                     <Link
@@ -169,11 +170,11 @@ export default function Navbar({ isModerator = false }: { isModerator?: boolean 
                       href={href}
                       className={`relative flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-150 active:scale-[0.96]
                         ${active
-                          ? "bg-indigo-50 text-indigo-700 shadow-[0_1px_0_0_theme(colors.indigo.200)] dark:bg-indigo-500/10 dark:text-indigo-400 dark:shadow-[0_1px_0_0_theme(colors.indigo.800)]"
+                          ? "bg-indigo-50 text-nawa-primary-hover shadow-[0_1px_0_0_theme(colors.indigo.200)] dark:bg-indigo-500/10 dark:text-indigo-400 dark:shadow-[0_1px_0_0_theme(colors.indigo.800)]"
                           : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800/60 dark:hover:text-zinc-200"
                         }`}
                     >
-                      <Icon className={`h-3.5 w-3.5 shrink-0 ${active ? "text-indigo-600 dark:text-indigo-400" : ""}`} />
+                      <Icon className={`h-3.5 w-3.5 shrink-0 ${active ? "text-nawa-primary dark:text-indigo-400" : ""}`} />
                       {label}
                       {active && (
                         <span className="absolute -bottom-[11px] inset-x-3 h-px rounded-full bg-indigo-400/60 dark:bg-indigo-500/50" aria-hidden />
@@ -191,14 +192,14 @@ export default function Navbar({ isModerator = false }: { isModerator?: boolean 
               <Show when="signed-out">
                 <Link
                   href="/sign-in"
-                  className="hidden sm:inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-indigo-700 active:scale-[0.98]"
+                  className="hidden sm:inline-flex items-center gap-1.5 rounded-xl bg-nawa-primary px-4 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-nawa-primary-hover active:scale-[0.98]"
                 >
-                  Masuk / Daftar
+                  {t("nav.signIn")}
                 </Link>
                 {/* Mobile: icon-only sign-in button */}
                 <Link
                   href="/sign-in"
-                  className="sm:hidden inline-flex items-center justify-center h-9 w-9 rounded-xl bg-indigo-600 text-white shadow-sm active:scale-[0.98]"
+                  className="sm:hidden inline-flex items-center justify-center h-9 w-9 rounded-xl bg-nawa-primary text-white shadow-sm active:scale-[0.98]"
                 >
                   <User className="h-4 w-4" />
                 </Link>
@@ -210,8 +211,8 @@ export default function Navbar({ isModerator = false }: { isModerator?: boolean 
                 {/* Mobile hamburger */}
                 <button
                   onClick={() => setMobileOpen(v => !v)}
-                  aria-label={mobileOpen ? "Tutup menu" : "Buka menu"}
-                  className="md:hidden inline-flex items-center justify-center h-9 w-9 rounded-xl border border-zinc-200 bg-white/80 text-zinc-600 transition-all hover:border-indigo-300 hover:text-indigo-600 dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-400 dark:hover:border-indigo-500 dark:hover:text-indigo-400 cursor-pointer"
+                  aria-label={mobileOpen ? t("nav.closeMenu") : t("nav.openMenu")}
+                  className="md:hidden inline-flex items-center justify-center h-9 w-9 rounded-xl border border-zinc-200 bg-white/80 text-zinc-600 transition-all hover:border-indigo-300 hover:text-nawa-primary dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-400 dark:hover:border-indigo-500 dark:hover:text-indigo-400 cursor-pointer"
                 >
                   {mobileOpen ? <X className="h-4.5 w-4.5" /> : <Menu className="h-4.5 w-4.5" />}
                 </button>
@@ -247,7 +248,7 @@ export default function Navbar({ isModerator = false }: { isModerator?: boolean 
 
             {/* Nav links */}
             <nav className="p-3 space-y-1">
-              {[...NAV_ITEMS, ...(isModerator ? [{ href: "/moderator", label: "Moderator", icon: Shield }] : [])].map(({ href, label, icon: Icon }, idx) => {
+              {[...NAV_ITEMS, ...(isModerator ? [{ href: "/moderator", label: t("nav.moderator"), icon: Shield }] : [])].map(({ href, label, icon: Icon }, idx) => {
                 const active = isActive(href);
                 return (
                   <Link
@@ -257,20 +258,20 @@ export default function Navbar({ isModerator = false }: { isModerator?: boolean 
                     style={{ transitionDelay: mobileOpen ? `${idx * 25}ms` : "0ms" }}
                     className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-150 active:scale-[0.97]
                       ${active
-                        ? "bg-indigo-50 text-indigo-700 border border-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-900/50"
+                        ? "bg-indigo-50 text-nawa-primary-hover border border-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-900/50"
                         : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/60 dark:hover:text-zinc-100"
                       }`}
                   >
                     <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-colors duration-150 ${
                       active ? "bg-indigo-100 dark:bg-indigo-500/20" : "bg-zinc-100 dark:bg-zinc-800"
                     }`}>
-                      <Icon className={`h-4 w-4 ${active ? "text-indigo-600 dark:text-indigo-400" : "text-zinc-500 dark:text-zinc-400"}`} />
+                      <Icon className={`h-4 w-4 ${active ? "text-nawa-primary dark:text-indigo-400" : "text-zinc-500 dark:text-zinc-400"}`} />
                     </div>
                     <span>{label}</span>
                     {active && (
                       <span className="ml-auto flex items-center gap-1 text-[10px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-wider">
                         <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400 animate-pulse" />
-                        Aktif
+                        {t("nav.active")}
                       </span>
                     )}
                   </Link>

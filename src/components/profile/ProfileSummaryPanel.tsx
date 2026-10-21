@@ -38,7 +38,7 @@ export function ProfileSummaryPanel({
           </div>
           <Link
             href="/submit"
-            className="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-5 py-3.5 rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-1.5 border border-indigo-500 cursor-pointer"
+            className="shrink-0 bg-nawa-primary hover:bg-nawa-primary-hover text-white font-bold text-xs px-5 py-3.5 rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-1.5 border border-indigo-500 cursor-pointer"
           >
             Unggah Catatan <ArrowRight className="h-4 w-4" />
           </Link>
@@ -55,11 +55,11 @@ export function ProfileSummaryPanel({
           <div className="space-y-3">
             <div className="group flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl hover:border-indigo-400 dark:hover:border-indigo-500 transition-all duration-300 shadow-sm hover:shadow-md cursor-default">
               <div className="flex items-center gap-3.5">
-                <div className="h-10 w-10 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/30 rounded-xl flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+                <div className="h-10 w-10 bg-indigo-50 dark:bg-indigo-950/40 text-nawa-primary dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/30 rounded-xl flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
                   <Folder className="h-5 w-5" />
                 </div>
                 <div>
-                  <h4 className="font-extrabold text-xs text-zinc-800 dark:text-zinc-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Total Modul Pending</h4>
+                  <h4 className="font-extrabold text-xs text-zinc-800 dark:text-zinc-200 group-hover:text-nawa-primary dark:group-hover:text-indigo-400 transition-colors">Total Modul Pending</h4>
                   <p className="text-[10px] text-zinc-500">Dalam tinjauan OSIS</p>
                 </div>
               </div>
@@ -68,7 +68,7 @@ export function ProfileSummaryPanel({
               </span>
             </div>
 
-            <div className="group flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl hover:border-emerald-400 dark:hover:border-emerald-500 transition-all duration-300 shadow-sm hover:shadow-md cursor-default">
+            <div className="group flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl hover:border-emerald-400 dark:hover:border-nawa-success transition-all duration-300 shadow-sm hover:shadow-md cursor-default">
               <div className="flex items-center gap-3.5">
                 <div className="h-10 w-10 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 rounded-xl flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
                   <Download className="h-5 w-5" />
@@ -83,7 +83,7 @@ export function ProfileSummaryPanel({
               </span>
             </div>
 
-            <div className="group flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl hover:border-amber-400 dark:hover:border-amber-500 transition-all duration-300 shadow-sm hover:shadow-md cursor-default">
+            <div className="group flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl hover:border-amber-400 dark:hover:border-nawa-warning transition-all duration-300 shadow-sm hover:shadow-md cursor-default">
               <div className="flex items-center gap-3.5">
                 <div className="h-10 w-10 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30 rounded-xl flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
                   <HelpCircle className="h-5 w-5" />
@@ -102,14 +102,14 @@ export function ProfileSummaryPanel({
 
         {/* Quick info card about Nawasena */}
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-sm text-center relative overflow-hidden">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 mb-3 border border-indigo-100 dark:border-indigo-900/30">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-nawa-primary dark:text-indigo-400 mb-3 border border-indigo-100 dark:border-indigo-900/30">
             <GraduationCap className="h-6 w-6" />
           </div>
           <h4 className="text-sm font-extrabold text-zinc-900 dark:text-white">OSIS NAWASENA SMAN 2 Jonggol</h4>
           <p className="text-xs text-zinc-500 mt-2 leading-relaxed">
             Platform NAWA-LEARN digagas oleh Divisi ICT OSIS Nawasena SMAN 2 Jonggol untuk mempermudah kolaborasi belajar antar siswa. Terima kasih telah menjadi kontributor aktif!
           </p>
-          <div className="border-t border-zinc-100 dark:border-zinc-800 mt-4 pt-4 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+          <div className="border-t border-zinc-100 dark:border-zinc-800 mt-4 pt-4 text-xs font-semibold text-nawa-primary dark:text-indigo-400">
             Kabinet Nawasena • Divisi ICT SMAN 2 Jonggol
           </div>
         </div>

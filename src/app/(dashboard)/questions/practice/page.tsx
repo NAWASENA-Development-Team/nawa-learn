@@ -350,14 +350,14 @@ export default function PracticeMode() {
   if (questions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[70vh] p-8 text-center gap-4">
-        <AlertTriangle className="h-12 w-12 text-amber-500" />
+        <AlertTriangle className="h-12 w-12 text-nawa-warning" />
         <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Paket Ini Belum Memiliki Soal</h3>
         <p className="text-xs text-zinc-500 max-w-xs">
           Ujian ini belum diisi pertanyaan. Tambahkan soal melalui fitur Buat Ujian Baru atau pilih paket lain.
         </p>
         <button
           onClick={() => setSelectedQuiz(null)}
-          className="mt-2 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 transition-all cursor-pointer"
+          className="mt-2 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-nawa-primary text-white text-sm font-bold hover:bg-nawa-primary-hover transition-all cursor-pointer"
         >
           <ArrowLeft className="h-4 w-4" /> Kembali ke Daftar
         </button>

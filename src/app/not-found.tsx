@@ -19,13 +19,13 @@ export default function NotFound() {
     <div className="flex min-h-[70vh] w-full items-center justify-center px-4 py-16">
       <div className="w-full max-w-md rounded-3xl border border-zinc-200 bg-white p-10 text-center shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-950/40">
-          <Compass className="h-7 w-7 text-indigo-600 dark:text-indigo-400" aria-hidden />
+          <Compass className="h-7 w-7 text-nawa-primary dark:text-indigo-400" aria-hidden />
         </div>
 
         <h1 className="mt-5 text-2xl font-extrabold text-zinc-900 dark:text-white">
           Halaman Tidak Ditemukan
         </h1>
-        <p className="mt-1 text-xs font-bold text-indigo-600 dark:text-indigo-400">
+        <p className="mt-1 text-xs font-bold text-nawa-primary dark:text-indigo-400">
           Galat 404
         </p>
         <p className="mt-3 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
@@ -36,7 +36,7 @@ export default function NotFound() {
         <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
           <Link
             href="/"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-bold text-white shadow-sm transition-all hover:bg-indigo-700 active:scale-[0.98]"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-nawa-primary px-5 py-2.5 text-xs font-bold text-white shadow-sm transition-all hover:bg-nawa-primary-hover active:scale-[0.98]"
           >
             <House className="h-4 w-4" aria-hidden />
             Ke beranda

@@ -64,7 +64,7 @@ export function DailyQuizTab({
               placeholder="Tulis pertanyaan di sini..."
               rows={3}
               required
-              className="w-full px-4 py-2.5 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm resize-none"
+              className="w-full px-4 py-2.5 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-nawa-success focus:border-transparent text-sm resize-none"
             />
           </div>
 
@@ -75,7 +75,7 @@ export function DailyQuizTab({
               <select
                 value={dailyForm.subject}
                 onChange={(e) => onFormChange(f => ({ ...f, subject: e.target.value }))}
-                className="w-full px-3 py-2 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm focus:ring-2 focus:ring-nawa-success"
               >
                 <option value="Umum">Umum</option>
                 <option value="Matematika">Matematika</option>
@@ -97,7 +97,7 @@ export function DailyQuizTab({
               <select
                 value={dailyForm.difficulty}
                 onChange={(e) => onFormChange(f => ({ ...f, difficulty: e.target.value as Difficulty }))}
-                className="w-full px-3 py-2 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm focus:ring-2 focus:ring-nawa-success"
               >
                 <option value="mudah">Mudah</option>
                 <option value="sedang">Sedang</option>
@@ -132,7 +132,7 @@ export function DailyQuizTab({
                     onChange={(e) => onFormChange(f => ({ ...f, [fieldKey]: e.target.value }))}
                     placeholder={`Opsi ${key}${key === "E" ? " (opsional)" : ""}`}
                     required={isRequired}
-                    className="flex-1 px-3 py-2 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="flex-1 px-3 py-2 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 text-sm focus:ring-2 focus:ring-nawa-success focus:border-transparent"
                   />
                   {dailyForm.answerKey === key && (
                     <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider shrink-0">Kunci</span>
@@ -183,7 +183,7 @@ export function DailyQuizTab({
                   </div>
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${dailyDifficultyClass(q.difficulty)}`}>{q.difficulty}</span>
-                    {q.subject && <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400">{q.subject}</span>}
+                    {q.subject && <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/40 text-nawa-primary dark:text-indigo-400">{q.subject}</span>}
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500">Kunci: {q.answerKey}</span>
                   </div>
                 </div>

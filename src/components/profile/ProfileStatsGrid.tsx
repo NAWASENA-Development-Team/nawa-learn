@@ -21,7 +21,7 @@ export function ProfileStatsGrid({ user, userModules, userQuestions }: ProfileSt
 
       {/* Total Points Card (Gold) */}
       <div className="group relative overflow-hidden bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/10 p-5 sm:p-6 border border-amber-200/60 dark:border-amber-900/30 rounded-3xl shadow-sm hover:shadow-md hover:border-amber-400 dark:hover:border-amber-700/80 transition-all duration-300">
-        <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full blur-xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-24 h-24 bg-nawa-warning/10 rounded-full blur-xl pointer-events-none" />
         <div className="flex items-center gap-3 mb-3">
           <div className="h-10 w-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-inner font-bold">
             <Trophy className="h-5 w-5" />
@@ -37,15 +37,15 @@ export function ProfileStatsGrid({ user, userModules, userQuestions }: ProfileSt
       </div>
 
       {/* Leaderboard Rank Card (Indigo/Blue) */}
-      <div className="group relative overflow-hidden bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-950/20 dark:to-blue-950/10 p-5 sm:p-6 border border-indigo-200/60 dark:border-indigo-900/30 rounded-3xl shadow-sm hover:shadow-md hover:border-indigo-400 dark:hover:border-indigo-700/80 transition-all duration-300">
+      <div className="group relative overflow-hidden bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-950/20 dark:to-blue-950/10 p-5 sm:p-6 border border-indigo-200/60 dark:border-indigo-900/30 rounded-3xl shadow-sm hover:shadow-md hover:border-indigo-400 dark:hover:border-nawa-primary-hover/80 transition-all duration-300">
         <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-xl pointer-events-none" />
         <div className="flex items-center gap-3 mb-3">
-          <div className="h-10 w-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-inner font-bold">
+          <div className="h-10 w-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 text-nawa-primary dark:text-indigo-400 flex items-center justify-center shadow-inner font-bold">
             <TrendingUp className="h-5 w-5" />
           </div>
           <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider">Peringkat Sekolah</span>
         </div>
-        <p className="text-3xl sm:text-4xl font-black text-indigo-600 dark:text-indigo-400 group-hover:scale-105 transition-transform duration-200">
+        <p className="text-3xl sm:text-4xl font-black text-nawa-primary dark:text-indigo-400 group-hover:scale-105 transition-transform duration-200">
           {user.points > 0 ? `#${user.rank}` : "—"}
         </p>
         <div className="mt-2 text-[10px] sm:text-xs text-zinc-500 font-medium">
@@ -75,7 +75,7 @@ export function ProfileStatsGrid({ user, userModules, userQuestions }: ProfileSt
 
       {/* Practice Questions created (Emerald) */}
       <div className="group relative overflow-hidden bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/10 p-5 sm:p-6 border border-emerald-200/60 dark:border-emerald-900/30 rounded-3xl shadow-sm hover:shadow-md hover:border-emerald-400 dark:hover:border-emerald-700/80 transition-all duration-300">
-        <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-24 h-24 bg-nawa-success/10 rounded-full blur-xl pointer-events-none" />
         <div className="flex items-center gap-3 mb-3">
           <div className="h-10 w-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-inner font-bold">
             <HelpCircle className="h-5 w-5" />

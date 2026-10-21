@@ -114,11 +114,11 @@ export default async function RootLayout({
                     tautannya ada di footer yang tampil di setiap halaman —
                     termasuk halaman masuk dan halaman publik. */}
                 <nav className="mt-2 flex items-center justify-center gap-4 text-xs font-semibold">
-                  <Link href="/privacy" className="hover:text-indigo-600 hover:underline dark:hover:text-indigo-400">
+                  <Link href="/privacy" className="hover:text-nawa-primary hover:underline dark:hover:text-indigo-400">
                     Kebijakan Privasi
                   </Link>
                   <span aria-hidden className="text-zinc-300 dark:text-zinc-700">•</span>
-                  <Link href="/terms" className="hover:text-indigo-600 hover:underline dark:hover:text-indigo-400">
+                  <Link href="/terms" className="hover:text-nawa-primary hover:underline dark:hover:text-indigo-400">
                     Ketentuan Layanan
                   </Link>
                 </nav>

@@ -65,8 +65,8 @@ export default function SubmitClient() {
         {/* Badges container */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 border-t border-zinc-200/60 dark:border-zinc-800/60 pt-6">
           {[
-            { title: submitType === "module" ? "Dapatkan +15 Poin" : "Dapatkan +10 Poin", desc: "Poin setiap kontribusi yang disetujui", icon: Sparkles, color: "text-amber-500 bg-amber-50 dark:bg-amber-950/20" },
-            { title: "Moderasi < 24 Jam", desc: "Tim OSIS meninjau dengan sangat cepat", icon: ShieldCheck, color: "text-emerald-500 bg-emerald-50 dark:bg-emerald-950/20" },
+            { title: submitType === "module" ? "Dapatkan +15 Poin" : "Dapatkan +10 Poin", desc: "Poin setiap kontribusi yang disetujui", icon: Sparkles, color: "text-nawa-warning bg-amber-50 dark:bg-amber-950/20" },
+            { title: "Moderasi < 24 Jam", desc: "Tim OSIS meninjau dengan sangat cepat", icon: ShieldCheck, color: "text-nawa-success bg-emerald-50 dark:bg-emerald-950/20" },
             { title: submitType === "module" ? "Metode Unggah Cerdas" : "Tinjau Kunci Jawaban", desc: submitType === "module" ? "Lokal file, Drive link, atau foto" : "Opsi ganda A-E terstruktur", icon: FileUp, color: "text-indigo-500 bg-indigo-50 dark:bg-indigo-950/20" }
           ].map((item, idx) => (
             <div key={idx} className="flex items-center gap-3">
@@ -89,7 +89,7 @@ export default function SubmitClient() {
           onClick={() => setSubmitType("module")}
           className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border ${
             submitType === "module"
-              ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/10 scale-[1.02]"
+              ? "bg-nawa-primary border-nawa-primary text-white shadow-md shadow-nawa-primary/10 scale-[1.02]"
               : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50"
           }`}
         >
@@ -100,7 +100,7 @@ export default function SubmitClient() {
           onClick={() => setSubmitType("question")}
           className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border ${
             submitType === "question"
-              ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/10 scale-[1.02]"
+              ? "bg-nawa-primary border-nawa-primary text-white shadow-md shadow-nawa-primary/10 scale-[1.02]"
               : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50"
           }`}
         >
@@ -124,7 +124,7 @@ export default function SubmitClient() {
                 { title: "Hindari Plagiarisme", desc: "Dilarang menyebarkan hak cipta buku komersial tanpa izin penulis." }
               ].map((step, idx) => (
                 <li key={idx} className="flex gap-3">
-                  <div className="h-5 w-5 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                  <div className="h-5 w-5 rounded-full bg-indigo-50 dark:bg-indigo-950 text-nawa-primary dark:text-indigo-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
                     {idx + 1}
                   </div>
                   <div>
@@ -136,7 +136,7 @@ export default function SubmitClient() {
             </ul>
 
             <div className="mt-6 pt-6 border-t border-zinc-100 dark:border-zinc-800 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+              <div className="h-10 w-10 rounded-full bg-indigo-50 dark:bg-indigo-950 text-nawa-primary dark:text-indigo-400 flex items-center justify-center shrink-0">
                 <BookOpen className="h-5 w-5" />
               </div>
               <div>

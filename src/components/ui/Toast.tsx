@@ -53,23 +53,23 @@ const VARIANTS: Record<
 > = {
   success: {
     icon: CheckCircle2,
-    bar: "bg-emerald-500",
-    iconCls: "text-emerald-500",
-    border: "border-l-emerald-500",
+    bar: "bg-nawa-success",
+    iconCls: "text-nawa-success",
+    border: "border-l-nawa-success",
     bg: "bg-white dark:bg-zinc-900",
   },
   error: {
     icon: XCircle,
-    bar: "bg-rose-500",
-    iconCls: "text-rose-500",
-    border: "border-l-rose-500",
+    bar: "bg-nawa-error",
+    iconCls: "text-nawa-error",
+    border: "border-l-nawa-error",
     bg: "bg-white dark:bg-zinc-900",
   },
   warning: {
     icon: AlertTriangle,
-    bar: "bg-amber-500",
-    iconCls: "text-amber-500",
-    border: "border-l-amber-500",
+    bar: "bg-nawa-warning",
+    iconCls: "text-nawa-warning",
+    border: "border-l-nawa-warning",
     bg: "bg-white dark:bg-zinc-900",
   },
   info: {

@@ -80,7 +80,7 @@ export default function LeaderboardClient({
 
   // Avatar frame gradient (matches ProfileClient.getAvatarFrame gradient)
   const podiumFrameGradient = (rank: number) => {
-    if (rank === 1) return "from-amber-400 via-yellow-300 to-amber-500";
+    if (rank === 1) return "from-amber-400 via-yellow-300 to-nawa-warning";
     if (rank <= 3)  return "from-amber-300 via-orange-200 to-amber-400";
     return "from-purple-400 via-fuchsia-400 to-purple-600";
   };
@@ -118,7 +118,7 @@ export default function LeaderboardClient({
       return {
         text: "Kamu belum terdaftar di papan peringkat musim ini karena belum mengumpulkan poin. Mulai selesaikan kuis harian atau bagikan modul pertamamu untuk unjuk gigi!",
         icon: Sparkles,
-        iconBg: "bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400"
+        iconBg: "bg-indigo-100 dark:bg-indigo-950/60 text-nawa-primary dark:text-indigo-400"
       };
     }
     
@@ -158,7 +158,7 @@ export default function LeaderboardClient({
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-zinc-900 dark:text-white tracking-tight leading-tight">
             Papan Peringkat Siswa
           </h1>
-          <div className="mt-3 inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/60 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 text-xs font-bold">
+          <div className="mt-3 inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/60 dark:border-indigo-800/60 text-nawa-primary-hover dark:text-indigo-300 text-xs font-bold">
             <Sparkles className="w-3.5 h-3.5" /> 
             {seasonLabel}
           </div>
@@ -212,7 +212,7 @@ export default function LeaderboardClient({
                 {/* Info card */}
                 <div className="w-full text-center p-5 bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-900 dark:to-zinc-950 border-2 border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-md flex flex-col items-center relative overflow-hidden hover:border-zinc-300 dark:hover:border-zinc-700 transition-all duration-300">
                   <div className="absolute top-0 right-0 w-12 h-12 bg-zinc-400/5 rounded-full blur-xl pointer-events-none" />
-                  <h3 className="font-extrabold text-zinc-900 dark:text-zinc-100 truncate max-w-[160px] hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                  <h3 className="font-extrabold text-zinc-900 dark:text-zinc-100 truncate max-w-[160px] hover:text-nawa-primary dark:hover:text-indigo-400 transition-colors">
                     <Link href={`/profile/${u.id}`}>{u.name}</Link>
                   </h3>
                   <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-bold bg-zinc-100 dark:bg-zinc-800 px-2.5 py-0.5 rounded-full mt-1.5 border border-zinc-200 dark:border-zinc-700">
@@ -242,11 +242,11 @@ export default function LeaderboardClient({
 
                 {/* Floating crown */}
                 <div className="animate-bounce mb-0">
-                  <Crown className="h-8 w-8 text-amber-500 drop-shadow-md" />
+                  <Crown className="h-8 w-8 text-nawa-warning drop-shadow-md" />
                 </div>
 
                 {/* Rank label */}
-                <div className="bg-amber-500 text-zinc-950 font-black text-[10px] px-3.5 py-1 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1 border border-amber-400">
+                <div className="bg-nawa-warning text-zinc-950 font-black text-[10px] px-3.5 py-1 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1 border border-amber-400">
                   <Crown className="h-3 w-3" /> Juara 1
                 </div>
 
@@ -260,7 +260,7 @@ export default function LeaderboardClient({
                     }
                   </div>
                   {/* #1 badge overlaid */}
-                  <div className="absolute -top-2 -right-2 bg-amber-500 text-zinc-950 font-black text-[9px] px-2 py-0.5 rounded-md border border-amber-300 shadow-md z-20 uppercase tracking-wide">
+                  <div className="absolute -top-2 -right-2 bg-nawa-warning text-zinc-950 font-black text-[9px] px-2 py-0.5 rounded-md border border-amber-300 shadow-md z-20 uppercase tracking-wide">
                     #1
                   </div>
                 </div>
@@ -278,7 +278,7 @@ export default function LeaderboardClient({
                 )}
 
                 {/* Info card */}
-                <div className="w-full text-center p-6 bg-gradient-to-b from-amber-500/10 via-yellow-400/5 to-transparent border-2 border-yellow-400/80 dark:border-yellow-500/40 rounded-3xl shadow-xl flex flex-col items-center relative overflow-hidden hover:border-yellow-400 transition-all duration-300">
+                <div className="w-full text-center p-6 bg-gradient-to-b from-nawa-warning/10 via-yellow-400/5 to-transparent border-2 border-yellow-400/80 dark:border-yellow-500/40 rounded-3xl shadow-xl flex flex-col items-center relative overflow-hidden hover:border-yellow-400 transition-all duration-300">
                   <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-500/[0.05] rounded-full blur-xl pointer-events-none" />
                   <h3 className="font-black text-lg text-zinc-900 dark:text-white truncate max-w-[200px] hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
                     <Link href={`/profile/${u.id}`}>{u.name}</Link>
@@ -286,7 +286,7 @@ export default function LeaderboardClient({
                   <span className="text-[10px] text-amber-900 dark:text-amber-400 font-bold bg-amber-100 dark:bg-amber-950/60 px-2.5 py-0.5 rounded-full mt-1.5 border border-amber-200/50 dark:border-amber-900/50">
                     Level {lvl}
                   </span>
-                  <p className="text-[9px] text-amber-800 dark:text-amber-500 font-bold mt-1">{getPlayfulTitle(u.points)}</p>
+                  <p className="text-[9px] text-amber-800 dark:text-nawa-warning font-bold mt-1">{getPlayfulTitle(u.points)}</p>
                   <div className="mt-2 flex items-baseline gap-1">
                     <span className="text-3xl font-black text-amber-600 dark:text-yellow-500">{u.seasonPoints}</span>
                     <span className="text-sm font-bold text-amber-600/70 dark:text-yellow-500/70">XP</span>
@@ -338,7 +338,7 @@ export default function LeaderboardClient({
                 {/* Info card */}
                 <div className="w-full text-center p-5 bg-gradient-to-b from-orange-50 to-white dark:from-zinc-900 dark:to-zinc-950 border-2 border-orange-200/60 dark:border-zinc-800 rounded-3xl shadow-md flex flex-col items-center relative overflow-hidden hover:border-orange-300 dark:hover:border-zinc-700 transition-all duration-300">
                   <div className="absolute top-0 right-0 w-12 h-12 bg-orange-400/5 rounded-full blur-xl pointer-events-none" />
-                  <h3 className="font-extrabold text-zinc-900 dark:text-zinc-100 truncate max-w-[160px] hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                  <h3 className="font-extrabold text-zinc-900 dark:text-zinc-100 truncate max-w-[160px] hover:text-nawa-primary dark:hover:text-indigo-400 transition-colors">
                     <Link href={`/profile/${u.id}`}>{u.name}</Link>
                   </h3>
                   <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-bold bg-zinc-100 dark:bg-zinc-800 px-2.5 py-0.5 rounded-full mt-1.5 border border-zinc-200 dark:border-zinc-700">
@@ -371,7 +371,7 @@ export default function LeaderboardClient({
             placeholder="Cari kontributor sekolah..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 pl-9 pr-4 py-2 text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-500 dark:text-white transition-all"
+            className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 pl-9 pr-4 py-2 text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-nawa-warning dark:focus:ring-nawa-warning dark:text-white transition-all"
           />
         </div>
 
@@ -429,7 +429,7 @@ export default function LeaderboardClient({
 
             // Row accent: border-left color based on tier
             const rowAccent = loggedInUser && loggedInUser.id === user.id
-              ? "bg-amber-500/5 dark:bg-amber-500/5 border-l-4 border-amber-500"
+              ? "bg-nawa-warning/5 dark:bg-nawa-warning/5 border-l-4 border-nawa-warning"
               : rank === 1
                 ? "border-l-4 border-yellow-400"
                 : rank === 2
@@ -446,7 +446,7 @@ export default function LeaderboardClient({
             const framePill = rank === 1
               ? <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-gradient-to-r from-amber-400 to-yellow-500 text-zinc-900 ml-1 shrink-0 animate-pulse">GOLD</span>
               : rank <= 3
-                ? <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-gradient-to-r from-orange-400 to-amber-500 text-white ml-1 shrink-0">TOP 3</span>
+                ? <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-gradient-to-r from-orange-400 to-nawa-warning text-white ml-1 shrink-0">TOP 3</span>
                 : isTop10
                   ? <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-gradient-to-r from-purple-500 to-indigo-500 text-white ml-1 shrink-0">TOP 10</span>
                   : isTop50
@@ -484,7 +484,7 @@ export default function LeaderboardClient({
                           : <Image src={avatar.svg} alt={avatar.label} fill className="object-cover" />
                         }
                       </div>
-                      <h3 className="font-extrabold text-sm text-zinc-900 dark:text-zinc-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                      <h3 className="font-extrabold text-sm text-zinc-900 dark:text-zinc-100 hover:text-nawa-primary dark:hover:text-indigo-400 transition-colors">
                         <Link href={`/profile/${user.id}`}>
                           {user.name}
                         </Link>
@@ -518,7 +518,7 @@ export default function LeaderboardClient({
                         ? "text-purple-600 dark:text-purple-400"
                         : isTop50
                           ? "text-cyan-600 dark:text-cyan-400"
-                          : "text-indigo-600 dark:text-indigo-500 group-hover:scale-105 transition-transform"
+                          : "text-nawa-primary dark:text-indigo-500 group-hover:scale-105 transition-transform"
                   } flex items-center gap-1.5`}>
                     {user.seasonPoints} <span className="text-[10px] sm:text-xs font-bold text-inherit opacity-70">XP</span>
                   </div>
@@ -551,7 +551,7 @@ export default function LeaderboardClient({
         </div>
         <Link 
           href="/submit"
-          className="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-5 py-3.5 rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-1.5 border border-indigo-500 cursor-pointer"
+          className="shrink-0 bg-nawa-primary hover:bg-nawa-primary-hover text-white font-bold text-xs px-5 py-3.5 rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-1.5 border border-indigo-500 cursor-pointer"
         >
           Unggah Karya Sekarang <ArrowRight className="h-4 w-4" />
         </Link>
@@ -576,7 +576,7 @@ export default function LeaderboardClient({
             <div className="flex gap-2 w-full sm:w-auto shrink-0">
               <Link
                 href="/profile"
-                className="w-full sm:w-auto text-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md active:scale-95 whitespace-nowrap cursor-pointer"
+                className="w-full sm:w-auto text-center bg-nawa-primary hover:bg-nawa-primary-hover text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md active:scale-95 whitespace-nowrap cursor-pointer"
               >
                 Lihat Profil Saya
               </Link>

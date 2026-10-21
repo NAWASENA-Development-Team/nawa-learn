@@ -37,7 +37,7 @@ export function ProfileBadges({ badgeDisplays }: { badgeDisplays: BadgeDisplay[]
             Buka lencana khusus dengan aktif berkontribusi di komunitas SMAN 2 Jonggol.
           </p>
         </div>
-        <span className="bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 text-xs px-3 py-1.5 rounded-xl font-bold border border-indigo-100 dark:border-indigo-950">
+        <span className="bg-indigo-50 dark:bg-indigo-950/60 text-nawa-primary dark:text-indigo-400 text-xs px-3 py-1.5 rounded-xl font-bold border border-indigo-100 dark:border-indigo-950">
           {unlockedCount} / {badgeDisplays.length} Terbuka
         </span>
       </div>

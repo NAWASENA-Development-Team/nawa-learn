@@ -37,7 +37,7 @@ export function HiddenBadgesTab({
 
       {isLoadingBadges ? (
         <div className="p-12 text-center text-zinc-600 flex flex-col items-center justify-center">
-          <div className="h-8 w-8 rounded-full border-4 border-amber-100 border-t-amber-500 animate-spin mb-3" />
+          <div className="h-8 w-8 rounded-full border-4 border-amber-100 border-t-nawa-warning animate-spin mb-3" />
           <p className="text-xs font-bold">Memuat data lencana tersembunyi...</p>
         </div>
       ) : (
@@ -73,12 +73,12 @@ export function HiddenBadgesTab({
                       </span>
                     </div>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 leading-snug">{badge.description}</p>
-                    <p className="text-[10px] text-amber-600 dark:text-amber-500 font-semibold mt-1">
+                    <p className="text-[10px] text-amber-600 dark:text-nawa-warning font-semibold mt-1">
                       Syarat rahasia: {badge.requirement ?? "—"}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1 shrink-0 pr-1">
-                    <span className="text-sm font-black text-indigo-600 dark:text-indigo-400">
+                    <span className="text-sm font-black text-nawa-primary dark:text-indigo-400">
                       {holders.length}
                     </span>
                     <span className="text-[10px] text-zinc-400 font-semibold">pemegang</span>
@@ -109,7 +109,7 @@ export function HiddenBadgesTab({
                               href={`/profile/${u.id}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline shrink-0 inline-flex items-center gap-0.5"
+                              className="text-[10px] font-bold text-nawa-primary dark:text-indigo-400 hover:underline shrink-0 inline-flex items-center gap-0.5"
                             >
                               Profil <ExternalLink className="h-3 w-3" />
                             </a>

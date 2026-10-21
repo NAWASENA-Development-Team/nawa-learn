@@ -218,7 +218,7 @@ export default function ModulesLibraryClient({
     }
     if (lowerUrl.startsWith("data:image/")) return { label: "Foto", color: "bg-emerald-50 text-emerald-600 border-emerald-100", icon: ImageIcon };
     if (lowerUrl.startsWith("data:application/pdf")) return { label: "PDF", color: "bg-red-50 text-red-600 border-red-100", icon: FileText };
-    return { label: "Berkas", color: "bg-indigo-50 text-indigo-600 border-indigo-100", icon: FileText };
+    return { label: "Berkas", color: "bg-indigo-50 text-nawa-primary border-indigo-100", icon: FileText };
   };
 
   return (
@@ -236,7 +236,7 @@ export default function ModulesLibraryClient({
         <div className="shrink-0 relative z-10 flex justify-center md:justify-end">
           <Link
             href="/submit"
-            className="inline-flex items-center gap-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white px-5 py-3 text-sm font-bold shadow-md shadow-indigo-500/20 hover:-translate-y-0.5 active:scale-[0.98] transition-all"
+            className="inline-flex items-center gap-2.5 rounded-xl bg-gradient-to-r from-nawa-primary to-nawa-secondary hover:from-nawa-primary-hover hover:to-nawa-secondary-hover text-white px-5 py-3 text-sm font-bold shadow-md shadow-indigo-500/20 hover:-translate-y-0.5 active:scale-[0.98] transition-all"
           >
             Kontribusi Modul <ArrowRight className="h-4.5 w-4.5" />
           </Link>
@@ -265,7 +265,7 @@ export default function ModulesLibraryClient({
                 onClick={() => setSortBy("newest")}
                 className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                   sortBy === "newest"
-                    ? "bg-white dark:bg-zinc-800 text-indigo-600 dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-700/50"
+                    ? "bg-white dark:bg-zinc-800 text-nawa-primary dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-700/50"
                     : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300"
                 }`}
               >
@@ -275,7 +275,7 @@ export default function ModulesLibraryClient({
                 onClick={() => setSortBy("downloads")}
                 className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                   sortBy === "downloads"
-                    ? "bg-white dark:bg-zinc-800 text-indigo-600 dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-700/50"
+                    ? "bg-white dark:bg-zinc-800 text-nawa-primary dark:text-white shadow-sm border border-zinc-200/50 dark:border-zinc-700/50"
                     : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300"
                 }`}
               >
@@ -299,7 +299,7 @@ export default function ModulesLibraryClient({
                   onClick={() => setSelectedCategory(cat)}
                   className={`px-3.5 py-1.5 rounded-full text-xs font-medium border transition-all duration-150 ${
                     selectedCategory === cat
-                      ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/10 scale-[1.02]"
+                      ? "bg-nawa-primary border-nawa-primary text-white shadow-md shadow-nawa-primary/10 scale-[1.02]"
                       : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800"
                   }`}
                 >
@@ -321,7 +321,7 @@ export default function ModulesLibraryClient({
                   onClick={() => setSelectedGrade(grd)}
                   className={`px-3.5 py-1.5 rounded-full text-xs font-medium border transition-all duration-150 ${
                     selectedGrade === grd
-                      ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/10 scale-[1.02]"
+                      ? "bg-nawa-primary border-nawa-primary text-white shadow-md shadow-nawa-primary/10 scale-[1.02]"
                       : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800"
                   }`}
                 >
@@ -337,7 +337,7 @@ export default function ModulesLibraryClient({
               onClick={() => setShowBookmarksOnly(!showBookmarksOnly)}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-bold transition-all shadow-sm ${
                 showBookmarksOnly 
-                  ? "bg-indigo-600 border-indigo-600 text-white shadow-indigo-500/20" 
+                  ? "bg-nawa-primary border-nawa-primary text-white shadow-indigo-500/20" 
                   : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
               }`}
             >
@@ -351,7 +351,7 @@ export default function ModulesLibraryClient({
       {/* Modules Grid */}
       {filteredAndSortedModules.length === 0 ? (
         <div className="text-center py-20 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl bg-white dark:bg-zinc-900 shadow-sm max-w-2xl mx-auto">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/40">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-nawa-primary dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/40">
             <BookOpen className="h-7 w-7" />
           </div>
           <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Tidak ada modul ditemukan</h3>
@@ -365,7 +365,7 @@ export default function ModulesLibraryClient({
               setSelectedGrade("Semua");
               setShowBookmarksOnly(false);
             }}
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all cursor-pointer"
+            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-nawa-primary hover:bg-nawa-primary-hover px-5 py-2.5 text-xs font-bold text-white shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all cursor-pointer"
           >
             Reset Semua Pencarian
           </button>
@@ -387,7 +387,7 @@ export default function ModulesLibraryClient({
                 <div>
                   {/* Card Header badges */}
                   <div className="flex justify-between items-center mb-4">
-                    <span className="inline-flex items-center rounded-lg bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-1 text-[10px] font-bold text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-950/80">
+                    <span className="inline-flex items-center rounded-lg bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-1 text-[10px] font-bold text-nawa-primary-hover dark:text-indigo-400 border border-indigo-100 dark:border-indigo-950/80">
                       {mod.category}
                     </span>
                     <div className="flex items-center gap-2">
@@ -401,7 +401,7 @@ export default function ModulesLibraryClient({
                   </div>
 
                   {/* Title & Subject */}
-                  <h3 className="text-base font-extrabold text-zinc-900 dark:text-zinc-100 mb-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2">
+                  <h3 className="text-base font-extrabold text-zinc-900 dark:text-zinc-100 mb-1 group-hover:text-nawa-primary dark:group-hover:text-indigo-400 transition-colors line-clamp-2">
                     {mod.title}
                   </h3>
                   <p className="text-xs font-semibold text-indigo-500 dark:text-indigo-400/80 mb-4">
@@ -413,7 +413,7 @@ export default function ModulesLibraryClient({
                 <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800/80 mt-4 flex items-center justify-between">
                   {/* Contributor badge */}
                   <div className="flex items-center gap-2">
-                    <div className="h-7 w-7 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-950/50 flex items-center justify-center font-bold text-[10px] uppercase">
+                    <div className="h-7 w-7 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-nawa-primary dark:text-indigo-400 border border-indigo-100 dark:border-indigo-950/50 flex items-center justify-center font-bold text-[10px] uppercase">
                       {mod.uploaderName ? mod.uploaderName.charAt(0) : "A"}
                     </div>
                     <div className="text-left">
@@ -437,8 +437,8 @@ export default function ModulesLibraryClient({
                       onClick={(e) => toggleBookmark(mod.id, e)}
                       className={`inline-flex h-9 w-9 items-center justify-center rounded-xl transition-all cursor-pointer border shadow-sm hover:scale-105 active:scale-95 ${
                         bookmarks.includes(mod.id)
-                          ? "bg-amber-100 border-amber-200 text-amber-600 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-500"
-                          : "bg-white border-zinc-200 text-zinc-400 hover:text-amber-500 dark:bg-zinc-800 dark:border-zinc-700 dark:hover:text-amber-400"
+                          ? "bg-amber-100 border-amber-200 text-amber-600 dark:bg-amber-900/30 dark:border-amber-800 dark:text-nawa-warning"
+                          : "bg-white border-zinc-200 text-zinc-400 hover:text-nawa-warning dark:bg-zinc-800 dark:border-zinc-700 dark:hover:text-amber-400"
                       }`}
                       title="Simpan Modul"
                     >
@@ -448,7 +448,7 @@ export default function ModulesLibraryClient({
                     <button 
                       type="button"
                       onClick={() => handleOpenModule(mod.id)}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer border border-indigo-700"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-nawa-primary hover:bg-nawa-primary-hover text-white shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer border border-nawa-primary-hover"
                       title="Buka Dokumen Modul"
                     >
                       <ExternalLink className="h-4.5 w-4.5" />
@@ -468,7 +468,7 @@ export default function ModulesLibraryClient({
             {/* Header bar */}
             <div className="p-5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50 dark:bg-zinc-950/50">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-100 dark:border-indigo-900/40">
+                <div className="h-10 w-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-nawa-primary dark:text-indigo-400 flex items-center justify-center border border-indigo-100 dark:border-indigo-900/40">
                   <BookOpen className="h-5 w-5" />
                 </div>
                 <div className="text-left">
@@ -480,7 +480,7 @@ export default function ModulesLibraryClient({
                     <span>•</span>
                     <span>Kelas {selectedReaderModule.grade}</span>
                     <span>•</span>
-                    <span className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 text-[10px] px-2 py-0.5 rounded-md font-bold">
+                    <span className="bg-indigo-50 dark:bg-indigo-950/40 text-nawa-primary dark:text-indigo-400 text-[10px] px-2 py-0.5 rounded-md font-bold">
                       {selectedReaderModule.category}
                     </span>
                   </div>
@@ -603,7 +603,7 @@ export default function ModulesLibraryClient({
                       /* Mock high-fidelity Physics handwritten note content */
                       <div className="space-y-6 text-sm sm:text-base leading-relaxed font-sans text-zinc-700">
                         <div>
-                          <h4 className="font-bold text-lg text-indigo-600 bg-indigo-50 border-b border-indigo-200 px-2 py-0.5 rounded inline-block">
+                          <h4 className="font-bold text-lg text-nawa-primary bg-indigo-50 border-b border-indigo-200 px-2 py-0.5 rounded inline-block">
                             I. Hukum II Newton ⚖️
                           </h4>
                           <p className="mt-2 text-zinc-700">
@@ -618,7 +618,7 @@ export default function ModulesLibraryClient({
                         </div>
 
                         <div>
-                          <h4 className="font-bold text-lg text-indigo-600 bg-indigo-50 border-b border-indigo-200 px-2 py-0.5 rounded inline-block">
+                          <h4 className="font-bold text-lg text-nawa-primary bg-indigo-50 border-b border-indigo-200 px-2 py-0.5 rounded inline-block">
                             II. Rotasi Benda Tegar (Dinamika Rotasi) 🌀
                           </h4>
                           <p className="mt-2 text-zinc-700">
@@ -632,7 +632,7 @@ export default function ModulesLibraryClient({
                         </div>
 
                         <div className="bg-indigo-50/50 border border-indigo-200 rounded-xl p-4 mt-6">
-                          <p className="text-xs font-bold text-indigo-600 uppercase">💡 Tips Ujian SMAN 2 Jonggol:</p>
+                          <p className="text-xs font-bold text-nawa-primary uppercase">💡 Tips Ujian SMAN 2 Jonggol:</p>
                           <p className="text-xs text-zinc-600 mt-1 leading-relaxed">
                             Jangan lupa untuk selalu menyamakan arah vektor gaya pada sumbu x dan sumbu y terlebih dahulu sebelum memasukkannya ke rumus ΣF = m·a!
                           </p>
@@ -642,7 +642,7 @@ export default function ModulesLibraryClient({
                       /* Mock high-fidelity Math handwritten note content */
                       <div className="space-y-6 text-sm sm:text-base leading-relaxed font-sans text-zinc-700">
                         <div>
-                          <h4 className="font-bold text-lg text-indigo-600 bg-indigo-50 border-b border-indigo-200 px-2 py-0.5 rounded inline-block">
+                          <h4 className="font-bold text-lg text-nawa-primary bg-indigo-50 border-b border-indigo-200 px-2 py-0.5 rounded inline-block">
                             I. Integral Substitusi 🧮
                           </h4>
                           <p className="mt-2 text-zinc-700">
@@ -656,7 +656,7 @@ export default function ModulesLibraryClient({
                         </div>
 
                         <div>
-                          <h4 className="font-bold text-lg text-indigo-600 bg-indigo-50 border-b border-indigo-200 px-2 py-0.5 rounded inline-block">
+                          <h4 className="font-bold text-lg text-nawa-primary bg-indigo-50 border-b border-indigo-200 px-2 py-0.5 rounded inline-block">
                             II. Integral Parsial (Metode Tanzalin) ⚡
                           </h4>
                           <p className="mt-2 text-zinc-700">
@@ -675,7 +675,7 @@ export default function ModulesLibraryClient({
                               <tbody>
                                 <tr>
                                   <td className="py-2 px-3 border-b font-mono">3x²</td>
-                                  <td className="py-2 px-3 border-b font-bold text-indigo-600">(+)</td>
+                                  <td className="py-2 px-3 border-b font-bold text-nawa-primary">(+)</td>
                                   <td className="py-2 px-3 border-b font-mono">cos(x)</td>
                                 </tr>
                                 <tr>
@@ -685,7 +685,7 @@ export default function ModulesLibraryClient({
                                 </tr>
                                 <tr>
                                   <td className="py-2 px-3 border-b font-mono text-zinc-400">6</td>
-                                  <td className="py-2 px-3 border-b font-bold text-indigo-600">(+)</td>
+                                  <td className="py-2 px-3 border-b font-bold text-nawa-primary">(+)</td>
                                   <td className="py-2 px-3 border-b font-mono text-zinc-400">-cos(x)</td>
                                 </tr>
                                 <tr>
@@ -702,7 +702,7 @@ export default function ModulesLibraryClient({
                       /* Fallback general subject handwritten note content */
                       <div className="space-y-6 text-sm sm:text-base leading-relaxed font-sans text-zinc-700">
                         <div>
-                          <h4 className="font-bold text-lg text-indigo-600 bg-indigo-50 border-b border-indigo-200 px-2 py-0.5 rounded inline-block">
+                          <h4 className="font-bold text-lg text-nawa-primary bg-indigo-50 border-b border-indigo-200 px-2 py-0.5 rounded inline-block">
                             Ringkasan Materi Pelajaran 📖
                           </h4>
                           <p className="mt-2 text-zinc-700">
@@ -723,7 +723,7 @@ export default function ModulesLibraryClient({
                 <div className="max-w-2xl mx-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 sm:p-8 rounded-2xl shadow-md text-left">
                   <div className="mb-6 pb-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-start">
                     <div>
-                      <span className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 text-[10px] px-2.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                      <span className="bg-indigo-50 dark:bg-indigo-950/40 text-nawa-primary dark:text-indigo-400 text-[10px] px-2.5 py-0.5 rounded font-bold uppercase tracking-wider">
                         Dokumen Modul Terverifikasi
                       </span>
                       <h2 className="text-xl sm:text-2xl font-extrabold text-zinc-900 dark:text-white tracking-tight mt-2">
@@ -738,15 +738,15 @@ export default function ModulesLibraryClient({
                   {/* Typed Mock textbook sheet */}
                   <div className="space-y-6 text-sm sm:text-base leading-relaxed text-zinc-700 dark:text-zinc-300">
                     <div>
-                      <h3 className="text-base font-extrabold text-indigo-600 dark:text-indigo-400 mb-2">1. Deskripsi & Silabus Materi</h3>
+                      <h3 className="text-base font-extrabold text-nawa-primary dark:text-indigo-400 mb-2">1. Deskripsi & Silabus Materi</h3>
                       <p>
                         Modul ini dipersiapkan secara khusus untuk memandu siswa SMAN 2 Jonggol dalam memahami konsep dasar dari pelajaran <b>{selectedReaderModule.subject}</b>. Pembahasan dirancang agar berorientasi pada penyelesaian soal latihan ujian, penilaian harian, dan persiapan ujian akhir semester.
                       </p>
                     </div>
 
                     <div>
-                      <h3 className="text-base font-extrabold text-indigo-600 dark:text-indigo-400 mb-2">2. Peta Konsep Esensial</h3>
-                      <div className="p-4 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl font-mono text-xs text-indigo-600 dark:text-indigo-400">
+                      <h3 className="text-base font-extrabold text-nawa-primary dark:text-indigo-400 mb-2">2. Peta Konsep Esensial</h3>
+                      <div className="p-4 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl font-mono text-xs text-nawa-primary dark:text-indigo-400">
                         <p className="font-bold">{"// RENCANA MATERI BELAJAR:"}</p>
                         <p className="mt-1">→ Pendahuluan & Definisi Istilah Penting</p>
                         <p>→ Teori Utama & Rumus Praktis Cepat</p>
@@ -756,7 +756,7 @@ export default function ModulesLibraryClient({
                     </div>
 
                     <div>
-                      <h3 className="text-base font-extrabold text-indigo-600 dark:text-indigo-400 mb-2">3. Manfaat Belajar Bersama NAWA-LEARN</h3>
+                      <h3 className="text-base font-extrabold text-nawa-primary dark:text-indigo-400 mb-2">3. Manfaat Belajar Bersama NAWA-LEARN</h3>
                       <p>
                         Dengan mempelajari modul yang dibagikan oleh kontributor berprestasi, Anda mendapatkan sudut pandang ringkas trik pengerjaan cepat yang tidak selalu diajarkan di buku teks standar komersial. Lakukan kolaborasi aktif di forum jika Anda mendapati bagian yang kurang jelas!
                       </p>
@@ -825,8 +825,8 @@ export default function ModulesLibraryClient({
                 }}
                 className={`inline-flex items-center gap-1.5 font-bold py-2.5 px-5 rounded-xl text-xs transition-all shadow-md cursor-pointer ${
                   printSuccess
-                    ? "bg-emerald-600 text-white hover:bg-emerald-500 shadow-emerald-600/10 scale-95"
-                    : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/10 hover:shadow-lg"
+                    ? "bg-emerald-600 text-white hover:bg-nawa-success shadow-emerald-600/10 scale-95"
+                    : "bg-nawa-primary hover:bg-nawa-primary-hover text-white shadow-nawa-primary/10 hover:shadow-lg"
                 }`}
               >
                 {printSuccess ? (

@@ -43,7 +43,7 @@ export function QuizListScreen({
       {/* Stats row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <div className="p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+          <div className="h-10 w-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-nawa-primary dark:text-indigo-400 flex items-center justify-center shrink-0">
             <BookOpen className="h-5 w-5" />
           </div>
           <div>
@@ -74,7 +74,7 @@ export function QuizListScreen({
       </div>
 
       {/* Daily Quiz CTA */}
-      <div className="bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-700 rounded-2xl p-6 text-white mb-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-lg shadow-indigo-500/20 relative overflow-hidden border border-indigo-400/20">
+      <div className="bg-gradient-to-r from-nawa-primary via-nawa-secondary to-purple-700 rounded-2xl p-6 text-white mb-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-lg shadow-indigo-500/20 relative overflow-hidden border border-indigo-400/20">
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
         <div className="flex items-center gap-4 relative z-10">
           <div className="bg-white/15 p-3 rounded-2xl backdrop-blur-sm relative border border-white/20">
@@ -90,7 +90,7 @@ export function QuizListScreen({
         </div>
         <Link
           href="/questions/daily"
-          className="shrink-0 bg-white hover:bg-indigo-50 text-indigo-700 px-6 py-3 rounded-xl font-bold transition-all shadow-md active:scale-[0.98] hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer relative z-10"
+          className="shrink-0 bg-white hover:bg-indigo-50 text-nawa-primary-hover px-6 py-3 rounded-xl font-bold transition-all shadow-md active:scale-[0.98] hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer relative z-10"
         >
           Mulai Kuis Harian <ArrowRight className="h-4 w-4" />
         </Link>
@@ -104,7 +104,7 @@ export function QuizListScreen({
           </h3>
           <button
             onClick={onOpenCreateModal}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-900/40 px-3 py-1.5 rounded-xl transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-nawa-primary dark:text-indigo-400 hover:text-nawa-primary-hover dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-900/40 px-3 py-1.5 rounded-xl transition-all cursor-pointer"
           >
             <PlusCircle className="h-3.5 w-3.5" /> Buat Ujian Baru
           </button>
@@ -122,7 +122,7 @@ export function QuizListScreen({
                   isEmpty
                     ? "border-zinc-200 dark:border-zinc-800 opacity-60"
                     : isContributed
-                      ? "border-amber-300 dark:border-amber-800 bg-amber-50/5 dark:bg-amber-950/5 shadow-inner shadow-amber-500/[0.02] hover:shadow-md"
+                      ? "border-amber-300 dark:border-amber-800 bg-amber-50/5 dark:bg-amber-950/5 shadow-inner shadow-nawa-warning/[0.02] hover:shadow-md"
                       : quiz.isCustom
                         ? "border-indigo-200 dark:border-indigo-900/40 bg-indigo-50/5 hover:shadow-md"
                         : "border-zinc-200 dark:border-zinc-800 hover:shadow-md hover:border-indigo-400 dark:hover:border-indigo-500/55"
@@ -136,7 +136,7 @@ export function QuizListScreen({
                       : quiz.isCustom
                         ? "bg-indigo-100 dark:bg-indigo-950/60 border-indigo-200 dark:border-indigo-900"
                         : quiz.subject === "Campuran"
-                          ? "bg-indigo-100 dark:bg-indigo-950/60 border-indigo-200 dark:border-indigo-900 text-indigo-600"
+                          ? "bg-indigo-100 dark:bg-indigo-950/60 border-indigo-200 dark:border-indigo-900 text-nawa-primary"
                           : quiz.subject === "Matematika"
                             ? "bg-orange-100 dark:bg-orange-950/60 border-orange-200 dark:border-orange-900 text-orange-600"
                             : quiz.subject === "Fisika"
@@ -150,16 +150,16 @@ export function QuizListScreen({
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">
+                      <h4 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white group-hover:text-nawa-primary dark:group-hover:text-indigo-400 transition-colors truncate">
                         {quiz.title}
                       </h4>
                       {isContributed && (
-                        <span className="bg-amber-500 text-white text-[8px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse border border-amber-600">
+                        <span className="bg-nawa-warning text-white text-[8px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse border border-amber-600">
                           KONTRIBUSI SISWA
                         </span>
                       )}
                       {quiz.isCustom && (
-                        <span className="bg-indigo-500 text-white text-[8px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider border border-indigo-600">
+                        <span className="bg-indigo-500 text-white text-[8px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider border border-nawa-primary">
                           BUATAN SISWA
                         </span>
                       )}
@@ -192,7 +192,7 @@ export function QuizListScreen({
                       <span>{quiz.questionsCount} Soal</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400 text-xs font-bold bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/50 dark:border-zinc-800 px-3 py-1.5 rounded-xl shadow-inner">
-                      <Clock className="h-3.5 w-3.5 text-amber-500" />
+                      <Clock className="h-3.5 w-3.5 text-nawa-warning" />
                       <span>{quiz.durationMinutes} Menit</span>
                     </div>
                   </div>
@@ -214,8 +214,8 @@ export function QuizListScreen({
                         isEmpty
                           ? "bg-zinc-300 dark:bg-zinc-700 cursor-not-allowed"
                           : isContributed
-                            ? "bg-amber-600 hover:bg-amber-500 shadow-amber-600/10 border border-amber-600"
-                            : "bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/10 border border-indigo-600"
+                            ? "bg-amber-600 hover:bg-nawa-warning shadow-amber-600/10 border border-amber-600"
+                            : "bg-nawa-primary hover:bg-indigo-500 shadow-nawa-primary/10 border border-nawa-primary"
                       }`}
                     >
                       {isEmpty ? "Tidak Tersedia" : <>Mulai <ArrowRight className="h-3.5 w-3.5" /></>}

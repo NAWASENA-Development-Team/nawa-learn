@@ -111,7 +111,7 @@ export default function PrivacyPage() {
       <LegalSection number={6} title="Hakmu">
         <LegalList
           items={[
-            <><strong>Melihat</strong> — seluruh data yang kami simpan tentangmu bisa kamu unduh sebagai berkas JSON atau CSV di <Link className="font-bold text-indigo-600 hover:underline dark:text-indigo-400" href="/profile/privacy">halaman privasi profilmu</Link>.</>,
+            <><strong>Melihat</strong> — seluruh data yang kami simpan tentangmu bisa kamu unduh sebagai berkas JSON atau CSV di <Link className="font-bold text-nawa-primary hover:underline dark:text-indigo-400" href="/profile/privacy">halaman privasi profilmu</Link>.</>,
             <><strong>Memperbaiki</strong> — nama, foto, bio, dan motto bisa kamu ubah sendiri kapan saja di profilmu.</>,
             <><strong>Menghapus</strong> — tombol <em>Hapus akun saya</em> memutus akun Clerk-mu, mengosongkan identitas pribadimu, dan menghapus laporan serta riwayat poinmu. Tindakan ini permanen dan tidak bisa dibatalkan.</>,
             <><strong>Menarik persetujuan</strong> — menarik persetujuan sama dengan menghapus akun, karena tanpa persetujuan kami tidak punya dasar untuk menyimpan datamu.</>,
@@ -162,8 +162,8 @@ export default function PrivacyPage() {
 
       <LegalSection number={11} title="Hubungi kami">
         <p>
-          Pertanyaan, permintaan data, atau keberatan: <a className="font-bold text-indigo-600 hover:underline dark:text-indigo-400" href={`mailto:${PRIVACY_CONTACT_EMAIL}`}>{PRIVACY_CONTACT_EMAIL}</a>.
-          Dokumen pendamping: <Link className="font-bold text-indigo-600 hover:underline dark:text-indigo-400" href={POLICY_PATHS.terms}>Ketentuan Layanan</Link>.
+          Pertanyaan, permintaan data, atau keberatan: <a className="font-bold text-nawa-primary hover:underline dark:text-indigo-400" href={`mailto:${PRIVACY_CONTACT_EMAIL}`}>{PRIVACY_CONTACT_EMAIL}</a>.
+          Dokumen pendamping: <Link className="font-bold text-nawa-primary hover:underline dark:text-indigo-400" href={POLICY_PATHS.terms}>Ketentuan Layanan</Link>.
         </p>
       </LegalSection>
     </LegalPage>

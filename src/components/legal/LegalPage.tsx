@@ -30,7 +30,7 @@ export function LegalPage({
           <span className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800/60 px-3 py-1 font-bold text-zinc-700 dark:text-zinc-300">
             NAWA-LEARN SMAN 2 Jonggol
           </span>
-          <span className="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-1 font-bold text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/50 dark:text-indigo-300">
+          <span className="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-1 font-bold text-nawa-primary-hover dark:border-indigo-900 dark:bg-indigo-950/50 dark:text-indigo-300">
             Versi {POLICY_VERSION}
           </span>
           <span className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-1 font-semibold text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
@@ -44,18 +44,18 @@ export function LegalPage({
       <footer className="mt-12 border-t border-zinc-200 pt-6 text-sm text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
         <p>
           Ada pertanyaan tentang dokumen ini? Kirim surel ke{" "}
-          <a className="font-bold text-indigo-600 hover:underline dark:text-indigo-400" href={`mailto:${PRIVACY_CONTACT_EMAIL}`}>
+          <a className="font-bold text-nawa-primary hover:underline dark:text-indigo-400" href={`mailto:${PRIVACY_CONTACT_EMAIL}`}>
             {PRIVACY_CONTACT_EMAIL}
           </a>
           .
         </p>
         <nav className="mt-4 flex flex-wrap gap-4 font-bold">
           {title.toLowerCase().includes("privasi") ? (
-            <Link className="text-indigo-600 hover:underline dark:text-indigo-400" href={POLICY_PATHS.terms}>
+            <Link className="text-nawa-primary hover:underline dark:text-indigo-400" href={POLICY_PATHS.terms}>
               Baca Ketentuan Layanan →
             </Link>
           ) : (
-            <Link className="text-indigo-600 hover:underline dark:text-indigo-400" href={POLICY_PATHS.privacy}>
+            <Link className="text-nawa-primary hover:underline dark:text-indigo-400" href={POLICY_PATHS.privacy}>
               Baca Kebijakan Privasi →
             </Link>
           )}

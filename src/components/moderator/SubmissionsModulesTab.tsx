@@ -26,12 +26,12 @@ export function SubmissionsModulesTab({
     <div className="space-y-4">
       {isLoadingModules ? (
         <div className="p-12 text-center text-zinc-600 flex flex-col items-center justify-center">
-          <div className="h-8 w-8 rounded-full border-4 border-indigo-100 border-t-indigo-600 animate-spin mb-3" />
+          <div className="h-8 w-8 rounded-full border-4 border-indigo-100 border-t-nawa-primary animate-spin mb-3" />
           <p className="text-xs font-bold">Memuat antrean draf modul...</p>
         </div>
       ) : submissions.length === 0 ? (
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200/60 dark:border-zinc-800 rounded-3xl p-10 text-center shadow-sm max-w-xl mx-auto">
-          <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-indigo-100/40">
+          <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-950/40 text-nawa-primary dark:text-indigo-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-indigo-100/40">
             <CheckCircle2 className="h-6 w-6" />
           </div>
           <h4 className="text-base font-extrabold text-zinc-800 dark:text-zinc-100">Antrean Modul Bersih</h4>
@@ -49,7 +49,7 @@ export function SubmissionsModulesTab({
                   {sub.moduleTitle}
                 </h3>
                 <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400 font-semibold">
-                  <span className="text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                  <span className="text-nawa-primary dark:text-indigo-400 flex items-center gap-1">
                     <User className="h-3.5 w-3.5" /> Pengirim: {sub.submitterName}
                   </span>
                   <span>•</span>
@@ -109,7 +109,7 @@ export function SubmissionsModulesTab({
                 <button
                   onClick={() => onApproveModule(sub)}
                   disabled={processingModuleId === sub.submissionId}
-                  className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer h-9 disabled:opacity-50"
+                  className="w-full sm:w-auto bg-nawa-primary hover:bg-nawa-primary-hover active:scale-[0.98] text-white px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer h-9 disabled:opacity-50"
                 >
                   {processingModuleId === sub.submissionId ? "Memproses..." : "Setujui Modul"}
                 </button>

@@ -26,7 +26,7 @@ export function QuizPreparationScreen({
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-2xl overflow-hidden text-left relative animate-in fade-in duration-300">
 
-        <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 p-6 sm:p-10 text-white relative">
+        <div className="bg-gradient-to-br from-nawa-primary via-purple-600 to-indigo-800 p-6 sm:p-10 text-white relative">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-tight">
             {quiz.title}
@@ -45,7 +45,7 @@ export function QuizPreparationScreen({
             <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-4">Informasi Detail Ujian</h4>
             <div className="grid grid-cols-2 gap-4">
               <div className="p-3.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/60 dark:border-zinc-800/80 rounded-2xl flex items-center gap-3">
-                <div className="h-9 w-9 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-100/40 shrink-0">
+                <div className="h-9 w-9 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-nawa-primary dark:text-indigo-400 flex items-center justify-center border border-indigo-100/40 shrink-0">
                   <FileText className="h-4.5 w-4.5" />
                 </div>
                 <div>
@@ -108,30 +108,30 @@ export function QuizPreparationScreen({
 
           {/* Instructions */}
           <div className="p-5 bg-indigo-50/20 dark:bg-indigo-950/20 border border-indigo-100/30 dark:border-indigo-900/30 rounded-2xl">
-            <h5 className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <h5 className="text-xs font-bold text-nawa-primary dark:text-indigo-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
               📝 Panduan Pengerjaan Soal:
             </h5>
             <ul className="space-y-3 text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
               <li className="flex gap-2.5 items-start">
-                <div className="h-4.5 w-4.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
+                <div className="h-4.5 w-4.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-nawa-primary dark:text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
                   <Check className="h-3 w-3" />
                 </div>
                 <span>Pastikan Anda berada di tempat yang tenang dengan koneksi internet stabil.</span>
               </li>
               <li className="flex gap-2.5 items-start">
-                <div className="h-4.5 w-4.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
+                <div className="h-4.5 w-4.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-nawa-primary dark:text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
                   <Check className="h-3 w-3" />
                 </div>
                 <span>Waktu ujian akan <b>berjalan mundur secara otomatis</b> dan tidak dapat dijeda.</span>
               </li>
               <li className="flex gap-2.5 items-start">
-                <div className="h-4.5 w-4.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
+                <div className="h-4.5 w-4.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-nawa-primary dark:text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
                   <Check className="h-3 w-3" />
                 </div>
                 <span>Gunakan sidebar navigasi soal di kanan untuk melompat bebas ke nomor soal manapun.</span>
               </li>
               <li className="flex gap-2.5 items-start">
-                <div className="h-4.5 w-4.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
+                <div className="h-4.5 w-4.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-nawa-primary dark:text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
                   <Check className="h-3 w-3" />
                 </div>
                 <span>Skor akhir dan umpan balik kelulusan akademik langsung disajikan setelah submit.</span>
@@ -153,7 +153,7 @@ export function QuizPreparationScreen({
             ) : (
               <button
                 onClick={onStart}
-                className="flex-[2] inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-extrabold py-3.5 px-6 text-xs sm:text-sm transition-all shadow-md shadow-indigo-500/25 hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer"
+                className="flex-[2] inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-nawa-primary to-nawa-secondary hover:from-nawa-primary-hover hover:to-nawa-secondary-hover text-white font-extrabold py-3.5 px-6 text-xs sm:text-sm transition-all shadow-md shadow-indigo-500/25 hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer"
               >
                 Mulai Ujian Sekarang
               </button>

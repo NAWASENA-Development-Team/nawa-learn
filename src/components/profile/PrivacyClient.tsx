@@ -167,7 +167,7 @@ export default function PrivacyClient({
     <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:py-12">
       {/* ── Kepala ─────────────────────────────────────────────────────────── */}
       <div className="flex items-start gap-3">
-        <div className="h-11 w-11 shrink-0 rounded-2xl bg-indigo-600 dark:bg-indigo-500 flex items-center justify-center shadow-sm">
+        <div className="h-11 w-11 shrink-0 rounded-2xl bg-nawa-primary dark:bg-indigo-500 flex items-center justify-center shadow-sm">
           <ShieldCheck className="h-5 w-5 text-white" />
         </div>
         <div>
@@ -183,7 +183,7 @@ export default function PrivacyClient({
       {/* ── Status persetujuan ─────────────────────────────────────────────── */}
       <section className="mt-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 sm:p-6 shadow-sm">
         <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-          <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Persetujuan yang tersimpan
+          <CheckCircle2 className="h-4 w-4 text-nawa-success" /> Persetujuan yang tersimpan
         </h2>
 
         <dl className="mt-4 grid gap-4 sm:grid-cols-3">
@@ -226,7 +226,7 @@ export default function PrivacyClient({
           <Link
             href={POLICY_PATHS.privacy}
             target="_blank"
-            className="font-bold text-indigo-600 hover:underline dark:text-indigo-400"
+            className="font-bold text-nawa-primary hover:underline dark:text-indigo-400"
           >
             Kebijakan Privasi
           </Link>{" "}
@@ -234,14 +234,14 @@ export default function PrivacyClient({
           <Link
             href={POLICY_PATHS.terms}
             target="_blank"
-            className="font-bold text-indigo-600 hover:underline dark:text-indigo-400"
+            className="font-bold text-nawa-primary hover:underline dark:text-indigo-400"
           >
             Ketentuan Layanan
           </Link>
           . Pertanyaan soal data bisa dikirim ke{" "}
           <a
             href={`mailto:${PRIVACY_CONTACT_EMAIL}`}
-            className="inline-flex items-center gap-1 font-bold text-indigo-600 hover:underline dark:text-indigo-400"
+            className="inline-flex items-center gap-1 font-bold text-nawa-primary hover:underline dark:text-indigo-400"
           >
             <Mail className="h-3 w-3" /> {PRIVACY_CONTACT_EMAIL}
           </a>
@@ -265,7 +265,7 @@ export default function PrivacyClient({
             type="button"
             onClick={() => handleExport("json")}
             disabled={downloading !== null}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-wait text-white px-4 py-3 text-sm font-bold shadow-sm transition-all active:scale-[0.98] cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-nawa-primary hover:bg-nawa-primary-hover disabled:opacity-60 disabled:cursor-wait text-white px-4 py-3 text-sm font-bold shadow-sm transition-all active:scale-[0.98] cursor-pointer"
           >
             {downloading === "json" ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -279,7 +279,7 @@ export default function PrivacyClient({
             type="button"
             onClick={() => handleExport("csv")}
             disabled={downloading !== null}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-60 disabled:cursor-wait text-zinc-700 dark:text-zinc-200 px-4 py-3 text-sm font-bold transition-all active:scale-[0.98] cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 hover:border-indigo-400 hover:text-nawa-primary dark:hover:text-indigo-400 disabled:opacity-60 disabled:cursor-wait text-zinc-700 dark:text-zinc-200 px-4 py-3 text-sm font-bold transition-all active:scale-[0.98] cursor-pointer"
           >
             {downloading === "csv" ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -410,7 +410,7 @@ export default function PrivacyClient({
         Kembali ke{" "}
         <Link
           href="/profile"
-          className="font-bold text-indigo-600 hover:underline dark:text-indigo-400"
+          className="font-bold text-nawa-primary hover:underline dark:text-indigo-400"
         >
           profilmu
         </Link>
