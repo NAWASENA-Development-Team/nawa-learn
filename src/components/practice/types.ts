@@ -1,8 +1,8 @@
 // components/practice/types.ts
 // ─── Bentuk data latihan CBT ──────────────────────────────────────────────────
 //
-// Tipe dipisah dari halaman karena **enam** komponen memakainya: dua puluh
-// layar daftar, persiapan, pengerjaan, hasil, dan modal pembuatan ujian.
+// Tipe dipisah dari halaman karena **lima** komponen memakainya: layar daftar,
+// persiapan, pengerjaan, hasil, dan pembuat paket ujian di `/submit`.
 // Menduplikasinya pasti berubah arah; mengimpornya dari halaman berarti
 // membawa seluruh halaman ke setiap komponen.
 
@@ -30,6 +30,13 @@ export type Quiz = {
   questions: Question[];
   author?: string;
   isCustom?: boolean;
+  /**
+   * `true` bila paket ujian ini ditulis oleh penontonnya sendiri. Daftar latihan
+   * tetap menampilkannya — paket yang hilang dari daftar terbaca sebagai paket
+   * yang gagal tersimpan — tetapi tombol "Mulai" diganti label, karena
+   * `/api/exams/submit` menjawab `403 own_exam_forbidden`.
+   */
+  isOwn?: boolean;
 };
 
 // ─── API payloads ─────────────────────────────────────────────────────────────
@@ -62,6 +69,15 @@ export type ExamListItemPayload = {
   difficulty: string;
   durationMinutes: number;
   authorName?: string | null;
+  /**
+   * Hanya terisi pada `?mine=1` dan pada baris yang benar-benar milik pemanggil.
+   * Rute default menyaring `status = 'approved'`, jadi nilainya selalu
+   * `"approved"` di sana — kolom ini ada supaya daftar "paket ujianku" bisa
+   * menampilkan status yang sebenarnya tanpa rute kedua.
+   */
+  status?: "pending" | "approved" | "rejected";
+  isOwn?: boolean;
+  questionCount?: number;
   questions: ExamQuestionPayload[];
 };
 

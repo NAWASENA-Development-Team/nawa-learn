@@ -184,11 +184,36 @@ export const customExams = pgTable("custom_exams", {
   questions: jsonb("questions").notNull(),
   authorId: uuid("author_id").references(() => users.id),
   authorName: varchar("author_name", { length: 255 }).notNull(),
+  // ── M18: paket ujian melewati peninjauan ────────────────────────────────────
+  //
+  // Sebelum M18 setiap paket yang dibuat langsung dapat dikerjakan siapa pun.
+  // Itu dapat diterima selama pembuatnya hanya staf, tetapi M18 membuka
+  // pembuatan paket untuk **kontributor** — dan paket 50 soal yang salah kunci
+  // membebani setiap siswa yang mengerjakannya, bukan hanya penulisnya.
+  //
+  // `statusEnum` yang sudah ada dipakai ulang (pending/approved/rejected) alih-
+  // alih enum baru: `submissions` sudah memakai tiga nilai yang sama, dan dua
+  // enum dengan arti identik adalah dua tempat yang bisa berbeda.
+  //
+  // Baris yang ditulis sebelum M18 sudah beredar dan tidak pernah ditinjau, jadi
+  // migrasinya mengisi `approved` — bukan `pending`, yang akan menyembunyikan
+  // paket yang sedang dipakai siswa tanpa ada yang memutuskannya.
+  status: statusEnum("status").default("pending").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
   // M13: `/api/exams/list` is keyset-paginated newest-first. Without this the
   // sort had to happen in memory over the whole table before `LIMIT` applied.
   index("custom_exams_created_idx").on(table.createdAt.desc(), table.id.desc()),
+  // M18: daftar siswa hanya membaca yang `approved`, dan antrean moderator hanya
+  // membaca yang `pending`. Satu indeks melayani keduanya.
+  index("custom_exams_status_created_idx").on(
+    table.status,
+    table.createdAt.desc(),
+    table.id.desc(),
+  ),
+  // M18: kuota "25 paket terbit per akun" dan "3 paket menunggu" dihitung per
+  // penulis, bukan dengan memindai tabel.
+  index("custom_exams_author_status_idx").on(table.authorId, table.status),
 ]);
 
 export const pointsLog = pgTable("points_log", {
@@ -204,6 +229,7 @@ export const pointsLog = pgTable("points_log", {
   // because Postgres treats NULLs as distinct in a unique index.
   //   quiz_answer    + refId = questionId  → one attempt per question, ever
   //   module_approved+ refId = moduleId    → a module can only pay out once
+  //   exam_approved  + refId = examId      → likewise for a package (M18)
   uniqueIndex("points_log_user_action_ref_unique").on(table.userId, table.action, table.refId),
 ]);
 
@@ -239,7 +265,7 @@ export const auditLog = pgTable("audit_log", {
   id: uuid("id").defaultRandom().primaryKey(),
   actorId: uuid("actor_id").references(() => users.id),
   action: varchar("action", { length: 64 }).notNull(),   // 'content.approve' | 'content.reject' | 'user.role_change'
-  entity: varchar("entity", { length: 64 }).notNull(),   // 'module' | 'question' | 'submission' | 'user'
+  entity: varchar("entity", { length: 64 }).notNull(),   // 'module' | 'question' | 'exam' | 'submission' | 'user'
   entityId: uuid("entity_id"),
   before: jsonb("before").$type<Record<string, unknown>>(),
   after: jsonb("after").$type<Record<string, unknown>>(),
@@ -316,6 +342,20 @@ export const dailyQuizSlot = pgTable("daily_quiz_slot", {
 export const dailyActivity = pgTable("daily_activity", {
   userId: uuid("user_id").references(() => users.id).notNull(),
   windowStart: timestamp("window_start").notNull(),
+  // ── M18 ───────────────────────────────────────────────────────────────────
+  // Soal mana yang dijawab, dan apakah jawabannya benar.
+  //
+  // Sampai M17 baris ini hanya berarti "pernah menjawab sesuatu hari ini", dan
+  // hadiah +25 dibayar untuk partisipasi apa pun — termasuk jawaban salah pada
+  // satu dari dua puluh soal. Sejak M18 kuis harian adalah **satu soal** dan
+  // hadiahnya hanya dibayar bila jawaban itu benar, jadi kebenarannya harus
+  // dicatat di sini: `points_log` tidak bisa menjawabnya (barisnya dibuang oleh
+  // indeks unik begitu soal itu pernah dijawab, dan baris delta 0 pun ada).
+  //
+  // `questionId` sengaja **tanpa** foreign key: soal tidak pernah dihapus, hanya
+  // berubah status, dan kolom ini adalah catatan riwayat — bukan penunjuk hidup.
+  questionId: uuid("question_id"),
+  isCorrect: boolean("is_correct").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
   primaryKey({ columns: [table.userId, table.windowStart] }),

@@ -6,6 +6,11 @@ import { questions, submissions } from "@/db/schema";
 import { requireUser } from "@/lib/authz";
 import { requestLogger } from "@/lib/logger";
 import { rateLimit } from "@/lib/rateLimit";
+import {
+  MAX_PENDING_SUBMISSIONS,
+  pendingQuotaResponse,
+  pendingSubmissionCount,
+} from "@/lib/submissionQuota";
 import { optionalText, parseJsonBody, shortText } from "@/lib/validation";
 
 const submitSchema = z
@@ -38,7 +43,9 @@ export async function POST(req: Request) {
     if (!authz.ok) return authz.response;
     const dbUser = authz.user;
 
-    if (dbUser.role === "student") return NextResponse.json({ error: "Hanya kontributor yang dapat mengunggah soal" }, { status: 403 });
+    // M18: siswa boleh mengajukan soal. Peran dinaikkan `promoteIfEligible()`
+    // setelah karya disetujui, bukan dijaga di pintu masuk — lihat
+    // `modules/submit` untuk alasan lengkapnya.
 
     // Kursi Dewan Podium tidak boleh mengunggah (I2). Alasannya sama dengan
     // `modules/submit`: kursi memegang `role = 'moderator'` selama masa jabatan,
@@ -56,6 +63,10 @@ export async function POST(req: Request) {
 
     const limit = await rateLimit(req, "questions/submit", dbUser.id);
     if (!limit.ok) return limit.response;
+
+    if ((await pendingSubmissionCount(db, dbUser.id)) >= MAX_PENDING_SUBMISSIONS) {
+      return pendingQuotaResponse();
+    }
 
     const parsed = await parseJsonBody(req, submitSchema);
     if (!parsed.ok) return parsed.response;

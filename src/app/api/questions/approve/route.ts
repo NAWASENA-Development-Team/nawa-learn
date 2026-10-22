@@ -13,6 +13,7 @@ import { parseJsonBody } from "@/lib/validation";
 import { recordAudit } from "@/lib/auditLog";
 import { notifyUnlockedBadges } from "@/lib/badgeMail";
 import { enqueueMail } from "@/lib/mailer";
+import { promoteIfEligible } from "@/lib/promotion";
 
 // `questionId` and `submitterId` are resolved from the submission row in the
 // database, never from the request body.
@@ -125,14 +126,17 @@ export async function POST(req: Request) {
         .where(eq(users.id, submitterId));
     }
 
-    // 7. Increment points, promote to contributor if still a student.
+    // 7. Increment points. Peran tidak ikut di sini (M18) — lihat
+    // `modules/approve`.
     await db.update(users)
       .set({
         points: sql`${users.points} + ${pointsAwarded}`,
         seasonPoints: sql`${users.seasonPoints} + ${pointsAwarded}`,
-        role: sql`CASE WHEN ${users.role} = 'student' THEN 'contributor'::role ELSE ${users.role} END`,
       })
       .where(eq(users.id, submitterId));
+
+    // 7b. Satu-satunya pintu evolusi peran.
+    await promoteIfEligible(db, { userId: submitterId, actorId: reviewer.id, log });
 
     const newPoints = submitter.points + pointsAwarded;
 

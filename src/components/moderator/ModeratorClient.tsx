@@ -9,29 +9,32 @@
 // Dulu 897 baris: empat antrean, empat kumpulan state, empat kelompok handler
 // dan seluruh markup empat tab dalam satu komponen. Sekarang file ini adalah
 // shell: memuat antrean pada saat mount, memegang jumlah untuk label tab, dan
-// menyerahkan setiap tab ke komponen presentasionalnya. Tab kelima (Tim, M17)
-// tidak punya antrean — ia hanya membaca daftar orang, dan justru itu alasan
-// keberadaannya: staf tidak lagi terlihat di papan peringkat.
+// menyerahkan setiap tab ke komponen presentasionalnya. Tab Tim (M17) tidak
+// punya antrean — ia hanya membaca daftar orang, dan justru itu alasan
+// keberadaannya: staf tidak lagi terlihat di papan peringkat. Tab Paket Ujian
+// (M18) punya antrean, dan ia ada karena paket ujian buatan siswa dulu tayang
+// tanpa diperiksa siapa pun.
 "use client";
 
 import { useState, useEffect } from "react";
 import {
-  BookOpen, BookMarked, Eye, Zap, ShieldCheck, Users,
+  BookOpen, BookMarked, ClipboardList, Eye, Zap, ShieldCheck, Users,
 } from "lucide-react";
 import type { BadgeDisplay } from "@/lib/badges";
 import { useToast } from "@/components/ui/Toast";
 import { SubmissionsModulesTab } from "./SubmissionsModulesTab";
 import { SubmissionsQuestionsTab } from "./SubmissionsQuestionsTab";
+import { ExamQueueTab } from "./ExamQueueTab";
 import { HiddenBadgesTab } from "./HiddenBadgesTab";
 import { DailyQuizTab } from "./DailyQuizTab";
 import { TeamTab } from "./TeamTab";
 import type { DailyFormState } from "./DailyQuizTab";
 import type {
-  PendingSubmission, PendingQuestion, HiddenBadgeHolder, DailyQuestion,
+  PendingSubmission, PendingQuestion, PendingExam, HiddenBadgeHolder, DailyQuestion,
   TeamSeatMember, TeamStaffMember,
 } from "./types";
 
-type ModeratorTab = "modules" | "questions" | "badges" | "daily" | "team";
+type ModeratorTab = "modules" | "questions" | "exams" | "badges" | "daily" | "team";
 
 export default function ModeratorClient({ seatKind = "human" }: { seatKind?: "human" | "seat" }) {
   const { success, error: toastError, info } = useToast();
@@ -51,6 +54,16 @@ export default function ModeratorClient({ seatKind = "human" }: { seatKind?: "hu
   const [pendingQuestions, setPendingQuestions] = useState<PendingQuestion[]>([]);
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
   const [processingQuestionId, setProcessingQuestionId] = useState<string | null>(null);
+
+  // Exams State (M18)
+  //
+  // Dimuat untuk **kedua** jenis peninjau: kursi musim boleh menerbitkan paket
+  // ujian (`requireReviewer()`), dan justru kursi itulah yang paling mungkin
+  // menulis paket — larangan yang mereka pegang hanya soal mengunggah, bukan
+  // meninjau.
+  const [pendingExams, setPendingExams] = useState<PendingExam[]>([]);
+  const [isLoadingExams, setIsLoadingExams] = useState(false);
+  const [processingExamId, setProcessingExamId] = useState<string | null>(null);
 
   // Hidden Badges State
   //
@@ -99,6 +112,7 @@ export default function ModeratorClient({ seatKind = "human" }: { seatKind?: "hu
     // team list (which every reviewer may read).
     fetchPendingSubmissions();
     fetchPendingQuestions();
+    fetchPendingExams();
     if (canSeeSecrets) fetchHiddenBadges();
     fetchDailyQuestions();
     fetchTeam();
@@ -155,6 +169,86 @@ export default function ModeratorClient({ seatKind = "human" }: { seatKind?: "hu
       setIsLoadingQuestions(false);
     }
   }
+
+  // ── Paket ujian (M18) ──
+  async function fetchPendingExams() {
+    setIsLoadingExams(true);
+    try {
+      const res = await fetch("/api/exams/pending");
+      if (res.ok) {
+        const { data } = await res.json();
+        setPendingExams(data);
+      }
+    } catch (error) {
+      console.error("Gagal mengambil data paket ujian pending:", error);
+    } finally {
+      setIsLoadingExams(false);
+    }
+  }
+
+  const handleApproveExam = async (exam: PendingExam) => {
+    setProcessingExamId(exam.submissionId);
+    try {
+      const res = await fetch("/api/exams/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          submissionId: exam.submissionId,
+          feedback: "Paket ujian disetujui. Terima kasih atas kontribusinya untuk SMAN 2 Jonggol!",
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const rewardMsg = data.levelRewards?.length
+          ? ` • Level Reward: ${data.levelRewards.join(", ")}`
+          : "";
+        success(
+          "Paket ujian diterbitkan!",
+          `+${data.pointsAwarded} V-Point diberikan ke penulisnya.${rewardMsg}`
+        );
+        setPendingExams((prev) => prev.filter((item) => item.submissionId !== exam.submissionId));
+      } else if (res.status === 409) {
+        // Sudah diputuskan peninjau lain (atau paketnya sudah tidak pending).
+        // Menghapus kartunya lebih jujur daripada membiarkannya terlihat bisa
+        // ditekan dua kali.
+        toastError("Paket ini sudah diputuskan", "Muat ulang panel untuk melihat keadaan terbaru.");
+        setPendingExams((prev) => prev.filter((item) => item.submissionId !== exam.submissionId));
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toastError("Gagal menerbitkan paket", data.error || "Terjadi kesalahan. Coba lagi.");
+      }
+    } catch {
+      toastError("Kesalahan jaringan", "Periksa koneksi internet Anda dan coba lagi.");
+    } finally {
+      setProcessingExamId(null);
+    }
+  };
+
+  const handleRejectExam = async (exam: PendingExam, reason: string) => {
+    setProcessingExamId(exam.submissionId);
+    try {
+      const res = await fetch("/api/exams/reject", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // `feedback`, bukan `reason`: skema route-nya `.strict()` dengan nama itu,
+        // dan `reason` akan dijawab 400 — penolakan tidak akan pernah terkirim.
+        body: JSON.stringify({ submissionId: exam.submissionId, feedback: reason }),
+      });
+
+      if (res.ok) {
+        setPendingExams((prev) => prev.filter((item) => item.submissionId !== exam.submissionId));
+        info("Paket ujian ditolak", "Penulisnya menerima alasan penolakan lewat surel.");
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toastError("Gagal menolak paket", data.error || "Terjadi kesalahan. Coba lagi.");
+      }
+    } catch {
+      toastError("Kesalahan jaringan", "Periksa koneksi internet Anda dan coba lagi.");
+    } finally {
+      setProcessingExamId(null);
+    }
+  };
 
   // Approve Module
   const handleApproveModule = async (sub: PendingSubmission) => {
@@ -374,7 +468,9 @@ export default function ModeratorClient({ seatKind = "human" }: { seatKind?: "hu
               Dasbor Pengawasan &amp; Persetujuan
             </h1>
             <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1 max-w-2xl leading-relaxed">
-              Tinjau kontribusi modul catatan belajar dan draf usulan soal latihan CBT yang diajukan oleh siswa agar perpustakaan NAWA-LEARN tetap bersih dan akurat.
+              Tinjau kontribusi modul catatan belajar, draf usulan soal latihan CBT, dan paket
+              ujian yang diajukan kontributor agar perpustakaan NAWA-LEARN tetap bersih dan
+              akurat. Paket ujian tidak tayang sebelum disetujui di sini.
             </p>
           </div>
         </div>
@@ -401,6 +497,17 @@ export default function ModeratorClient({ seatKind = "human" }: { seatKind?: "hu
             }`}
           >
             <BookMarked className="h-4 w-4" /> Draf Soal Latihan CBT ({pendingQuestions.length})
+          </button>
+
+          <button
+            onClick={() => setActiveTab("exams")}
+            className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center gap-2 active:scale-[0.98] ${
+              activeTab === "exams"
+                ? "bg-nawa-primary border-nawa-primary text-white shadow-sm"
+                : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            }`}
+          >
+            <ClipboardList className="h-4 w-4" /> Paket Ujian ({pendingExams.length})
           </button>
 
           {canSeeSecrets && (
@@ -460,7 +567,18 @@ export default function ModeratorClient({ seatKind = "human" }: { seatKind?: "hu
         />
       )}
 
-      {/* 3. HIDDEN BADGES MONITOR TAB */}
+      {/* 3. EXAM PACKAGE QUEUE TAB (M18) */}
+      {activeTab === "exams" && (
+        <ExamQueueTab
+          pendingExams={pendingExams}
+          isLoadingExams={isLoadingExams}
+          processingExamId={processingExamId}
+          onApproveExam={handleApproveExam}
+          onRejectExam={handleRejectExam}
+        />
+      )}
+
+      {/* 4. HIDDEN BADGES MONITOR TAB */}
       {canSeeSecrets && activeTab === "badges" && (
         <HiddenBadgesTab
           hiddenBadges={hiddenBadges}
@@ -471,7 +589,7 @@ export default function ModeratorClient({ seatKind = "human" }: { seatKind?: "hu
         />
       )}
 
-      {/* 4. DAILY QUIZ CREATOR TAB */}
+      {/* 5. DAILY QUIZ CREATOR TAB */}
       {activeTab === "daily" && (
         <DailyQuizTab
           dailyQuestions={dailyQuestions}
@@ -484,7 +602,7 @@ export default function ModeratorClient({ seatKind = "human" }: { seatKind?: "hu
         />
       )}
 
-      {/* 5. TEAM TAB (M17) */}
+      {/* 6. TEAM TAB (M17) */}
       {activeTab === "team" && (
         <TeamTab
           staff={teamStaff}

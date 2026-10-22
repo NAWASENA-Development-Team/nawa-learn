@@ -165,6 +165,10 @@ async function seedExam(values: { createdAt: Date; title: string }) {
       durationMinutes: 30,
       authorName: "Penyusun",
       createdAt: values.createdAt,
+      // `exams/list` hanya menyajikan paket `approved`, dan sejak M18 default
+      // kolomnya `pending` — tanpa baris ini seluruh halaman kosong dan uji
+      // paginasi ini akan lulus atas nol baris.
+      status: "approved" as const,
       questions: [
         {
           id: uniqueId("q"),

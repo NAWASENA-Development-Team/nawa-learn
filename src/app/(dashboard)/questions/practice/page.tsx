@@ -19,7 +19,6 @@ import { QuizListScreen } from "@/components/practice/QuizListScreen";
 import { QuizPreparationScreen } from "@/components/practice/QuizPreparationScreen";
 import { QuizSessionScreen } from "@/components/practice/QuizSessionScreen";
 import { QuizResultsScreen } from "@/components/practice/QuizResultsScreen";
-import { CreateExamModal } from "@/components/practice/CreateExamModal";
 import { BASE_QUESTIONS } from "@/components/practice/baseQuestions";
 import type {
   Quiz, Question, ApprovedQuestionPayload, ExamListItemPayload,
@@ -46,7 +45,9 @@ export default function PracticeMode() {
   const [notRewardable, setNotRewardable] = useState(false);
 
   // ── Exam creation modal ────────────────────────────────────────────────────
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  // M18: pembuatan paket ujian pindah ke `/submit` (tab ketiga), jadi halaman ini
+  // tidak lagi punya modal pembuatan. Yang tersisa hanyalah tautan ke sana —
+  // membuat konten adalah satu permukaan, dan permukaan itu bukan halaman latihan.
 
   // ── Load quizzes: approved questions from the DB + custom exams from /api/exams/list ──
   useEffect(() => {
@@ -151,7 +152,9 @@ export default function PracticeMode() {
         });
       }
 
-      // Load student-created custom exams from DB (visible to all users)
+      // Load approved custom exams. `/api/exams/list` answers only
+      // `status = 'approved'` since M18 — a package still in review is invisible
+      // here, which is the whole point of the review queue.
       try {
         const examRes = await fetch("/api/exams/list");
         if (examRes.ok) {
@@ -181,6 +184,10 @@ export default function PracticeMode() {
               questions: qs,
               author: exam.authorName || "Siswa SMAN 2",
               isCustom: true,
+              // Paket milik sendiri tetap tampil — menyembunyikannya membuat
+              // penulis mengira karyanya hilang — tetapi tombol "Mulai" diganti
+              // label, karena `/api/exams/submit` menjawab 403 untuk penulisnya.
+              isOwn: exam.isOwn === true,
             });
           });
         }
@@ -206,6 +213,12 @@ export default function PracticeMode() {
   }, [isStarted, timeLeft, isFinished]);
 
   const handleSelectQuiz = (quiz: Quiz) => {
+    // Paket ujian milik sendiri tidak bisa dikerjakan: `/api/exams/submit`
+    // menjawab 403 `own_exam_forbidden`, dan penulisnya memang sudah memegang
+    // kunci jawabannya. Daftar sudah mengganti tombolnya, jadi ini hanya pagar
+    // terakhir kalau tombol itu kelak dirender ulang tanpa memeriksa `isOwn`.
+    if (quiz.isOwn) return;
+
     // Anti-cheat: for the contributed quiz, filter out questions created by current user
     let quizQuestions = quiz.questions;
     let blocked = false;
@@ -305,13 +318,6 @@ export default function PracticeMode() {
     setNotRewardable(false);
   };
 
-  // ── Delete custom exam (removes from UI only; DB deletion not exposed)  ───
-  const handleDeleteCustomExam = (examId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!confirm("Sembunyikan ujian ini dari daftar lokal? (Ujian tetap tersimpan di server dan masih terlihat pengguna lain)")) return;
-    setQuizzes((prev) => prev.filter((q) => q.id !== examId));
-  };
-
   // ── Computed values ───────────────────────────────────────────────────────
   const answeredCount = Object.keys(answers).length;
   const progressPercent = questions.length ? Math.round((answeredCount / questions.length) * 100) : 0;
@@ -323,25 +329,7 @@ export default function PracticeMode() {
   // 1. Quiz selection list
   // ══════════════════════════════════════════════════════════════════════════
   if (!selectedQuiz) {
-    return (
-      <>
-        <QuizListScreen
-          quizzes={quizzes}
-          onSelectQuiz={handleSelectQuiz}
-          onOpenCreateModal={() => setShowCreateModal(true)}
-          onDeleteCustomExam={handleDeleteCustomExam}
-        />
-        {showCreateModal && (
-          <CreateExamModal
-            onClose={() => setShowCreateModal(false)}
-            onExamCreated={(quiz) => {
-              setQuizzes((prev) => [...prev, quiz]);
-              setShowCreateModal(false);
-            }}
-          />
-        )}
-      </>
-    );
+    return <QuizListScreen quizzes={quizzes} onSelectQuiz={handleSelectQuiz} />;
   }
 
   // ══════════════════════════════════════════════════════════════════════════

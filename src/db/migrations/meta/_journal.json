@@ -50,6 +50,20 @@
       "when": 1792579122173,
       "tag": "0006_dewan_podium",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792696305228,
+      "tag": "0007_soft_bullseye",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792696380611,
+      "tag": "0008_huge_human_robot",
+      "breakpoints": true
     }
   ]
 }

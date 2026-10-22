@@ -6,6 +6,11 @@ import { modules, submissions } from "@/db/schema";
 import { requireUser } from "@/lib/authz";
 import { requestLogger } from "@/lib/logger";
 import { rateLimit } from "@/lib/rateLimit";
+import {
+  MAX_PENDING_SUBMISSIONS,
+  pendingQuotaResponse,
+  pendingSubmissionCount,
+} from "@/lib/submissionQuota";
 import { httpUrl, parseJsonBody, shortText } from "@/lib/validation";
 
 // Validate incoming request body using Zod.
@@ -38,11 +43,12 @@ export async function POST(req: Request) {
     if (!authz.ok) return authz.response;
     const dbUser = authz.user;
 
-    if (dbUser.role === "student") {
-      return NextResponse.json({ 
-        error: "Hanya kontributor yang dapat mengunggah modul" 
-      }, { status: 403 });
-    }
+    // M18: siswa **boleh** mengunggah. Sampai M17 blok di sini menolak
+    // `role === "student"` dengan 403, dan itu menutup satu-satunya jalan
+    // menjadi kontributor: peran hanya bisa dinaikkan lewat karya yang
+    // disetujui, sementara karya tidak bisa diajukan sebelum perannya naik.
+    // Peran sekarang dinaikkan `promoteIfEligible()` setelah approval, jadi
+    // penjaganya bukan lagi peran melainkan kursi (di bawah) dan kuota.
 
     // Kursi Dewan Podium **tidak** boleh mengunggah (I2).
     //
@@ -67,6 +73,13 @@ export async function POST(req: Request) {
 
     const limit = await rateLimit(req, "modules/submit", dbUser.id);
     if (!limit.ok) return limit.response;
+
+    // Kuota antrean diperiksa **sebelum** badan dibaca: seorang penulis yang
+    // sudah punya tiga kiriman menunggu tidak perlu membuat server mem-parse
+    // payload-nya lebih dulu untuk mengetahui jawabannya.
+    if ((await pendingSubmissionCount(db, dbUser.id)) >= MAX_PENDING_SUBMISSIONS) {
+      return pendingQuotaResponse();
+    }
 
     // 2. Parse and validate the request body
     const parsed = await parseJsonBody(req, submitSchema, { message: "Invalid data" });

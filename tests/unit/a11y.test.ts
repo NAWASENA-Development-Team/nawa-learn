@@ -69,6 +69,38 @@ function readOpenTag(source: string, start: number): string {
   return source.slice(start);
 }
 
+/**
+ * Semua nilai atribut bernama `name`, dalam **kedua** bentuk yang dipakai JSX:
+ * literal string (`htmlFor="x"`) dan template literal tanpa interpolasi
+ * (`htmlFor={`x`}`).
+ *
+ * Versi pertama hanya membaca literal string, sehingga satu-satunya kontrol
+ * dinamis di aplikasi — textarea alasan penolakan di antrean ujian, yang `id`-nya
+ * wajib unik per baris sehingga harus berupa template literal — dilaporkan tanpa
+ * nama padahal `<label htmlFor>`-nya ada dan menunjuk tepat ke sana. Gerbang yang
+ * salah menuduh sama merusaknya dengan gerbang yang gagal terbuka: satu-satunya
+ * cara membuatnya hijau adalah menghapus label yang benar.
+ */
+function attributeValues(source: string, name: string): Array<{ value: string; index: number }> {
+  const out: Array<{ value: string; index: number }> = [];
+  const patterns = [
+    new RegExp(`\\b${name}="([^"]+)"`, "g"),
+    new RegExp("\\b" + name + "=\\{`([^`]+)`\\}", "g"),
+  ];
+  for (const pattern of patterns) {
+    let match: RegExpExecArray | null;
+    while ((match = pattern.exec(source)) !== null) {
+      out.push({ value: match[1], index: match.index });
+    }
+  }
+  return out.sort((a, b) => a.index - b.index);
+}
+
+/** Nilai satu atribut di dalam satu tag pembuka, atau `undefined`. */
+function readAttribute(tag: string, name: string): string | undefined {
+  return attributeValues(tag, name)[0]?.value;
+}
+
 /** Berkas JSX di `src/`, dibaca sekali lalu dipakai keempat pemeriksaan. */
 const FILES = walk(SRC, [".tsx"]).map((file) => ({ rel: relative(file), src: read(file) }));
 
@@ -82,11 +114,12 @@ describe("aksesibilitas: kontrol form punya nama", () => {
       while ((match = control.exec(src)) !== null) {
         const tag = readOpenTag(src, match.index);
         const hasAria = /aria-label|aria-labelledby/.test(tag);
-        const id = /\bid="([^"]+)"/.exec(tag)?.[1];
+        const id = readAttribute(tag, "id");
         // `id` sendirian bukan nama: ia baru menjadi nama ketika ada
         // `<label htmlFor>` yang menunjuknya. Gerbang yang menerima `id` apa
         // adanya akan hijau atas kolom yang tetap dibacakan "kosong".
-        const referenced = id !== undefined && src.includes(`htmlFor="${id}"`);
+        const referenced =
+          id !== undefined && attributeValues(src, "htmlFor").some((label) => label.value === id);
         if (!hasAria && !referenced) {
           offenders.push(`${rel}:${lineOf(src, match.index)}  <${match[1]}>`);
         }
@@ -117,12 +150,10 @@ describe("aksesibilitas: label menunjuk sesuatu", () => {
     const offenders: string[] = [];
 
     for (const { rel, src } of FILES) {
-      const label = /htmlFor="([^"]+)"/g;
-      let match: RegExpExecArray | null;
-      while ((match = label.exec(src)) !== null) {
-        const target = match[1];
-        if (!src.includes(`id="${target}"`)) {
-          offenders.push(`${rel}:${lineOf(src, match.index)}  htmlFor="${target}"`);
+      const ids = new Set(attributeValues(src, "id").map((entry) => entry.value));
+      for (const label of attributeValues(src, "htmlFor")) {
+        if (!ids.has(label.value)) {
+          offenders.push(`${rel}:${lineOf(src, label.index)}  htmlFor="${label.value}"`);
         }
       }
     }
@@ -134,14 +165,17 @@ describe("aksesibilitas: label menunjuk sesuatu", () => {
     const offenders: string[] = [];
 
     for (const { rel, src } of FILES) {
-      const seen = new Set<string>();
-      const id = /\bid="([^"]+)"/g;
-      let match: RegExpExecArray | null;
-      while ((match = id.exec(src)) !== null) {
-        if (seen.has(match[1])) {
-          offenders.push(`${rel}:${lineOf(src, match.index)}  id="${match[1]}"`);
+      // Hanya id **literal** yang dibandingkan. `id={`baris-${row.id}`}` baru
+      // mendapat nilainya saat render, dan setiap baris mendapat nilai berbeda —
+      // membandingkan teks template-nya akan menuduh pola yang justru dipakai
+      // untuk menjamin keunikan.
+      const ids = new Set<string>();
+      for (const entry of attributeValues(src, "id")) {
+        if (entry.value.includes("${")) continue;
+        if (ids.has(entry.value)) {
+          offenders.push(`${rel}:${lineOf(src, entry.index)}  id="${entry.value}"`);
         }
-        seen.add(match[1]);
+        ids.add(entry.value);
       }
     }
 

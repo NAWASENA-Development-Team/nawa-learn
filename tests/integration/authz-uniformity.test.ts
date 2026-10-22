@@ -14,6 +14,15 @@
 //
 // These four routes were at 0% coverage before this file, which is why the
 // ordering bug survived review: nothing was watching.
+//
+// M18 mengubah siapa yang boleh mengunggah. `modules/submit` dan
+// `questions/submit` dulu menolak `role === "student"` dengan 403, dan itu
+// menutup satu-satunya jalan menjadi kontributor: peran hanya naik lewat karya
+// yang disetujui, sementara karya tidak bisa diajukan sebelum perannya naik.
+// Sekarang siswa boleh mengunggah, dan penjaganya tinggal dua: **kursi** (tidak
+// boleh mengunggah sama sekali) dan **kuota** (tiga kiriman menunggu). Jadi test
+// peran di bawah berganti arah: siswa → 400 (lolos penjaga, gagal skema), kursi
+// → 403. `exams/create` tetap butuh kontributor, jadi fixture-nya ikut naik.
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import { createTestDb, jsonRequest, seedUser, uniqueId, type TestDb } from "../helpers/harness";
@@ -33,8 +42,20 @@ import { POST as submitModule } from "@/app/api/modules/submit/route";
 import { POST as submitQuestion } from "@/app/api/questions/submit/route";
 import { POST as submitReport } from "@/app/api/profile/report/route";
 import * as schema from "@/db/schema";
+import { getSeasonKey } from "@/lib/season";
+import { MAX_PENDING_SUBMISSIONS } from "@/lib/submissionQuota";
 
 const authMock = vi.mocked(auth);
+
+/**
+ * Kunci musim yang **sedang berjalan**, bukan literal.
+ *
+ * `isSeatActive()` membandingkan `season_role_key` dengan musim saat ini, jadi
+ * kursi berlabel `"2026-Q4"` berhenti menjadi kursi pada 1 Januari 2027 — dan
+ * test ini akan mulai menjawab 400 (bukan 403) tanpa satu baris kode berubah.
+ * Memakai `getSeasonKey()` membuatnya tetap benar kapan pun suite dijalankan.
+ */
+const SEASON_KEY = getSeasonKey();
 
 let db: TestDb;
 
@@ -169,11 +190,27 @@ describe("modules/submit — the guard runs before the body is read", () => {
     expect(response.status).toBe(401);
   });
 
-  it("answers 403, not 400, when a student sends an invalid body", async () => {
+  it("answers 400 for a student, because students may submit since M18", async () => {
+    // Dulu 403: peran siswa adalah penjaga unggah, dan itu membuat peran tidak
+    // pernah bisa naik. Sekarang penjaganya kursi, jadi seorang siswa sampai ke
+    // validasi skema — dan body yang tidak valid memang 400.
     const student = await seedUser(db, { role: "student" });
     signIn(student.clerkId);
     const response = await submitModule(post("/api/modules/submit", garbageBody()));
+    expect(response.status).toBe(400);
+  });
+
+  it("answers 403 for a season seat, before the body is read", async () => {
+    // Kursi memegang `role = 'moderator'` selama masa jabatannya, jadi tanpa
+    // penjaga `season_role_key` ia otomatis mewarisi hak unggah staf — dan kursi
+    // yang boleh mengunggah sekaligus menilai bisa menerbitkan karyanya sendiri.
+    const seat = await seedUser(db, { role: "moderator", seasonRoleKey: SEASON_KEY });
+    signIn(seat.clerkId);
+    const response = await submitModule(post("/api/modules/submit", garbageBody()));
     expect(response.status).toBe(403);
+
+    const body = (await response.json()) as { code?: string };
+    expect(body.code).toBe("seat_cannot_upload");
   });
 
   it("still answers 400 once the caller is allowed to submit", async () => {
@@ -184,16 +221,112 @@ describe("modules/submit — the guard runs before the body is read", () => {
   });
 });
 
-describe("questions/submit — role is separate from session", () => {
-  it("answers 403 for a student, even with a valid payload", async () => {
+describe("questions/submit — the seat is the only uploader forbidden", () => {
+  it("accepts a student submission now that contributing is how a student advances", async () => {
     const student = await seedUser(db, { role: "student" });
     signIn(student.clerkId);
     const before = await countQuestions();
 
     const response = await submitQuestion(post("/api/questions/submit", questionBody()));
 
+    expect(response.status).toBe(201);
+    expect(await countQuestions()).toBe(before + 1);
+  });
+
+  it("answers 403 for a season seat even with a valid payload", async () => {
+    const seat = await seedUser(db, { role: "moderator", seasonRoleKey: SEASON_KEY });
+    signIn(seat.clerkId);
+    const before = await countQuestions();
+
+    const response = await submitQuestion(post("/api/questions/submit", questionBody()));
+
     expect(response.status).toBe(403);
+    const body = (await response.json()) as { code?: string };
+    expect(body.code).toBe("seat_cannot_upload");
     expect(await countQuestions()).toBe(before);
+  });
+});
+
+// ── kuota kiriman ────────────────────────────────────────────────────────────
+
+describe("kuota kiriman — tiga yang menunggu per akun", () => {
+  /** Satu baris `submissions` yang belum diputus; jenisnya tidak penting bagi kuota. */
+  async function seedPendingSubmission(userId: string, type: "module" | "question") {
+    await db.insert(schema.submissions).values({
+      type,
+      refId: crypto.randomUUID(),
+      submitterId: userId,
+    });
+  }
+
+  it("answers 409 too_many_pending_submissions at three pending", async () => {
+    // Sejak M18 setiap siswa boleh mengajukan. Tanpa batas, satu akun bisa
+    // membanjiri antrean moderasi sampai peninjau berhenti membacanya — dan
+    // antrean yang tidak dibaca adalah antrean yang tidak ada.
+    const student = await seedUser(db, { role: "student" });
+    for (let i = 0; i < MAX_PENDING_SUBMISSIONS; i += 1) {
+      await seedPendingSubmission(student.id, i % 2 === 0 ? "module" : "question");
+    }
+    signIn(student.clerkId);
+    const before = await countQuestions();
+
+    const response = await submitQuestion(post("/api/questions/submit", questionBody()));
+
+    expect(response.status).toBe(409);
+    const body = (await response.json()) as { code?: string };
+    expect(body.code).toBe("too_many_pending_submissions");
+    // Ditolak berarti tidak ada baris yang ditulis: kuota yang menolak setelah
+    // menyimpan bukan kuota.
+    expect(await countQuestions()).toBe(before);
+  });
+
+  it("counts modules and questions in one budget", async () => {
+    // Dua tab, satu peninjau. Kalau anggarannya terpisah, batasnya bisa
+    // dilipatgandakan hanya dengan berpindah tab.
+    const student = await seedUser(db, { role: "student" });
+    for (let i = 0; i < MAX_PENDING_SUBMISSIONS; i += 1) {
+      await seedPendingSubmission(student.id, "module");
+    }
+    signIn(student.clerkId);
+
+    const response = await submitModule(post("/api/modules/submit", moduleBody()));
+
+    expect(response.status).toBe(409);
+    const body = (await response.json()) as { code?: string };
+    expect(body.code).toBe("too_many_pending_submissions");
+  });
+
+  it("does not count another account's pending rows", async () => {
+    const student = await seedUser(db, { role: "student" });
+    const neighbour = await seedUser(db, { role: "student" });
+    for (let i = 0; i < MAX_PENDING_SUBMISSIONS; i += 1) {
+      await seedPendingSubmission(neighbour.id, "module");
+    }
+    signIn(student.clerkId);
+
+    const response = await submitQuestion(post("/api/questions/submit", questionBody()));
+
+    expect(response.status).toBe(201);
+  });
+
+  it("frees the budget once a submission is decided", async () => {
+    // Yang dihitung adalah `status = 'pending'`, bukan "pernah mengirim". Kalau
+    // sebaliknya, siswa yang tiga kali ditolak tidak akan pernah bisa memperbaiki
+    // karyanya — hukuman permanen untuk kesalahan pertama.
+    const student = await seedUser(db, { role: "student" });
+    for (let i = 0; i < MAX_PENDING_SUBMISSIONS; i += 1) {
+      await db.insert(schema.submissions).values({
+        type: "question",
+        refId: crypto.randomUUID(),
+        submitterId: student.id,
+        status: "rejected",
+      });
+    }
+    signIn(student.clerkId);
+
+    const response = await submitQuestion(post("/api/questions/submit", questionBody()));
+
+    expect(response.status).toBe(201);
   });
 });
 
@@ -201,7 +334,7 @@ describe("questions/submit — role is separate from session", () => {
 
 describe("POST /api/exams/create (H3)", () => {
   it("stores the real author instead of a NULL author_id", async () => {
-    const user = await seedUser(db, { role: "student", name: "Budi Santoso" });
+    const user = await seedUser(db, { role: "contributor", name: "Budi Santoso" });
     signIn(user.clerkId);
 
     const response = await createExam(post("/api/exams/create", examBody()));
@@ -215,6 +348,8 @@ describe("POST /api/exams/create (H3)", () => {
 
     expect(row.authorId).toBe(user.id);
     expect(row.authorName).toBe("Budi Santoso");
+    // M18: paket ujian tidak tayang sebelum ditinjau.
+    expect(row.status).toBe("pending");
   });
 
   it("writes no row at all for an anonymous caller", async () => {
@@ -227,8 +362,35 @@ describe("POST /api/exams/create (H3)", () => {
     expect(await countExams()).toBe(before);
   });
 
+  it("answers 403 contributor_required for a student", async () => {
+    // Paket ujian adalah satu-satunya konten yang tetap butuh peran: ia menilai
+    // banyak soal sekaligus dan tidak punya alur "satu kiriman, satu tinjauan"
+    // yang bisa dipakai siswa untuk naik peran.
+    const student = await seedUser(db, { role: "student" });
+    signIn(student.clerkId);
+    const before = await countExams();
+
+    const response = await createExam(post("/api/exams/create", examBody()));
+
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as { code?: string };
+    expect(body.code).toBe("contributor_required");
+    expect(await countExams()).toBe(before);
+  });
+
+  it("answers 403 seat_cannot_upload for a season seat", async () => {
+    const seat = await seedUser(db, { role: "moderator", seasonRoleKey: SEASON_KEY });
+    signIn(seat.clerkId);
+    const before = await countExams();
+
+    const response = await createExam(post("/api/exams/create", examBody()));
+
+    expect(response.status).toBe(403);
+    expect(await countExams()).toBe(before);
+  });
+
   it("rejects a payload with an unknown key rather than ignoring it", async () => {
-    const user = await seedUser(db, {});
+    const user = await seedUser(db, { role: "contributor" });
     signIn(user.clerkId);
 
     const response = await createExam(

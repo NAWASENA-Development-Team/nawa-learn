@@ -2,14 +2,21 @@
 // ─── Layar 1: daftar paket ujian ──────────────────────────────────────────────
 //
 // Murni presentasi: daftar kuis, kartu statistik, dan ajakan kuis harian.
-// Tidak ada state di sini — pemilihan kuis, penghapusan ujian buatan, dan
-// membuka modal pembuatan adalah callback ke halaman, yang menguasai session.
+// Tidak ada state di sini — pemilihan kuis adalah callback ke halaman, yang
+// menguasai session.
+//
+// M18 mencabut dua tombol dari layar ini: "Buat Ujian Baru" dan ikon hapus.
+// Pembuatan paket ujian pindah ke `/submit` (satu permukaan kontribusi), dan
+// penghapusan ikut ke sana karena hanya di sana penulisnya melihat paket yang
+// belum disetujui. Tombol hapus yang lama bahkan tidak menghapus apa pun — ia
+// hanya menyembunyikan baris dari state lokal, sementara komentarnya sendiri
+// mengakui "Ujian tetap tersimpan di server".
 "use client";
 
 import Link from "next/link";
 import {
-  Clock, ArrowRight, FileText, PlusCircle, Trash2, BrainCircuit,
-  BookOpen, Users, AlertTriangle,
+  Clock, ArrowRight, FileText, PlusCircle, BrainCircuit,
+  BookOpen, Users, AlertTriangle, Lock,
 } from "lucide-react";
 import type { Quiz } from "./types";
 import { getDifficultyStyle } from "./types";
@@ -17,13 +24,9 @@ import { getDifficultyStyle } from "./types";
 interface QuizListScreenProps {
   quizzes: Quiz[];
   onSelectQuiz: (quiz: Quiz) => void;
-  onOpenCreateModal: () => void;
-  onDeleteCustomExam: (examId: string, e: React.MouseEvent) => void;
 }
 
-export function QuizListScreen({
-  quizzes, onSelectQuiz, onOpenCreateModal, onDeleteCustomExam,
-}: QuizListScreenProps) {
+export function QuizListScreen({ quizzes, onSelectQuiz }: QuizListScreenProps) {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8 text-left animate-in fade-in duration-200">
 
@@ -79,12 +82,13 @@ export function QuizListScreen({
         <div className="flex items-center gap-4 relative z-10">
           <div className="bg-white/15 p-3 rounded-2xl backdrop-blur-sm relative border border-white/20">
             <BrainCircuit className="h-8 w-8 text-white" />
-            <div className="absolute -top-2 -right-2 bg-amber-400 text-amber-950 text-[10px] font-black px-1.5 py-0.5 rounded-md shadow-sm">+25 XP</div>
+            <div className="absolute -top-2 -right-2 bg-amber-400 text-amber-950 text-[10px] font-black px-1.5 py-0.5 rounded-md shadow-sm">+25</div>
           </div>
           <div>
             <h3 className="text-lg font-black flex items-center gap-2">Tantangan Kuis Harian</h3>
             <p className="text-xs sm:text-sm text-indigo-100 max-w-lg mt-1 leading-relaxed">
-              Selesaikan tantangan soal adaptif yang diacak sistem setiap hari untuk menjaga streak dan klaim bonus +25 poin musim. (Reset setiap 03.00 WIB).
+              Satu soal setiap hari, satu percobaan. Jawab benar untuk mengklaim bonus +25 V-Points;
+              jawaban salah berarti coba lagi besok. (Reset setiap 03.00 WIB).
             </p>
           </div>
         </div>
@@ -102,12 +106,12 @@ export function QuizListScreen({
           <h3 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
             Daftar Paket Simulasi CBT SMAN 2
           </h3>
-          <button
-            onClick={onOpenCreateModal}
+          <Link
+            href="/submit"
             className="inline-flex items-center gap-1.5 text-xs font-bold text-nawa-primary dark:text-indigo-400 hover:text-nawa-primary-hover dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-900/40 px-3 py-1.5 rounded-xl transition-all cursor-pointer"
           >
-            <PlusCircle className="h-3.5 w-3.5" /> Buat Ujian Baru
-          </button>
+            <PlusCircle className="h-3.5 w-3.5" /> Buat Paket Ujian
+          </Link>
         </div>
 
         <div className="space-y-3">
@@ -160,7 +164,12 @@ export function QuizListScreen({
                       )}
                       {quiz.isCustom && (
                         <span className="bg-indigo-500 text-white text-[8px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider border border-nawa-primary">
-                          BUATAN SISWA
+                          PAKET KONTRIBUTOR
+                        </span>
+                      )}
+                      {quiz.isOwn && (
+                        <span className="bg-zinc-700 text-white text-[8px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider border border-zinc-600">
+                          PAKETMU
                         </span>
                       )}
                       {isEmpty && (
@@ -198,28 +207,24 @@ export function QuizListScreen({
                   </div>
 
                   <div className="flex items-center gap-1.5">
-                    {quiz.isCustom && (
-                      <button
-                        onClick={(e) => onDeleteCustomExam(quiz.id, e)}
-                        aria-label={`Hapus ujian ${quiz.title}`}
-                        className="h-8 w-8 flex items-center justify-center rounded-xl border border-red-200 dark:border-red-900/40 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all cursor-pointer"
-                        title="Hapus ujian ini"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    )}
                     <button
-                      onClick={() => !isEmpty && onSelectQuiz(quiz)}
-                      disabled={isEmpty}
+                      onClick={() => !isEmpty && !quiz.isOwn && onSelectQuiz(quiz)}
+                      disabled={isEmpty || quiz.isOwn}
                       className={`inline-flex items-center gap-1.5 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-sm hover:scale-[1.02] active:scale-95 cursor-pointer ${
-                        isEmpty
+                        isEmpty || quiz.isOwn
                           ? "bg-zinc-300 dark:bg-zinc-700 cursor-not-allowed"
                           : isContributed
                             ? "bg-amber-600 hover:bg-nawa-warning shadow-amber-600/10 border border-amber-600"
                             : "bg-nawa-primary hover:bg-indigo-500 shadow-nawa-primary/10 border border-nawa-primary"
                       }`}
                     >
-                      {isEmpty ? "Tidak Tersedia" : <>Mulai <ArrowRight className="h-3.5 w-3.5" /></>}
+                      {isEmpty ? (
+                        "Tidak Tersedia"
+                      ) : quiz.isOwn ? (
+                        <><Lock className="h-3.5 w-3.5" /> Paketmu</>
+                      ) : (
+                        <>Mulai <ArrowRight className="h-3.5 w-3.5" /></>
+                      )}
                     </button>
                   </div>
                 </div>

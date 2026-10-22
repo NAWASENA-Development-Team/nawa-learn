@@ -53,11 +53,22 @@ async function pointsOf(userId: string): Promise<number> {
  * detail internal: `points_log` hanya berisi jawaban yang **dibayar**, sehingga
  * pengguna yang sudah menjawab semua soal tidak pernah punya baris baru dan
  * kehilangan +25 selamanya.
+ *
+ * Sejak M18 baris yang sama juga menyimpan `is_correct`, karena hadiahnya kini
+ * hanya untuk jawaban benar. Bawaannya `true` — kasus "sudah menjawab dengan
+ * benar" adalah yang diuji oleh sebagian besar test di bawah; test yang
+ * menguji jawaban salah memintanya secara eksplisit.
  */
-async function recordActivity(userId: string, windowStart: Date = startOfDailyWindow()) {
+async function recordActivity(
+  userId: string,
+  {
+    windowStart = startOfDailyWindow(),
+    isCorrect = true,
+  }: { windowStart?: Date; isCorrect?: boolean } = {},
+) {
   await db
     .insert(schema.dailyActivity)
-    .values({ userId, windowStart })
+    .values({ userId, windowStart, isCorrect })
     .onConflictDoNothing();
 }
 
@@ -76,6 +87,21 @@ describe("POST /api/quiz/daily-claim", () => {
 
     expect(data.success).toBe(false);
     expect(data.pointsAwarded).toBeUndefined();
+    expect(await pointsOf(student.id)).toBe(0);
+  });
+
+  it("refuses to pay out for a wrong answer", async () => {
+    // M18: hadiahnya hanya untuk jawaban benar, dan `daily_activity.is_correct`
+    // adalah satu-satunya tempat fakta itu disimpan — `points_log` tidak bisa
+    // menjawabnya, karena baris `delta = 0` pun ada di sana.
+    const student = await seedUser(db, {});
+    await recordActivity(student.id, { isCorrect: false });
+
+    signIn(student.clerkId);
+    const { data } = await claim();
+
+    expect(data.success).toBe(false);
+    expect(data.code).toBe("incorrect");
     expect(await pointsOf(student.id)).toBe(0);
   });
 
@@ -98,7 +124,9 @@ describe("POST /api/quiz/daily-claim", () => {
   it("ignores activity from a previous window", async () => {
     const student = await seedUser(db, {});
     // 48 jam lalu: pasti sebelum reset 03:00 WIB hari ini.
-    await recordActivity(student.id, new Date(Date.now() - 48 * 60 * 60 * 1000));
+    await recordActivity(student.id, {
+      windowStart: new Date(Date.now() - 48 * 60 * 60 * 1000),
+    });
 
     signIn(student.clerkId);
     const { data } = await claim();

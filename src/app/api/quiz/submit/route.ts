@@ -8,9 +8,10 @@
 import { NextResponse } from "next/server";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { dailyActivity, dailyQuizSlot, pointsLog, questions, users } from "@/db/schema";
+import { dailyActivity, pointsLog, questions, users } from "@/db/schema";
 import { requireUser } from "@/lib/authz";
 import { flagPointSpike } from "@/lib/abuse";
+import { resolveDailyQuestion } from "@/lib/dailySession";
 import { startOfDailyWindow } from "@/lib/dailyWindow";
 import { checkAndGrantLevelRewards } from "@/lib/levelRewards";
 import { needsSeasonReset } from "@/lib/season";
@@ -81,7 +82,6 @@ export async function POST(req: Request) {
         id: questions.id,
         answerKey: questions.answerKey,
         difficulty: questions.difficulty,
-        category: questions.category,
         uploaderId: questions.uploaderId,
       })
       .from(questions)
@@ -101,6 +101,8 @@ export async function POST(req: Request) {
     let correctCount = 0;
     let wrongAnswers = 0;
     let creditedCount = 0;
+    /** Berapa soal yang percobaannya benar-benar baru tercatat. */
+    let attemptCount = 0;
     const results: GradedQuestion[] = [];
 
     for (const q of rows) {
@@ -125,9 +127,17 @@ export async function POST(req: Request) {
           .returning({ id: pointsLog.id });
 
         if (inserted.length > 0) {
-          credited = true;
-          creditedCount++;
-          pointsAwarded += delta;
+          attemptCount++;
+          // Baris tercatat **bukan** berarti poin dibayarkan: jawaban salah
+          // menulis baris dengan `delta = 0` supaya percobaannya habis dan soal
+          // itu tidak bisa dipakai menabung poin. `credited` dipakai UI untuk
+          // lencana "+N poin" dan dipakai tripwire penyalahgunaan, jadi ia harus
+          // mengikuti uangnya, bukan keberhasilan INSERT (M18).
+          if (delta > 0) {
+            credited = true;
+            creditedCount++;
+            pointsAwarded += delta;
+          }
         }
       }
 
@@ -147,12 +157,14 @@ export async function POST(req: Request) {
           .where(eq(users.id, user.id));
       }
 
+      // Poin saja. Peran **tidak** naik di sini (M18): kehadiran bukan
+      // kontribusi. Satu-satunya pintu evolusi adalah `promoteIfEligible()`,
+      // dipanggil dari route approval setelah karya benar-benar diterima.
       await db
         .update(users)
         .set({
           points: sql`${users.points} + ${pointsAwarded}`,
           seasonPoints: sql`${users.seasonPoints} + ${pointsAwarded}`,
-          role: sql`CASE WHEN ${users.role} = 'student' THEN 'contributor'::role ELSE ${users.role} END`,
         })
         .where(eq(users.id, user.id));
     }
@@ -165,30 +177,53 @@ export async function POST(req: Request) {
     // rajin justru yang pertama kehilangan +25, permanen. Sebuah kejadian tidak
     // boleh disimpulkan dari catatan pembayarannya.
     //
+    // M18 menambah satu hal lagi: yang dicatat adalah **soal mana** dan **benar
+    // atau tidak**. Hadiah +25 kini hanya dibayar untuk jawaban benar, dan
+    // `points_log` tidak bisa menjawab pertanyaan itu — barisnya dibuang oleh
+    // indeks unik dan baris delta 0 pun ada. Soal harian ditanyakan lewat
+    // `resolveDailyQuestion()` supaya route ini dan halaman kuis memakai soal
+    // yang sama, termasuk ketika soal slot ternyata milik penjawabnya sendiri.
+    //
     // Kegagalan menulis baris ini tidak boleh menggagalkan penilaian: poin sudah
     // dibayarkan di atas, dan jawaban yang benar tetap benar.
-    const inDailySession = rows.some((row) => row.category === "Kuis Harian")
-      ? true
-      : await (async () => {
-          // Slot kurasi hari ini bisa berisi soal dari bank umum (fallback cron),
-          // sehingga kategorinya bukan "Kuis Harian". Satu query tambahan, dan
-          // hanya ketika sesi ini tidak memuat soal kategori itu.
-          const slot = await db.query.dailyQuizSlot.findFirst({
-            where: eq(dailyQuizSlot.windowStart, startOfDailyWindow()),
-            columns: { questionId: true },
-          });
-          return slot ? rows.some((row) => row.id === slot.questionId) : false;
-        })();
+    const windowStart = startOfDailyWindow();
+    try {
+      // Jalur cepat. Satu soal, satu percobaan: baris hari ini berarti
+      // kesempatan hari ini sudah terpakai, jadi tidak ada yang perlu dihitung
+      // atau ditimpa.
+      const answeredToday = await db
+        .select({ userId: dailyActivity.userId })
+        .from(dailyActivity)
+        .where(
+          and(
+            eq(dailyActivity.userId, user.id),
+            eq(dailyActivity.windowStart, windowStart),
+          ),
+        )
+        .limit(1);
 
-    if (inDailySession) {
-      try {
-        await db
-          .insert(dailyActivity)
-          .values({ userId: user.id, windowStart: startOfDailyWindow() })
-          .onConflictDoNothing();
-      } catch (error) {
-        log.error("daily activity write failed", { error });
+      if (answeredToday.length === 0) {
+        const daily = await resolveDailyQuestion(db, {
+          userId: user.id,
+          now: windowStart,
+          log,
+        });
+        const answered = daily ? rows.find((row) => row.id === daily.id) : undefined;
+
+        if (daily && answered) {
+          await db
+            .insert(dailyActivity)
+            .values({
+              userId: user.id,
+              windowStart,
+              questionId: daily.id,
+              isCorrect: answers[daily.id] === answered.answerKey,
+            })
+            .onConflictDoNothing();
+        }
       }
+    } catch (error) {
+      log.error("daily activity write failed", { error });
     }
 
     const newTotal = dbUser.points + pointsAwarded;
@@ -216,8 +251,10 @@ export async function POST(req: Request) {
       wrongAnswers,
       totalCount: rows.length,
       creditedCount,
-      // Nothing new was credited → every question here had already been answered.
-      alreadyCompleted: creditedCount === 0,
+      // Tidak ada percobaan baru yang tercatat → setiap soal di sini sudah
+      // pernah dijawab. Sengaja memakai `attemptCount`, bukan `creditedCount`:
+      // jawaban salah tetap tercatat sebagai percobaan walau tidak dibayar.
+      alreadyCompleted: attemptCount === 0,
       results,
       levelRewards: levelRewards.map((r) => r.label),
     }, { status: 200 });

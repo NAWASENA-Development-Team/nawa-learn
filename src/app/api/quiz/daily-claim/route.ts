@@ -14,6 +14,10 @@
 // membuangnya ketika soal itu pernah dijawab — jadi pengguna paling rajin justru
 // yang pertama kehilangan +25, permanen. Sebuah kejadian tidak boleh disimpulkan
 // dari catatan pembayarannya.
+//
+// M18 mengubah **syaratnya**: kuis harian adalah satu soal, dan hadiahnya hanya
+// dibayar bila jawabannya benar. `daily_activity.is_correct` — bukan keberadaan
+// barisnya — yang memutuskan.
 import { NextResponse } from "next/server";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
@@ -36,12 +40,15 @@ export async function POST(req: Request) {
     const now = new Date();
     const windowStart = startOfDailyWindow(now);
 
-    // Proof of participation: at least one graded answer on a daily-quiz
-    // question since the reset. Those rows are written by /api/quiz/submit
-    // after grading against the database, whether or not points were paid, so
-    // they cannot be forged client-side and cannot run out.
+    // Bukti partisipasi: satu jawaban **tercatat** pada soal harian hari ini.
+    //
+    // M18 mengubah syaratnya, bukan sumber buktinya. Kuis harian kini satu soal,
+    // jadi hadiah +25 hanya dibayar bila jawaban itu benar — kalau partisipasi
+    // saja sudah cukup, satu soal berarti satu klik acak untuk poin gratis.
+    // Kebenarannya dibaca dari `daily_activity.is_correct`, yang ditulis
+    // `/api/quiz/submit` setelah dinilai terhadap kunci di database.
     const proof = await db
-      .select({ userId: dailyActivity.userId })
+      .select({ isCorrect: dailyActivity.isCorrect })
       .from(dailyActivity)
       .where(
         and(
@@ -54,7 +61,16 @@ export async function POST(req: Request) {
     if (proof.length === 0) {
       return NextResponse.json({
         success: false,
-        message: "Kerjakan dulu minimal satu soal Kuis Harian hari ini untuk mengklaim hadiah.",
+        code: "not_answered",
+        message: "Kerjakan dulu soal Kuis Harian hari ini untuk mengklaim hadiah.",
+      });
+    }
+
+    if (!proof[0].isCorrect) {
+      return NextResponse.json({
+        success: false,
+        code: "incorrect",
+        message: "Jawabanmu belum tepat. Hadiah Kuis Harian hanya untuk jawaban benar — coba lagi besok.",
       });
     }
 
@@ -79,7 +95,6 @@ export async function POST(req: Request) {
         points: sql`${users.points} + ${DAILY_REWARD}`,
         seasonPoints: sql`${users.seasonPoints} + ${DAILY_REWARD}`,
         lastDailyQuizAt: now,
-        role: sql`CASE WHEN ${users.role} = 'student' THEN 'contributor'::role ELSE ${users.role} END`,
       })
       .where(eq(users.id, user.id));
 

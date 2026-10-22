@@ -65,6 +65,15 @@ export const RATE_LIMITS = {
   // The cap is generous enough that a person refreshing never notices it.
   "exams/list": { perUser: { limit: 60, windowMs: MINUTE }, perIp: { limit: 120, windowMs: MINUTE } },
   "exams/submit": { perUser: { limit: 30, windowMs: MINUTE }, perIp: { limit: 90, windowMs: MINUTE } },
+  // M18: the review queue ships answer keys to the reviewer, so it is the most
+  // sensitive read on this surface. Reviewer-only and budgeted separately from
+  // the student-facing list, which never carries a key.
+  "exams/pending": { perUser: { limit: 30, windowMs: MINUTE }, perIp: { limit: 60, windowMs: MINUTE } },
+  // A decision, not a read. The panel calls it once per exam a human reads.
+  "exams/approve": { perUser: { limit: 30, windowMs: MINUTE }, perIp: { limit: 60, windowMs: MINUTE } },
+  "exams/reject": { perUser: { limit: 30, windowMs: MINUTE }, perIp: { limit: 60, windowMs: MINUTE } },
+  // Permanent deletion of your own exam. Nothing legitimate calls it in a loop.
+  "exams/delete": { perUser: { limit: 10, windowMs: MINUTE }, perIp: { limit: 20, windowMs: MINUTE } },
   // The only route that writes to object storage, so it is the one that costs
   // money per call. A module submission uploads one file; 15 a minute is far
   // more than a person needs and far less than a script wants.

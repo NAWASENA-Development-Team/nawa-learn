@@ -124,6 +124,22 @@ export function toPublicExamQuestions(raw: unknown): PublicExamQuestion[] {
 }
 
 /**
+ * The reviewer's projection of a stored exam: everything, **including the key**.
+ *
+ * This is the one function that may hand a key to a browser, and it exists only
+ * for `GET /api/exams/pending`, which is behind `requireReviewer()`. A reviewer
+ * cannot judge a package without seeing which option it calls correct — approving
+ * blind is how a wrong key reaches every student who takes the exam.
+ *
+ * It still rebuilds each question through `readStoredQuestions()` rather than
+ * returning the raw jsonb, so an unusable row is dropped here too and the queue
+ * never renders a question the grader would ignore.
+ */
+export function toReviewExamQuestions(raw: unknown): StoredExamQuestion[] {
+  return readStoredQuestions(raw);
+}
+
+/**
  * Grade a submission against the stored keys.
  *
  * Every stored question produces a verdict, including the ones left blank — the

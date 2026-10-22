@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+.serena
 
 # next.js
 /.next/

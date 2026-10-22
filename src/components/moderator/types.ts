@@ -1,9 +1,10 @@
 // components/moderator/types.ts
 // ─── Bentuk data panel moderator ─────────────────────────────────────────────
 //
-// Dipakai oleh empat tab (modul, soal, lencana, kuis harian) dan oleh shell.
-// Ditarik ke file sendiri karena tiap tab hanya butuh bentuknya sendiri —
-// mengimpor dari shell berarti membawa seluruh panel ke setiap tab.
+// Dipakai oleh tab-tab panel moderator (modul, soal, paket ujian, lencana, kuis
+// harian, tim) dan oleh shell. Ditarik ke file sendiri karena tiap tab hanya
+// butuh bentuknya sendiri — mengimpor dari shell berarti membawa seluruh panel
+// ke setiap tab.
 
 export type PendingSubmission = {
   submissionId: string;
@@ -66,6 +67,39 @@ export type TeamSeatMember = {
   photoUrl: string | null;
   points: number;
   seatNumber: number;
+};
+
+/**
+ * Satu soal paket ujian seperti yang dilihat **peninjau** — `answerKey` ikut.
+ *
+ * Bentuk ini hanya datang dari `GET /api/exams/pending` (di balik
+ * `requireReviewer()`) lewat `toReviewExamQuestions()`. Kalau tipe ini suatu hari
+ * dipakai untuk data dari `/api/exams/list`, kuncinya akan tampil sebagai string
+ * kosong — bukan kebocoran, tetapi tab peninjau akan menampilkan paket seolah
+ * tanpa kunci jawaban, dan menyetujuinya berarti menyetujui tanpa memeriksa.
+ */
+export type PendingExamQuestion = {
+  id: string;
+  text: string;
+  options: Record<string, string>;
+  answerKey: string;
+  explanation: string | null;
+};
+
+/** Satu paket ujian yang menunggu keputusan (tab "Paket Ujian"). */
+export type PendingExam = {
+  submissionId: string;
+  submittedAt: string;
+  examId: string;
+  title: string;
+  subject: string;
+  category: string;
+  difficulty: string;
+  durationMinutes: number;
+  questionCount: number;
+  questions: PendingExamQuestion[];
+  submitterId: string;
+  submitterName: string;
 };
 
 export type DailyQuestion = {

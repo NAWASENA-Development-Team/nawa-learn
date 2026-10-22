@@ -21,10 +21,11 @@
 // `isSeatActive()` membandingkan `season_role_key` dengan kunci musim berjalan
 // (invarian I1). Yang tertunda hanyalah **pemberian**. Tidak ada kursi abadi.
 
-import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lt, ne, notInArray, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
 import * as schema from "@/db/schema";
 import type { AppDb } from "@/db/types";
 import { recordAudit } from "@/lib/auditLog";
+import { ensureDailySlot } from "@/lib/dailySession";
 import { deterministicUuid, startOfDailyWindow } from "@/lib/dailyWindow";
 import { enqueueMail, sendPendingMail } from "@/lib/mailer";
 import { IS_PARTICIPANT } from "@/lib/participants";
@@ -396,42 +397,15 @@ export async function runSeasonCron(
   }
 
   // ── 7. Slot kuis harian ───────────────────────────────────────────────────
-  // Kalau tiga peninjau telat bangun, seluruh sekolah tetap punya soal. Soal
-  // dipilih deterministik (tertua yang belum pernah menjadi slot), sehingga
-  // bank berputar alih-alih mengulang satu soal yang sama.
-  let slotFilled = false;
-  const existingSlot = await db.query.dailyQuizSlot.findFirst({
-    where: eq(schema.dailyQuizSlot.windowStart, windowStart),
-    columns: { windowStart: true },
-  });
-
-  if (!existingSlot) {
-    const usedSlotQuestions = (
-      await db.select({ questionId: schema.dailyQuizSlot.questionId }).from(schema.dailyQuizSlot)
-    ).map((row) => row.questionId);
-
-    const slotFilters = [eq(schema.questions.status, "approved")];
-    if (usedSlotQuestions.length > 0) {
-      slotFilters.push(notInArray(schema.questions.id, usedSlotQuestions));
-    }
-
-    const candidate = await db.query.questions.findFirst({
-      where: and(...slotFilters),
-      columns: { id: true },
-      orderBy: [asc(schema.questions.createdAt), asc(schema.questions.id)],
-    });
-
-    if (candidate) {
-      const claimed = await db
-        .insert(schema.dailyQuizSlot)
-        .values({ windowStart, questionId: candidate.id, authorId: null })
-        .onConflictDoNothing()
-        .returning({ windowStart: schema.dailyQuizSlot.windowStart });
-      slotFilled = claimed.length > 0;
-    } else {
-      log.warn("daily_slot_empty_no_candidate", { windowStart: windowStart.toISOString() });
-    }
-  }
+  // Kalau tiga peninjau telat bangun, seluruh sekolah tetap punya soal.
+  //
+  // Sejak M18 pengisian slot hidup di `lib/dailySession.ts`, bukan di sini:
+  // halaman kuis harian memanggilnya juga, karena jendela berganti pukul 03:00
+  // WIB sementara cron ini berjalan pukul 07:00 WIB. Dua salinan aturan "soal
+  // mana yang jadi soal hari ini" adalah cara paling halus membuat halaman dan
+  // cron menampilkan dua soal berbeda pada hari yang sama.
+  const slot = await ensureDailySlot(db, { now, log });
+  const slotFilled = slot.filled;
 
   // ── 8. Kedalaman bank soal ────────────────────────────────────────────────
   // Metrik ini yang menentukan apakah kuis harian hidup atau mati. Diukur pada

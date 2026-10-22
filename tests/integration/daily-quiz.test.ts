@@ -16,9 +16,25 @@
 //   3. Kursi Dewan Podium memegang `role = 'moderator'` selama masa jabatan,
 //      sehingga tanpa penjaga ia mewarisi hak unggah staf dan bisa menjadi
 //      penulis sekaligus penilai karyanya sendiri.
+//
+// M18 mengubah **bentuk** kuis harian: satu soal, satu percobaan, dan hadiah
+// hanya untuk jawaban benar. Berkas ini sekarang juga menjaga:
+//
+//   4. `ensureDailySlot()` memilih soal secara deterministik (tertua yang belum
+//      pernah menjadi slot), sehingga bank berputar dan halaman serta cron tidak
+//      bisa menampilkan soal berbeda pada hari yang sama.
+//   5. `credited` mengikuti uangnya, bukan keberhasilan INSERT: jawaban salah
+//      menulis baris `points_log` dengan `delta = 0`, dan dulu baris itu
+//      dilaporkan sebagai "poin diterima".
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { and, eq } from "drizzle-orm";
-import { createTestDb, seedQuestion, seedUser, type TestDb } from "../helpers/harness";
+import {
+  createTestDb,
+  resetTestDb,
+  seedQuestion,
+  seedUser,
+  type TestDb,
+} from "../helpers/harness";
 const holder = vi.hoisted(() => ({ db: undefined as unknown }));
 
 vi.mock("@/db", () => ({
@@ -34,6 +50,7 @@ import { POST as dailyCreate } from "@/app/api/questions/daily-create/route";
 import { POST as questionSubmit } from "@/app/api/questions/submit/route";
 import { POST as moduleSubmit } from "@/app/api/modules/submit/route";
 import { POST as quizSubmit } from "@/app/api/quiz/submit/route";
+import { ensureDailySlot } from "@/lib/dailySession";
 import { startOfDailyWindow } from "@/lib/dailyWindow";
 import { getSeasonKey } from "@/lib/season";
 
@@ -48,10 +65,11 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   authMock.mockReset();
-  // `daily_quiz_slot` berkunci pada `window_start`, dan seluruh berkas berbagi
-  // satu database. Tanpa pembersihan ini, test pertama mengklaim slot hari ini
-  // dan setiap test berikutnya menerima 409 yang bukan tentang dirinya.
-  await db.delete(schema.dailyQuizSlot);
+  // `daily_quiz_slot` berkunci pada `window_start`, dan soal harian dipilih dari
+  // **seluruh** bank soal yang disetujui. Dua hal itu membuat sisa data dari test
+  // sebelumnya ikut menjadi kandidat — test ini akan lulus atau gagal tergantung
+  // urutan, bukan tergantung kode. Database dibersihkan utuh, bukan satu tabel.
+  await resetTestDb(db);
 });
 
 function signIn(clerkId: string) {
@@ -90,8 +108,8 @@ async function answer(questionId: string, key = "A") {
   return { status: response.status, data: await response.json() };
 }
 
-async function activityCount(userId: string): Promise<number> {
-  const rows = await db
+async function todayRows(userId: string) {
+  return db
     .select()
     .from(schema.dailyActivity)
     .where(
@@ -100,7 +118,10 @@ async function activityCount(userId: string): Promise<number> {
         eq(schema.dailyActivity.windowStart, startOfDailyWindow()),
       ),
     );
-  return rows.length;
+}
+
+async function activityCount(userId: string): Promise<number> {
+  return (await todayRows(userId)).length;
 }
 
 describe("POST /api/questions/daily-create — satu hari, satu slot", () => {
@@ -162,14 +183,13 @@ describe("POST /api/questions/daily-create — satu hari, satu slot", () => {
   });
 });
 
-describe("POST /api/quiz/submit — bukti partisipasi kuis harian", () => {
-  it("mencatat daily_activity untuk soal kategori Kuis Harian", async () => {
+describe("POST /api/quiz/submit — satu soal harian, satu percobaan", () => {
+  it("mencatat daily_activity untuk soal slot hari ini", async () => {
     const author = await seedUser(db, { clerkId: "penulis_harian", role: "moderator" });
     const student = await seedUser(db, { clerkId: "siswa_harian" });
     const question = await seedQuestion(db, {
       uploaderId: author.id,
       difficulty: "sedang",
-      category: "Kuis Harian",
       answerKey: "A",
     });
 
@@ -177,51 +197,129 @@ describe("POST /api/quiz/submit — bukti partisipasi kuis harian", () => {
     const { status } = await answer(question.id, "A");
 
     expect(status).toBe(200);
-    expect(await activityCount(student.id)).toBe(1);
+    const rows = await todayRows(student.id);
+    expect(rows).toHaveLength(1);
+    // Bank soal hanya berisi satu soal, jadi `ensureDailySlot()` menjadikannya
+    // soal hari ini — kategori tidak lagi menentukan apa pun.
+    expect(rows[0].questionId).toBe(question.id);
+    expect(rows[0].isCorrect).toBe(true);
   });
 
-  it("mencatat daily_activity ketika soal slot berasal dari bank umum", async () => {
-    // Fallback cron mengisi slot dengan soal `approved` biasa, yang kategorinya
-    // bukan "Kuis Harian". Tanpa cabang kedua di route, sesi seperti itu tidak
-    // pernah menghasilkan bukti partisipasi dan hadiah +25 tidak bisa diklaim.
-    const author = await seedUser(db, { clerkId: "penulis_bank", role: "moderator" });
-    const student = await seedUser(db, { clerkId: "siswa_bank" });
+  it("menandai jawaban salah sebagai is_correct = false", async () => {
+    const author = await seedUser(db, { clerkId: "penulis_salah", role: "moderator" });
+    const student = await seedUser(db, { clerkId: "siswa_salah" });
     const question = await seedQuestion(db, {
       uploaderId: author.id,
-      difficulty: "mudah",
-      category: "UTBK",
-      answerKey: "B",
-    });
-
-    await db.insert(schema.dailyQuizSlot).values({
-      windowStart: startOfDailyWindow(),
-      questionId: question.id,
-      authorId: null,
+      difficulty: "sedang",
+      answerKey: "A",
     });
 
     signIn(student.clerkId);
-    const { status } = await answer(question.id, "B");
+    await answer(question.id, "B");
 
-    expect(status).toBe(200);
-    expect(await activityCount(student.id)).toBe(1);
+    const rows = await todayRows(student.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].isCorrect).toBe(false);
+  });
+
+  it("tidak menandai jawaban salah sebagai credited", async () => {
+    // Cacat M17: baris `points_log` dengan `delta = 0` tetap membuat `credited`
+    // bernilai true, jadi UI menampilkan "poin diterima" untuk jawaban salah.
+    const author = await seedUser(db, { clerkId: "penulis_credited", role: "moderator" });
+    const student = await seedUser(db, { clerkId: "siswa_credited" });
+    const question = await seedQuestion(db, {
+      uploaderId: author.id,
+      difficulty: "sulit",
+      answerKey: "A",
+    });
+
+    signIn(student.clerkId);
+    const { data } = await answer(question.id, "C");
+
+    expect(data.results?.[0]?.correct).toBe(false);
+    expect(data.results?.[0]?.credited).toBe(false);
+    expect(data.pointsAwarded).toBe(0);
+    // Percobaannya tetap tercatat — karena itu `alreadyCompleted` tidak boleh
+    // dihitung dari `creditedCount`.
+    expect(data.alreadyCompleted).toBe(false);
   });
 
   it("tidak mencatat daily_activity untuk soal latihan biasa", async () => {
     const author = await seedUser(db, { clerkId: "penulis_latihan", role: "moderator" });
     const student = await seedUser(db, { clerkId: "siswa_latihan" });
-    const question = await seedQuestion(db, {
+    const dailyQuestion = await seedQuestion(db, {
       uploaderId: author.id,
       difficulty: "mudah",
-      category: "UTBK",
+      answerKey: "A",
+    });
+    const practice = await seedQuestion(db, {
+      uploaderId: author.id,
+      difficulty: "mudah",
+      answerKey: "A",
+    });
+
+    await db.insert(schema.dailyQuizSlot).values({
+      windowStart: startOfDailyWindow(),
+      questionId: dailyQuestion.id,
+      authorId: null,
     });
 
     signIn(student.clerkId);
-    await answer(question.id, "A");
+    await answer(practice.id, "A");
 
     expect(await activityCount(student.id)).toBe(0);
   });
 
-  it("mencatat bukti walau poin tidak dibayarkan (soal sudah pernah dijawab)", async () => {
+  it("tidak menimpa percobaan pertama pada jendela yang sama", async () => {
+    const author = await seedUser(db, { clerkId: "penulis_sekali", role: "moderator" });
+    const student = await seedUser(db, { clerkId: "siswa_sekali" });
+    const question = await seedQuestion(db, {
+      uploaderId: author.id,
+      difficulty: "sedang",
+      answerKey: "A",
+    });
+
+    signIn(student.clerkId);
+    await answer(question.id, "A");
+    await answer(question.id, "B");
+
+    const rows = await todayRows(student.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].isCorrect).toBe(true);
+  });
+
+  it("melewati soal milik penjawabnya sendiri", async () => {
+    // Menjawab soal sendiri bukan ujian, dan `quiz/submit` menolak membayar
+    // karya sendiri. Kalau soal slot adalah karya penjawabnya, ia mendapat soal
+    // lain — dan menjawab soalnya sendiri tidak menghasilkan bukti partisipasi.
+    const author = await seedUser(db, { clerkId: "penulis_sendiri", role: "contributor" });
+    const other = await seedUser(db, { clerkId: "penulis_lain", role: "moderator" });
+    const own = await seedQuestion(db, {
+      uploaderId: author.id,
+      difficulty: "mudah",
+      answerKey: "A",
+    });
+    const alternative = await seedQuestion(db, {
+      uploaderId: other.id,
+      difficulty: "mudah",
+      answerKey: "A",
+    });
+
+    await db.insert(schema.dailyQuizSlot).values({
+      windowStart: startOfDailyWindow(),
+      questionId: own.id,
+      authorId: null,
+    });
+
+    signIn(author.clerkId);
+    await answer(own.id, "A");
+    expect(await activityCount(author.id)).toBe(0);
+
+    await answer(alternative.id, "A");
+    expect(await activityCount(author.id)).toBe(1);
+  });
+
+  it("tetap mencatat bukti walau poin tidak dibayarkan (soal sudah pernah dijawab)", async () => {
     // Inilah cacat aslinya: `points_log` tidak mendapat baris kedua, jadi dulu
     // pengguna yang menjawab ulang kehilangan hadiah hariannya selamanya.
     const author = await seedUser(db, { clerkId: "penulis_ulang", role: "moderator" });
@@ -229,21 +327,90 @@ describe("POST /api/quiz/submit — bukti partisipasi kuis harian", () => {
     const question = await seedQuestion(db, {
       uploaderId: author.id,
       difficulty: "sedang",
-      category: "Kuis Harian",
       answerKey: "A",
     });
 
     signIn(student.clerkId);
     await answer(question.id, "A");
 
-    // Hari berikutnya jendela berganti; hapus bukti hari ini lalu jawab lagi.
+    // Jendela berikutnya: bukti hari ini dihapus, soal yang sama dijawab lagi.
     await db
       .delete(schema.dailyActivity)
       .where(eq(schema.dailyActivity.userId, student.id));
 
     const second = await answer(question.id, "A");
     expect(second.data.results?.[0]?.correct).toBe(true);
+    expect(second.data.results?.[0]?.credited).toBe(false);
     expect(await activityCount(student.id)).toBe(1);
+  });
+});
+
+describe("ensureDailySlot — satu slot, deterministik", () => {
+  it("mengisi slot dengan soal tertua yang belum pernah menjadi slot", async () => {
+    const author = await seedUser(db, { clerkId: "kurator_slot", role: "moderator" });
+    const oldest = await seedQuestion(db, { uploaderId: author.id, difficulty: "mudah" });
+    const newer = await seedQuestion(db, { uploaderId: author.id, difficulty: "sedang" });
+    // Urutan dipatok eksplisit: `created_at` dua sisipan berurutan bisa jatuh di
+    // mikrodetik yang sama, dan test ini menguji urutannya, bukan kebetulan itu.
+    await db
+      .update(schema.questions)
+      .set({ createdAt: new Date("2026-01-01T00:00:00.000Z") })
+      .where(eq(schema.questions.id, oldest.id));
+    await db
+      .update(schema.questions)
+      .set({ createdAt: new Date("2026-01-02T00:00:00.000Z") })
+      .where(eq(schema.questions.id, newer.id));
+
+    const slot = await ensureDailySlot(db);
+
+    expect(slot.filled).toBe(true);
+    expect(slot.questionId).toBe(oldest.id);
+  });
+
+  it("tidak mengisi ulang slot yang sudah ada", async () => {
+    const author = await seedUser(db, { clerkId: "kurator_isi", role: "moderator" });
+    await seedQuestion(db, { uploaderId: author.id, difficulty: "mudah" });
+    const picked = await seedQuestion(db, { uploaderId: author.id, difficulty: "sedang" });
+
+    await db.insert(schema.dailyQuizSlot).values({
+      windowStart: startOfDailyWindow(),
+      questionId: picked.id,
+      authorId: null,
+    });
+
+    const slot = await ensureDailySlot(db);
+
+    expect(slot.filled).toBe(false);
+    expect(slot.questionId).toBe(picked.id);
+  });
+
+  it("berputar: soal yang pernah menjadi slot tidak dipilih lagi", async () => {
+    const author = await seedUser(db, { clerkId: "kurator_putar", role: "moderator" });
+    await seedQuestion(db, { uploaderId: author.id, difficulty: "mudah" });
+    await seedQuestion(db, { uploaderId: author.id, difficulty: "sedang" });
+
+    const today = await ensureDailySlot(db);
+    expect(today.questionId).not.toBeNull();
+
+    const tomorrow = new Date(startOfDailyWindow().getTime() + 24 * 60 * 60 * 1000);
+    const next = await ensureDailySlot(db, { now: tomorrow });
+
+    // Yang diuji adalah **perputaran**, bukan soal mana yang lebih dulu lahir:
+    // dua sisipan berurutan bisa berbagi `created_at` yang sama.
+    expect(next.filled).toBe(true);
+    expect(next.questionId).not.toBeNull();
+    expect(next.questionId).not.toBe(today.questionId);
+  });
+
+  it("mengembalikan slot kosong bila belum ada soal yang disetujui", async () => {
+    const author = await seedUser(db, { clerkId: "kurator_kosong", role: "moderator" });
+    await seedQuestion(db, { uploaderId: author.id, difficulty: "mudah", status: "pending" });
+
+    const slot = await ensureDailySlot(db);
+
+    expect(slot.filled).toBe(false);
+    expect(slot.questionId).toBeNull();
+    expect(await db.select().from(schema.dailyQuizSlot)).toHaveLength(0);
   });
 });
 

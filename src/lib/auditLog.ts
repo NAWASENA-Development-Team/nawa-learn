@@ -36,7 +36,10 @@ export const AUDIT_ACTIONS = [
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
 /** Entitas yang bisa menjadi sasaran. Juga daftar tertutup. */
-export const AUDIT_ENTITIES = ["module", "question", "submission", "user"] as const;
+// `exam` ditambahkan di M18: paket ujian punya antrean tinjauan sendiri dan
+// keputusannya layak punya jejak yang sama dengan modul dan soal. Kolomnya
+// `varchar(64)`, jadi tidak ada enum yang perlu dimigrasikan.
+export const AUDIT_ENTITIES = ["module", "question", "exam", "submission", "user"] as const;
 
 export type AuditEntity = (typeof AUDIT_ENTITIES)[number];
 

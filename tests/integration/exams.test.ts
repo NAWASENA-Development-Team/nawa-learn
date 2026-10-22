@@ -66,14 +66,29 @@ afterEach(() => {
 });
 
 /** A signed-in user whose Clerk id resolves to a real row. */
-async function signIn() {
-  const user = await seedUser(db, { clerkId: uniqueId("clerk") });
+async function signIn(overrides: { role?: "student" | "contributor" } = {}) {
+  const user = await seedUser(db, { clerkId: uniqueId("clerk"), ...overrides });
   authMock.mockResolvedValue({ userId: user.clerkId } as never);
   return user;
 }
 
-async function seedExam(questions: unknown = QUESTIONS) {
-  const author = await seedUser(db, {});
+/**
+ * Sejak M18 sebuah paket ujian punya status, dan `list` hanya mengirim yang
+ * `approved`. Paket di berkas ini adalah fixture untuk kebocoran kunci jawaban,
+ * bukan untuk alur peninjauan — jadi default-nya `approved`. Berkas
+ * `exams-moderation.test.ts` yang menguji `pending` dan `rejected`.
+ */
+async function seedExam(
+  options: {
+    questions?: unknown;
+    status?: "pending" | "approved" | "rejected";
+    authorId?: string;
+    authorName?: string;
+  } = {},
+) {
+  const author = options.authorId
+    ? null
+    : await seedUser(db, { role: "contributor" });
   const [row] = await db
     .insert(customExams)
     .values({
@@ -82,9 +97,10 @@ async function seedExam(questions: unknown = QUESTIONS) {
       category: "UTBK-SNBT",
       difficulty: "Sedang",
       durationMinutes: 30,
-      questions,
-      authorId: author.id,
-      authorName: author.name,
+      questions: options.questions ?? QUESTIONS,
+      authorId: options.authorId ?? author?.id ?? null,
+      authorName: options.authorName ?? author?.name ?? "Penulis Uji",
+      status: options.status ?? "approved",
     })
     .returning();
   return row;
@@ -163,6 +179,62 @@ describe("GET /api/exams/list", () => {
     const body = await (await listExams(listRequest("?limit=abc"))).json();
 
     expect(body.data).toHaveLength(1);
+  });
+});
+
+// ── M18: paket ujian harus ditinjau sebelum tayang ───────────────────────────
+//
+// Sebelum M18 daftar ini mengirim **setiap** paket, dan sejak pembuatan paket
+// dibatasi ke kontributor itu berarti satu paket yang belum ditinjau langsung
+// bisa dikerjakan siapa pun. Dua lingkup di bawah adalah kontrolnya.
+describe("GET /api/exams/list — lingkup (M18)", () => {
+  it("hanya mengirim paket approved secara default", async () => {
+    await signIn();
+    await seedExam({ status: "approved" });
+    await seedExam({ status: "pending" });
+    await seedExam({ status: "rejected" });
+
+    const body = await (await listExams(listRequest())).json();
+
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0].status).toBe("approved");
+  });
+
+  it("mengirim paket milik pemanggil dalam semua status pada ?mine=1", async () => {
+    const me = await signIn({ role: "contributor" });
+    await seedExam({ status: "approved", authorId: me.id, authorName: me.name });
+    await seedExam({ status: "pending", authorId: me.id, authorName: me.name });
+    await seedExam({ status: "rejected", authorId: me.id, authorName: me.name });
+
+    const body = await (await listExams(listRequest("?mine=1"))).json();
+
+    expect(body.data).toHaveLength(3);
+    expect(body.data.map((row: { status: string }) => row.status).sort()).toEqual([
+      "approved",
+      "pending",
+      "rejected",
+    ]);
+    expect(body.data.every((row: { isOwn: boolean }) => row.isOwn)).toBe(true);
+  });
+
+  it("tidak memasukkan paket orang lain yang belum tayang ke ?mine=1", async () => {
+    const me = await signIn({ role: "contributor" });
+    const other = await seedUser(db, { role: "contributor" });
+    await seedExam({ status: "pending", authorId: other.id, authorName: other.name });
+
+    const body = await (await listExams(listRequest("?mine=1"))).json();
+
+    expect(body.data).toHaveLength(0);
+    expect(me.id).not.toBe(other.id);
+  });
+
+  it("menandai isOwn untuk paket sendiri di daftar publik", async () => {
+    const me = await signIn({ role: "contributor" });
+    await seedExam({ status: "approved", authorId: me.id, authorName: me.name });
+
+    const body = await (await listExams(listRequest())).json();
+
+    expect(body.data[0].isOwn).toBe(true);
   });
 });
 
@@ -271,7 +343,7 @@ describe("POST /api/exams/submit", () => {
 
   it("grades a row whose blob is malformed without crashing", async () => {
     await signIn();
-    const exam = await seedExam({ not: "an array" });
+    const exam = await seedExam({ questions: { not: "an array" } });
 
     const res = await submitExam(jsonRequest("https://nawa.test/api/exams/submit", {
       examId: exam.id,
@@ -280,6 +352,46 @@ describe("POST /api/exams/submit", () => {
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toMatchObject({ correctCount: 0, totalCount: 0, results: [] });
+  });
+
+  // ── M18: status dan kepemilikan ──
+  it("answers 404 for a package that is still pending", async () => {
+    await signIn();
+    const exam = await seedExam({ status: "pending" });
+
+    const res = await submitExam(jsonRequest("https://nawa.test/api/exams/submit", {
+      examId: exam.id,
+      answers: { custom_x_q0: "B" },
+    }));
+
+    // 404, bukan 403: bagi siswa, paket yang belum tayang memang tidak ada.
+    expect(res.status).toBe(404);
+  });
+
+  it("answers 404 for a rejected package", async () => {
+    await signIn();
+    const exam = await seedExam({ status: "rejected" });
+
+    const res = await submitExam(jsonRequest("https://nawa.test/api/exams/submit", {
+      examId: exam.id,
+      answers: { custom_x_q0: "B" },
+    }));
+
+    expect(res.status).toBe(404);
+  });
+
+  it("answers 403 own_exam_forbidden for the author's own package", async () => {
+    const author = await signIn({ role: "contributor" });
+    const exam = await seedExam({ authorId: author.id, authorName: author.name });
+
+    const res = await submitExam(jsonRequest("https://nawa.test/api/exams/submit", {
+      examId: exam.id,
+      answers: { custom_x_q0: "B", custom_x_q1: "A" },
+    }));
+
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as { code?: string };
+    expect(body.code).toBe("own_exam_forbidden");
   });
 });
 

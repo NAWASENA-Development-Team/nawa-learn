@@ -9,6 +9,18 @@
 // It deliberately awards nothing. M3 decided that an exam a student wrote can
 // never move V-Points, and this route does not change that: it has no pointsLog
 // write, no points update and no level-reward check. It grades, and says so.
+//
+// M18 menambahkan dua penjaga sebelum penilaian:
+//
+//   1. `status = 'approved'`. Sejak paket ujian harus ditinjau, ada paket
+//      `pending` dan `rejected` di database, dan mengerjakan yang belum ditinjau
+//      berarti memakai kunci yang belum diperiksa siapa pun. Jawabannya **404**,
+//      bukan 403: bagi siswa, paket yang belum tayang memang tidak ada — sama
+//      seperti paket yang sudah dihapus.
+//   2. Karya sendiri tidak bisa dikerjakan. Penulisnya memegang kuncinya, jadi
+//      "mengerjakan" paket sendiri selalu skor penuh, dan sebuah skor penuh yang
+//      bisa dibuat sendiri tidak berarti apa pun. Ini 403 dengan kode yang jelas,
+//      karena penulisnya memang melihat paket itu di halamannya sendiri.
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
@@ -33,13 +45,30 @@ export async function POST(req: Request) {
 
   try {
     const [exam] = await db
-      .select({ questions: customExams.questions })
+      .select({
+        questions: customExams.questions,
+        status: customExams.status,
+        authorId: customExams.authorId,
+      })
       .from(customExams)
       .where(eq(customExams.id, parsed.data.examId))
       .limit(1);
 
-    if (!exam) {
+    // `pending` dan `rejected` dijawab 404 yang sama dengan "tidak ada":
+    // membedakannya akan memberi tahu siswa bahwa sebuah paket sedang ditinjau,
+    // dan itu urusan penulisnya serta moderatornya.
+    if (!exam || exam.status !== "approved") {
       return NextResponse.json({ error: "Exam not found" }, { status: 404 });
+    }
+
+    if (exam.authorId !== null && exam.authorId === authz.user.id) {
+      return NextResponse.json(
+        {
+          error: "Kamu tidak dapat mengerjakan paket ujian yang kamu buat sendiri.",
+          code: "own_exam_forbidden",
+        },
+        { status: 403 },
+      );
     }
 
     const grade = gradeExam(exam.questions, parsed.data.answers);

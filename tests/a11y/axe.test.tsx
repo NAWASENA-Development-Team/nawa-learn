@@ -34,7 +34,7 @@ vi.mock("next/navigation", () => ({
 
 import ConsentForm from "@/components/legal/ConsentForm";
 import { ModuleSubmitForm } from "@/components/submit/ModuleSubmitForm";
-import { CreateExamModal } from "@/components/practice/CreateExamModal";
+import { ExamCreateForm } from "@/components/submit/ExamCreateForm";
 import PrivacyClient from "@/components/profile/PrivacyClient";
 import LeaderboardClient from "@/components/leaderboard/LeaderboardClient";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -132,10 +132,12 @@ describe("axe: komponen yang dirender tidak punya pelanggaran WCAG A/AA", { time
     expect(violations, report(violations)).toEqual([]);
   });
 
-  it("CreateExamModal — metadata ujian", async () => {
-    const violations = await audit(
-      withToast(createElement(CreateExamModal, { onClose: () => {}, onExamCreated: () => {} })),
-    );
+  // M18: pembuatan paket ujian pindah dari modal di halaman latihan ke tab
+  // ketiga `/submit`, jadi yang diaudit adalah formulir sebarisnya. `onCreated`
+  // opsional dan tidak dipanggil pada langkah metadata, yang memang yang dirender
+  // saat pertama kali — jadi tidak perlu prop apa pun.
+  it("ExamCreateForm — metadata paket ujian", async () => {
+    const violations = await audit(withToast(createElement(ExamCreateForm)));
     expect(violations, report(violations)).toEqual([]);
   });
 

@@ -41,7 +41,10 @@ export type MailKind =
   | "badge_unlocked"
   | "season_result"
   | "seat_granted"
-  | "seat_revoked";
+  | "seat_revoked"
+  | "role_promoted"
+  | "exam_approved"
+  | "exam_rejected";
 
 export type MailPayload = Record<string, string | number>;
 
@@ -148,6 +151,45 @@ export function renderMail(
           ? "Kamu tidak lagi berada di tiga teratas papan peringkat musim ini, jadi kursi moderasimu berakhir."
           : "Musim ini sudah berganti, jadi kursi moderasimu berakhir dengan sendirinya.",
         "Poin seumur hidupmu tidak berkurang. Kalau kamu kembali ke tiga teratas, kursinya kembali.",
+      ];
+      return { subject, text: `${subject}\n\n${body.join("\n\n")}`, html: wrap(subject, body) };
+    }
+
+    case "role_promoted": {
+      const points = str("points");
+      const subject = "Kamu sekarang kontributor NAWA-LEARN";
+      const body = [
+        `Karyamu sudah disetujui dan poinmu sudah melewati ambang kontributor${points ? ` (${points} V-Points)` : ""}.`,
+        "Sebagai kontributor kamu bisa membuat paket ujian, di samping tetap bisa mengajukan modul dan soal.",
+        "Kamu tetap bisa mengerjakan kuis harian, latihan, dan ujian seperti biasa.",
+      ];
+      return { subject, text: `${subject}\n\n${body.join("\n\n")}`, html: wrap(subject, body) };
+    }
+
+    // ── Paket ujian (M18) ──
+    //
+    // Sengaja **bukan** `submission_approved`: pesan modul berbunyi "sekarang
+    // bisa dibaca siswa lain", dan untuk paket ujian kalimat itu menyesatkan —
+    // yang berubah adalah paketnya bisa **dikerjakan**. Dua jenis karya, dua
+    // kalimat.
+    case "exam_approved": {
+      const title = str("title") || "paket ujianmu";
+      const points = payload.points === undefined ? "" : ` (+${str("points")} V-Points)`;
+      const subject = `Paket ujianmu disetujui: ${title}`;
+      const body = [
+        `Kabar baik — paket ujian "${title}" sudah disetujui dan sekarang bisa dikerjakan siswa lain${points}.`,
+        "Terima kasih sudah berbagi. Kamu bisa melihat dan menghapus paketmu sendiri dari halaman kontribusi.",
+      ];
+      return { subject, text: `${subject}\n\n${body.join("\n\n")}`, html: wrap(subject, body) };
+    }
+
+    case "exam_rejected": {
+      const title = str("title") || "paket ujianmu";
+      const reason = str("reason");
+      const subject = `Paket ujianmu belum bisa diterbitkan: ${title}`;
+      const body = [
+        `Paket ujian "${title}" belum bisa diterbitkan. Paket yang ditolak bisa kamu hapus, lalu buat ulang setelah diperbaiki.`,
+        ...(reason ? [`Catatan peninjau: ${reason}`] : []),
       ];
       return { subject, text: `${subject}\n\n${body.join("\n\n")}`, html: wrap(subject, body) };
     }

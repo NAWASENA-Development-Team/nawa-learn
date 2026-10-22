@@ -13,6 +13,7 @@ import { parseJsonBody } from "@/lib/validation";
 import { recordAudit } from "@/lib/auditLog";
 import { notifyUnlockedBadges } from "@/lib/badgeMail";
 import { enqueueMail } from "@/lib/mailer";
+import { promoteIfEligible } from "@/lib/promotion";
 
 // The client only picks *which* submission to act on.
 // `moduleId` and `submitterId` are resolved from the submission row in the
@@ -129,14 +130,18 @@ export async function POST(req: Request) {
         .where(eq(users.id, submitterId));
     }
 
-    // 7. Increment points, promote to contributor if still a student.
+    // 7. Increment points. Peran **tidak** ikut di sini: promosi adalah
+    // pernyataan terpisah setelah poin benar-benar bertambah (M18).
     await db.update(users)
       .set({
         points: sql`${users.points} + ${MODULE_APPROVAL_POINTS}`,
         seasonPoints: sql`${users.seasonPoints} + ${MODULE_APPROVAL_POINTS}`,
-        role: sql`CASE WHEN ${users.role} = 'student' THEN 'contributor'::role ELSE ${users.role} END`,
       })
       .where(eq(users.id, submitterId));
+
+    // 7b. Satu-satunya pintu evolusi peran. Best effort: kegagalannya dicatat
+    // dan keputusan approval tetap berdiri.
+    await promoteIfEligible(db, { userId: submitterId, actorId: reviewer.id, log });
 
     const newPoints = submitter.points + MODULE_APPROVAL_POINTS;
 
