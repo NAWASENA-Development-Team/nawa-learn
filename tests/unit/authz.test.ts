@@ -10,7 +10,7 @@ vi.mock("@/db", () => ({ db: {} }));
 vi.mock("@clerk/nextjs/server", () => ({ auth: vi.fn() }));
 
 import { auth } from "@clerk/nextjs/server";
-import { hasReviewerRole, requireSession, REVIEWER_ROLES } from "@/lib/authz";
+import { hasReviewerRole, isHumanStaff, requireSession, REVIEWER_ROLES } from "@/lib/authz";
 
 const authMock = vi.mocked(auth);
 
@@ -69,6 +69,36 @@ describe("requireSession", () => {
     authMock.mockResolvedValue({ userId: "clerk_abc" } as never);
 
     await expect(requireSession()).resolves.toEqual({ ok: true, clerkId: "clerk_abc" });
+  });
+});
+
+// ─── `isHumanStaff`: siapa yang "mengelola", bukan siapa yang "meninjau" ──────
+//
+// `hasReviewerRole` menjawab "bolehkah orang ini membuka panel?". Pertanyaan itu
+// sekarang punya dua jawaban benar yang berbeda orangnya: staf manusia **dan**
+// pemegang kursi musim. `isHumanStaff` menjawab pertanyaan kedua — "apakah orang
+// ini bagian dari staf tetap?" — dan hanya jawaban itu yang dipakai untuk
+// menyembunyikan seseorang dari papan peringkat.
+//
+// Parameter struktural, bukan `SessionUser`: halaman memegang `CurrentUser`
+// (`id`, `name`, `role`, `seasonRoleKey`, consent) tanpa `clerkId` dan `points`,
+// dan predikat ini tidak boleh memaksa halaman mengambil kolom yang tidak
+// dibutuhkannya.
+describe("isHumanStaff", () => {
+  it("separates human staff from a seat, on the same role", () => {
+    expect(isHumanStaff({ role: "moderator", seasonRoleKey: null })).toBe(true);
+    expect(isHumanStaff({ role: "moderator", seasonRoleKey: "2026-Q4" })).toBe(false);
+  });
+
+  it("accepts a CurrentUser-shaped object, not just a full session row", () => {
+    const currentUser = {
+      id: "00000000-0000-0000-0000-000000000000",
+      name: "Bu Sari",
+      role: "admin",
+      seasonRoleKey: null,
+      consentPolicyVersion: null,
+    };
+    expect(isHumanStaff(currentUser)).toBe(true);
   });
 });
 

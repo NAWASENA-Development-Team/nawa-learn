@@ -8,7 +8,7 @@ import { isUuid } from "@/lib/ids";
 import { logger } from "@/lib/logger";
 import { IS_PARTICIPANT } from "@/lib/participants";
 import { getCurrentUser, getSessionUserId } from "@/lib/currentUser";
-import { hasReviewerRole } from "@/lib/authz";
+import { canReview, isHumanStaff } from "@/lib/authz";
 import { emptySpecialtyStats, getSpecialtyStats, getSubjectBreakdown } from "@/lib/specialtyStats";
 import {
   buildBadgeUnlockData,
@@ -55,6 +55,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
         clerkId: true,
         name: true,
         role: true,
+        seasonRoleKey: true,
         points: true,
         createdAt: true,
         avatarIndex: true,
@@ -94,7 +95,24 @@ export default async function PublicProfilePage({ params }: PageProps) {
     getCurrentUser(),
   ]);
   const isOwnProfile = clerkId ? dbUser.clerkId === clerkId : false;
-  const viewerIsModerator = viewer ? hasReviewerRole(viewer.role) : false;
+  // `canReview`, bukan `hasReviewerRole`: peran `moderator` dari kursi musim lalu
+  // masih terbaca di kolom `role` sampai cron mencabutnya, dan syarat lencana
+  // rahasia bukan untuk pemegang amanah yang sudah berakhir.
+  const viewerIsModerator = viewer ? canReview(viewer) : false;
+
+  // 4b. Profil staf manusia bukan permukaan siswa (M17).
+  //
+  // Moderator yang diangkat lewat `db:promote` tidak ada di papan peringkat dan
+  // tautan ke profilnya tidak pernah dirender. Membiarkan `/profile/<id>` tetap
+  // terbuka akan membuat penyembunyian itu kosmetik: id-nya masih bisa ditemukan
+  // dari tautan lama atau percobaan langsung, dan yang terbuka adalah nama, bio,
+  // serta motto seorang guru.
+  //
+  // Yang tetap boleh membukanya: pemiliknya sendiri dan peninjau (staf manusia
+  // maupun kursi aktif) — supaya baris "Tim Moderator" di panel bisa diklik.
+  // `notFound()`, bukan 403: jawaban yang membedakan "ada tetapi terlarang" dari
+  // "tidak ada" sudah cukup untuk memetakan siapa saja staf platform ini.
+  if (isHumanStaff(dbUser) && !isOwnProfile && !viewerIsModerator) notFound();
 
   // 5. Retrieve rank statistics & data concurrently for optimization
   const modulesCondition = isOwnProfile 
@@ -177,7 +195,16 @@ export default async function PublicProfilePage({ params }: PageProps) {
     getSubjectBreakdown(db, [dbUser.id]),
   ]);
 
-  const rank = (higherPointsResult[0]?.value || 0) + 1;
+  // Staf manusia tidak punya peringkat: ia tidak ikut dihitung di papan, jadi
+  // "jumlah peserta dengan poin lebih tinggi + 1" tidak berarti apa pun untuknya
+  // (bisa menghasilkan "#7 dari 6"). `null` yang menyeberang ke UI.
+  //
+  // Evaluasi lencana tetap butuh angka, dan yang dipakai adalah
+  // `Number.MAX_SAFE_INTEGER` — nilai yang sama dengan `rankOf()` untuk orang di
+  // luar papan. **Jangan** memakai nol: kelima lencana peringkat berbentuk
+  // `rank <= 50`, sehingga nol justru membuka semuanya.
+  const staffProfile = isHumanStaff(dbUser);
+  const rank = staffProfile ? null : (higherPointsResult[0]?.value || 0) + 1;
   const totalStudents = totalStudentsResult[0]?.value || 1;
   const specialtyStats = specialtyStatsById.get(dbUser.id) ?? emptySpecialtyStats();
 
@@ -190,7 +217,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
   const unlockedBadgeIds = evaluateBadges(
     buildBadgeUnlockData({
       points: dbUser.points,
-      rank,
+      rank: rank ?? Number.MAX_SAFE_INTEGER,
       specialty: specialtyStats,
       modulesBySubject: subjectBreakdownById.get(dbUser.id) ?? {},
       createdAt: dbUser.createdAt,

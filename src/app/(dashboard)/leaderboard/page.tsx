@@ -5,6 +5,7 @@ import { and, count, desc, eq, sql } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
 import LeaderboardClient from "@/components/leaderboard/LeaderboardClient";
 import { IS_PARTICIPANT } from "@/lib/participants";
+import { isHumanStaff } from "@/lib/authz";
 import { effectiveSeasonPoints, getSeasonLabel, isSeasonCurrent } from "@/lib/season";
 import { emptySpecialtyStats, getSpecialtyStats } from "@/lib/specialtyStats";
 
@@ -22,6 +23,8 @@ async function loadLoggedInUser(clerkId: string | null) {
     columns: {
       id: true,
       name: true,
+      role: true,
+      seasonRoleKey: true,
       points: true,
       seasonPoints: true,
       seasonResetAt: true,
@@ -30,6 +33,12 @@ async function loadLoggedInUser(clerkId: string | null) {
     },
   });
   if (!dbUser) return null;
+
+  // Staf manusia tidak punya peringkat, karena ia memang tidak ada di papan.
+  // Mengembalikan `rank` untuknya berarti menghitung "jumlah peserta dengan poin
+  // lebih tinggi + 1" atas sebuah baris yang tidak pernah ikut dihitung — hasilnya
+  // bisa "#7 dari 6". `null` membuat banner "peringkat saya" hilang, yang jujur.
+  if (isHumanStaff(dbUser)) return null;
 
   // Poin musim yang sah. `season_points` hanya direset saat pengguna menulis poin
   // berikutnya (reset malas), jadi akun dorman masih menyimpan angka musim lalu.

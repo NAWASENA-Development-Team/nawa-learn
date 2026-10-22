@@ -93,6 +93,10 @@ export const RATE_LIMITS = {
   // table that only ever grows, so it gets a budget of its own rather than
   // sharing the read allowance of the public routes.
   "moderator/audit-log": { perUser: { limit: 60, windowMs: MINUTE }, perIp: { limit: 120, windowMs: MINUTE } },
+  // The moderator team list. It is a handful of rows read by a reviewer opening
+  // a tab, but it names people, so it gets its own budget rather than sharing
+  // an anonymous read allowance.
+  "moderator/team": { perUser: { limit: 30, windowMs: MINUTE }, perIp: { limit: 60, windowMs: MINUTE } },
   // A bookmark is one row keyed by (user, module). The button is clicked by a
   // human, so this budget is generous for a person and still bounded for a script.
   "bookmarks/toggle": { perUser: { limit: 60, windowMs: MINUTE }, perIp: { limit: 120, windowMs: MINUTE } },

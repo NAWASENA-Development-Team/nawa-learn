@@ -46,12 +46,14 @@ export function ProfileStatsGrid({ user, userModules, userQuestions }: ProfileSt
           <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider">Peringkat Sekolah</span>
         </div>
         <p className="text-3xl sm:text-4xl font-black text-nawa-primary dark:text-indigo-400 group-hover:scale-105 transition-transform duration-200">
-          {user.points > 0 ? `#${user.rank}` : "—"}
+          {user.rank === null ? "★" : user.points > 0 ? `#${user.rank}` : "—"}
         </p>
         <div className="mt-2 text-[10px] sm:text-xs text-zinc-500 font-medium">
-          {user.points > 0
-            ? `Peringkat #${user.rank} dari ${user.totalStudents} siswa.`
-            : "Unggah modul untuk masuk papan peringkat!"
+          {user.rank === null
+            ? "Staf peninjau — tidak ikut papan peringkat."
+            : user.points > 0
+              ? `Peringkat #${user.rank} dari ${user.totalStudents} siswa.`
+              : "Unggah modul untuk masuk papan peringkat!"
           }
         </div>
       </div>

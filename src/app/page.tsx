@@ -1,8 +1,9 @@
 // src/app/page.tsx
 import { db } from "@/db";
 import { modules, questions, users } from "@/db/schema";
-import { count, eq, desc, sql } from "drizzle-orm";
+import { count, eq, desc, sql, and } from "drizzle-orm";
 import LandingClient from "@/components/landing/LandingClient";
+import { IS_PARTICIPANT } from "@/lib/participants";
 
 export const dynamic = "force-dynamic";
 
@@ -18,14 +19,19 @@ export default async function LandingPage() {
     .from(questions)
     .where(eq(questions.status, "approved"));
 
+  // Kedua angka ini dulu `count(*)` polos, sehingga tombstone **dan** staf
+  // manusia ikut terhitung sebagai "siswa" di halaman muka — angka yang tidak
+  // pernah cocok dengan papan peringkat. Definisi pesertanya sekarang sama
+  // dengan yang dipakai papan itu (`IS_PARTICIPANT`).
   const [studentsCountResult] = await db
     .select({ value: count() })
-    .from(users);
+    .from(users)
+    .where(IS_PARTICIPANT);
 
   const [contributorsCountResult] = await db
     .select({ value: count() })
     .from(users)
-    .where(sql`${users.points} > 0 OR ${users.role} = 'contributor'`);
+    .where(and(IS_PARTICIPANT, sql`(${users.points} > 0 OR ${users.role} = 'contributor')`));
 
   const modulesCount = approvedModulesCountResult?.value || 0;
   const questionsCount = approvedQuestionsCountResult?.value || 0;

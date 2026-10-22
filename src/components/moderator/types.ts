@@ -38,6 +38,36 @@ export type HiddenBadgeHolder = {
   approvedQuestions: number;
 };
 
+/**
+ * Staf manusia di tab Tim (M17) — `role` peninjau dengan `season_role_key` NULL.
+ *
+ * `email` sengaja tidak ada: daftar ini dibaca pemegang kursi juga, dan alamat
+ * surel seorang guru bukan bagian dari "siapa yang menjaga panel ini".
+ */
+export type TeamStaffMember = {
+  id: string;
+  name: string;
+  role: "moderator" | "admin";
+  avatarIndex: number | null;
+  photoUrl: string | null;
+};
+
+/**
+ * Pemegang kursi Dewan Podium musim berjalan, diambil dari `getPodium()`.
+ *
+ * `seatNumber` berasal dari urutan podium, bukan dari `season_role_key`: kunci
+ * yang tersisa dari musim lalu belum dicabut cron, jadi ia bukan bukti bahwa
+ * orangnya masih duduk.
+ */
+export type TeamSeatMember = {
+  id: string;
+  name: string;
+  avatarIndex: number | null;
+  photoUrl: string | null;
+  points: number;
+  seatNumber: number;
+};
+
 export type DailyQuestion = {
   id: string;
   questionText: string;

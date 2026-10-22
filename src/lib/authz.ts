@@ -80,9 +80,22 @@ export function canReview(user: { role: string; seasonRoleKey: string | null }):
  * Ini pembeda untuk kapabilitas yang **tidak** boleh dipegang kursi: melihat
  * `requirement` lencana rahasia dan membaca `audit_log`. Kursi adalah amanah
  * satu musim, bukan jabatan kepercayaan penuh.
+ *
+ * Sejak M17 predikat ini juga menjawab "apakah orang ini peserta kompetisi":
+ * staf tidak masuk papan peringkat. Pasangan SQL-nya adalah `IS_HUMAN_STAFF` di
+ * `lib/participants.ts`, dan `tests/unit/participants.test.ts` memastikan
+ * keduanya menjawab sama untuk setiap kombinasi `role` × `season_role_key`.
+ *
+ * Parameternya struktural, bukan `SessionUser`, karena halaman hanya memegang
+ * baris dari `getCurrentUser()` — yang tidak membawa `clerkId` maupun `points`.
  */
-export function isHumanReviewer(user: SessionUser): boolean {
+export function isHumanStaff(user: { role: string; seasonRoleKey: string | null }): boolean {
   return hasReviewerRole(user.role) && user.seasonRoleKey === null;
+}
+
+/** Alias historis: peninjau manusia = staf manusia. */
+export function isHumanReviewer(user: SessionUser): boolean {
+  return isHumanStaff(user);
 }
 
 /**

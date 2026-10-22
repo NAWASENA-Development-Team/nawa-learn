@@ -8,13 +8,15 @@
 //
 // Dulu 897 baris: empat antrean, empat kumpulan state, empat kelompok handler
 // dan seluruh markup empat tab dalam satu komponen. Sekarang file ini adalah
-// shell: memuat keempat antrean pada saat mount, memegang jumlah untuk label
-// tab, dan menyerahkan setiap tab ke komponen presentasionalnya.
+// shell: memuat antrean pada saat mount, memegang jumlah untuk label tab, dan
+// menyerahkan setiap tab ke komponen presentasionalnya. Tab kelima (Tim, M17)
+// tidak punya antrean — ia hanya membaca daftar orang, dan justru itu alasan
+// keberadaannya: staf tidak lagi terlihat di papan peringkat.
 "use client";
 
 import { useState, useEffect } from "react";
 import {
-  BookOpen, BookMarked, Eye, Zap, ShieldCheck,
+  BookOpen, BookMarked, Eye, Zap, ShieldCheck, Users,
 } from "lucide-react";
 import type { BadgeDisplay } from "@/lib/badges";
 import { useToast } from "@/components/ui/Toast";
@@ -22,12 +24,14 @@ import { SubmissionsModulesTab } from "./SubmissionsModulesTab";
 import { SubmissionsQuestionsTab } from "./SubmissionsQuestionsTab";
 import { HiddenBadgesTab } from "./HiddenBadgesTab";
 import { DailyQuizTab } from "./DailyQuizTab";
+import { TeamTab } from "./TeamTab";
 import type { DailyFormState } from "./DailyQuizTab";
 import type {
   PendingSubmission, PendingQuestion, HiddenBadgeHolder, DailyQuestion,
+  TeamSeatMember, TeamStaffMember,
 } from "./types";
 
-type ModeratorTab = "modules" | "questions" | "badges" | "daily";
+type ModeratorTab = "modules" | "questions" | "badges" | "daily" | "team";
 
 export default function ModeratorClient({ seatKind = "human" }: { seatKind?: "human" | "seat" }) {
   const { success, error: toastError, info } = useToast();
@@ -60,6 +64,19 @@ export default function ModeratorClient({ seatKind = "human" }: { seatKind?: "hu
   const [isLoadingBadges, setIsLoadingBadges] = useState(false);
   const [expandedBadge, setExpandedBadge] = useState<string | null>(null);
 
+  // Team State (M17)
+  //
+  // Dimuat untuk **kedua** jenis peninjau. Tab ini justru paling dibutuhkan
+  // pemegang kursi: staf manusia tidak lagi muncul di papan peringkat, jadi
+  // tanpa tab ini tidak ada satu pun layar yang memberi tahu kursi baru siapa
+  // yang mengangkatnya.
+  const [teamStaff, setTeamStaff] = useState<TeamStaffMember[]>([]);
+  const [teamSeats, setTeamSeats] = useState<TeamSeatMember[]>([]);
+  const [isLoadingTeam, setIsLoadingTeam] = useState(true);
+  // A failed load must not render as "belum ada staf": that sentence is a claim
+  // about the platform, and an empty array from a 500 says nothing about it.
+  const [teamError, setTeamError] = useState(false);
+
   // Daily Quiz State
   const [dailyQuestions, setDailyQuestions] = useState<DailyQuestion[]>([]);
   const [isLoadingDaily, setIsLoadingDaily] = useState(false);
@@ -78,13 +95,15 @@ export default function ModeratorClient({ seatKind = "human" }: { seatKind?: "hu
 
   useEffect(() => {
     // Mount-only bootstrap. The server already proved this viewer is a reviewer,
-    // so there is no gate left to clear here — only the four queues to load.
+    // so there is no gate left to clear here — only the queues to load, plus the
+    // team list (which every reviewer may read).
     fetchPendingSubmissions();
     fetchPendingQuestions();
     if (canSeeSecrets) fetchHiddenBadges();
     fetchDailyQuestions();
-    // The four fetchers are re-created on every render by design: they close over
-    // the toast helpers. Re-running the effect on each render would refetch every
+    fetchTeam();
+    // The fetchers are re-created on every render by design: they close over the
+    // toast helpers. Re-running the effect on each render would refetch every
     // queue forever, so the fetchers are deliberately left out of this list.
     // `canSeeSecrets` **is** listed: it is a server prop, and if it ever changes
     // under a live session (a podium seat revoked mid-season) the secret panel
@@ -225,6 +244,26 @@ export default function ModeratorClient({ seatKind = "human" }: { seatKind?: "hu
       setProcessingQuestionId(null);
     }
   };
+
+  // ── Team (M17) ──
+  async function fetchTeam() {
+    try {
+      const res = await fetch("/api/moderator/team");
+      if (!res.ok) {
+        setTeamError(true);
+        return;
+      }
+      const { staff, seats } = await res.json();
+      setTeamStaff(staff);
+      setTeamSeats(seats);
+      setTeamError(false);
+    } catch (error) {
+      setTeamError(true);
+      console.error("Gagal mengambil daftar tim moderator:", error);
+    } finally {
+      setIsLoadingTeam(false);
+    }
+  }
 
   // ── Daily Quiz Functions ──
   async function fetchDailyQuestions() {
@@ -386,6 +425,17 @@ export default function ModeratorClient({ seatKind = "human" }: { seatKind?: "hu
           >
             <Zap className="h-4 w-4" /> Kuis Harian ({dailyQuestions.length})
           </button>
+
+          <button
+            onClick={() => setActiveTab("team")}
+            className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center gap-2 active:scale-[0.98] ${
+              activeTab === "team"
+                ? "bg-zinc-800 border-zinc-800 text-white shadow-sm"
+                : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            }`}
+          >
+            <Users className="h-4 w-4" /> Tim ({teamStaff.length + teamSeats.length})
+          </button>
         </div>
       </div>
 
@@ -431,6 +481,16 @@ export default function ModeratorClient({ seatKind = "human" }: { seatKind?: "hu
           onFormChange={setDailyForm}
           onCreateQuestion={handleCreateDailyQuestion}
           onDeleteQuestion={handleDeleteDailyQuestion}
+        />
+      )}
+
+      {/* 5. TEAM TAB (M17) */}
+      {activeTab === "team" && (
+        <TeamTab
+          staff={teamStaff}
+          seats={teamSeats}
+          isLoadingTeam={isLoadingTeam}
+          hasError={teamError}
         />
       )}
     </div>

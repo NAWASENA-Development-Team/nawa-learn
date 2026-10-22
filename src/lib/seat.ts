@@ -46,7 +46,9 @@ export const CONFLICT_ZONE_RANK = 10;
  *
  * Pengguna yang tidak ada (id asing) mengembalikan `Number.MAX_SAFE_INTEGER`,
  * bukan 0: nilai itu berarti "tidak ada di zona konflik", dan pemanggil tidak
- * perlu membedakan "tidak ada" dari "sangat jauh di bawah".
+ * perlu membedakan "tidak ada" dari "sangat jauh di bawah". Staf manusia
+ * mendapat nilai yang sama sejak M17 — ia tidak ikut dihitung sebagai peserta,
+ * jadi peringkatnya memang tidak ada.
  */
 export async function rankOf(db: AppDb, userId: string): Promise<number> {
   const [self] = await db

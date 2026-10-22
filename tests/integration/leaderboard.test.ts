@@ -154,6 +154,53 @@ describe("LeaderboardPage", () => {
     expect(props.loggedInUser?.rank).toBe(2);
   });
 
+  it("keeps human staff off the board and out of the student count", async () => {
+    // A promoted moderator is a teacher who runs the platform, not a student
+    // competing for the season. Two lies come from listing one: everyone else's
+    // rank shifts by a person who is not playing, and the moderator is published
+    // to the whole school as a student (M17).
+    await seedUser(db, { name: "Siswa", points: 40, seasonPoints: 40 });
+    await seedUser(db, { name: "Pak Budi", role: "moderator", points: 500, seasonPoints: 500 });
+    await seedUser(db, { name: "Bu Sari", role: "admin", points: 900, seasonPoints: 900 });
+
+    const props = await render();
+
+    expect(props.topUsers.map((u) => u.name)).toEqual(["Siswa"]);
+    expect(props.totalStudents).toBe(1);
+  });
+
+  it("keeps a season seat on the board", async () => {
+    // The mirror of the test above, and the one that matters most: a seat *is* a
+    // student. `role` is `moderator` for the length of the season, so a filter
+    // that read `role` alone would hide the very person the podium describes.
+    const seat = await seedUser(db, {
+      name: "Juara Musim",
+      role: "moderator",
+      seasonRoleKey: "2026-Q4",
+      points: 70,
+      seasonPoints: 70,
+    });
+
+    const props = await render();
+
+    expect(props.topUsers.map((u) => u.name)).toEqual(["Juara Musim"]);
+    expect(props.totalStudents).toBe(1);
+    expect(props.topUsers[0].id).toBe(seat.id);
+  });
+
+  it("gives a signed-in staff member no rank at all", async () => {
+    // `null`, not `0` and not "last place": a teacher is not competing, and the
+    // page must not invent a position for them. `0` would be worse than a lie —
+    // it satisfies every `rank <= N` badge condition on the profile.
+    const staff = await seedUser(db, { name: "Pak Budi", role: "moderator", points: 100, seasonPoints: 100 });
+    await seedUser(db, { name: "Siswa", points: 10, seasonPoints: 10 });
+
+    authMock.mockResolvedValue({ userId: staff.clerkId } as never);
+    const props = await render();
+
+    expect(props.loggedInUser).toBeNull();
+  });
+
   it("has nobody signed in when the session is empty", async () => {
     await seedUser(db, { name: "Siswa", points: 10 });
 

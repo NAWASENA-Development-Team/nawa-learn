@@ -48,10 +48,17 @@ afterEach(() => {
 });
 
 interface RenderedProps {
-  user: { id: string; name: string; rank: number; totalStudents: number };
+  // `rank` is `null` for human staff: they are not on the board, so a position
+  // for them would have to be invented (M17).
+  user: { id: string; name: string; rank: number | null; totalStudents: number };
   specialtyStats: { quizTotal: number; hardQuizzes: number };
   isOwnProfile: boolean;
 }
+
+// `notFound()` throws an `Error` whose `digest` (and message) is this literal.
+// Asserting the digest rather than "it rejected" is the difference between
+// "the page refused" and "the page crashed for some unrelated reason".
+const NOT_FOUND_DIGEST = "NEXT_HTTP_ERROR_FALLBACK;404";
 
 async function render(id: string): Promise<RenderedProps> {
   const element = (await PublicProfilePage({
@@ -118,5 +125,76 @@ describe("PublicProfilePage", () => {
 
     expect((await render(me.id)).isOwnProfile).toBe(true);
     expect((await render(other.id)).isOwnProfile).toBe(false);
+  });
+
+  // ─── Profil staf manusia (M17) ─────────────────────────────────────────────
+  //
+  // Staf disembunyikan dari papan peringkat, jadi tidak ada tautan yang
+  // mengarah ke profil mereka. Membiarkan URL-nya tetap terbuka akan membuat
+  // penyembunyian itu kosmetik: id-nya bisa ditemukan dari tautan lama atau
+  // percobaan langsung, dan yang terbuka adalah nama, bio serta motto seorang
+  // guru. `notFound()`, bukan 403 — jawaban yang membedakan "ada tetapi
+  // terlarang" dari "tidak ada" sudah cukup untuk memetakan staf platform.
+  it("hides a human moderator's profile from a student", async () => {
+    const staff = await seedUser(db, { name: "Pak Budi", role: "moderator" });
+    const student = await seedUser(db, { name: "Siswa" });
+
+    authMock.mockResolvedValue({ userId: student.clerkId } as never);
+
+    await expect(render(staff.id)).rejects.toThrow(NOT_FOUND_DIGEST);
+  });
+
+  it("hides a human moderator's profile from an anonymous visitor", async () => {
+    const staff = await seedUser(db, { name: "Pak Budi", role: "admin" });
+
+    // `beforeEach` already leaves the session empty.
+    await expect(render(staff.id)).rejects.toThrow(NOT_FOUND_DIGEST);
+  });
+
+  it("lets a reviewer open a staff profile, and gives that profile no rank", async () => {
+    // The moderator team tab links here, so a reviewer must be able to follow it.
+    const staff = await seedUser(db, { name: "Pak Budi", role: "moderator", points: 100 });
+    const reviewer = await seedUser(db, { name: "Bu Sari", role: "admin" });
+    await seedUser(db, { name: "Siswa", points: 10 });
+
+    authMock.mockResolvedValue({ userId: reviewer.clerkId } as never);
+    const props = await render(staff.id);
+
+    expect(props.user.name).toBe("Pak Budi");
+    // `null`, not `1` and not `0`. Zero would satisfy every `rank <= N` badge
+    // condition; a computed rank would print "#4 dari 2" for someone the board
+    // does not contain.
+    expect(props.user.rank).toBeNull();
+    // Only the student is a participant: the profile's owner and the reviewer
+    // reading it are both human staff, and staff are not counted as students.
+    expect(props.user.totalStudents).toBe(1);
+  });
+
+  it("lets a moderator open their own profile", async () => {
+    const staff = await seedUser(db, { name: "Pak Budi", role: "moderator" });
+
+    authMock.mockResolvedValue({ userId: staff.clerkId } as never);
+    const props = await render(staff.id);
+
+    expect(props.isOwnProfile).toBe(true);
+    expect(props.user.rank).toBeNull();
+  });
+
+  it("keeps a season seat's profile public", async () => {
+    // The mirror of the gate above, and the case a `role`-only check gets wrong:
+    // a seat holds `role = moderator` for the length of the season but is still
+    // a student, still on the board, and still has a profile students may open.
+    const seat = await seedUser(db, {
+      name: "Juara Musim",
+      role: "moderator",
+      seasonRoleKey: "2026-Q4",
+      points: 20,
+    });
+    await seedUser(db, { name: "Siswa", points: 10 });
+
+    const props = await render(seat.id);
+
+    expect(props.user.rank).toBe(1);
+    expect(props.user.totalStudents).toBe(2);
   });
 });

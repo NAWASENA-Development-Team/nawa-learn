@@ -135,6 +135,21 @@ export function ProfileHeader({
 
   // === REWARD SYSTEM HELPERS ===
 
+  // Staf manusia tidak punya peringkat (M17): `user.rank` bernilai `null` untuk
+  // mereka. Semua perbandingan di bawah memakai `rank`, bukan field itu langsung,
+  // karena di JavaScript `null <= 3` bernilai **true** — tanpa konversi ini,
+  // profil seorang moderator akan memakai mahkota Top 3, bingkai emas, dan
+  // mencetak "#null".
+  //
+  // `Number.MAX_SAFE_INTEGER` adalah nilai yang sama dengan `rankOf()` untuk
+  // orang di luar papan, jadi tidak ada perbandingan yang bisa bernilai true.
+  const rank = user.rank ?? Number.MAX_SAFE_INTEGER;
+
+  // Perk foto kustom adalah hadiah peringkat. Staf tidak sedang berlomba, jadi
+  // gerbang peringkat tidak berlaku baginya — tetapi siswa di luar 10 besar tetap
+  // tidak boleh memakainya.
+  const rankPerkUnlocked = user.rank === null || rank <= 10;
+
   // Get avatar frame style based on rank
   const getAvatarFrame = (rank: number) => {
     if (rank <= 3) return {
@@ -175,11 +190,11 @@ export function ProfileHeader({
   const levelFrameStyle = getLevelFrameStyle(user.levelFrame);
 
   // Get specialty badge for Top 3 (based on contribution type)
-  const userSpecialtyBadge = getSpecialtyBadge(specialtyStats, user.rank);
+  const userSpecialtyBadge = getSpecialtyBadge(specialtyStats, rank);
 
   // Get secret achievement for Top 100
   const getSecretAchievement = () => {
-    if (user.rank > 100) return null;
+    if (rank > 100) return null;
     // Sumber yang sama dengan lencana spesialis di atas: SQL, bukan 20 baris
     // log terakhir. `quizTotal`/`hardQuizzes` di sini berarti soal yang dijawab.
     const { quizTotal, hardQuizzes, approvedMods, diverseSubjects, totalDownloads } = specialtyStats;
@@ -189,12 +204,12 @@ export function ProfileHeader({
     if (totalDownloads >= 100) return { name: "Viral Scholar", desc: "Modul diunduh 100+ kali", icon: "🌊", color: "text-cyan-400", bg: "bg-cyan-950/30 border-cyan-900/50" };
     if (diverseSubjects >= 4) return { name: "Polymath Prodigy", desc: "Kontribusi di 4+ mata pelajaran", icon: "🔬", color: "text-green-400", bg: "bg-green-950/30 border-green-900/50" };
     if (quizTotal >= 10) return { name: "Eternal Student", desc: "Menjawab 10+ soal", icon: "🔄", color: "text-blue-400", bg: "bg-blue-950/30 border-blue-900/50" };
-    if (user.rank <= 10) return { name: "The Chosen Few", desc: "Masuk dalam 10 besar", icon: "🌟", color: "text-amber-400", bg: "bg-amber-950/30 border-amber-900/50" };
-    if (user.rank <= 50) return { name: "Silent Powerhouse", desc: "Masuk dalam 50 besar", icon: "⚡", color: "text-indigo-400", bg: "bg-indigo-950/30 border-indigo-900/50" };
+    if (rank <= 10) return { name: "The Chosen Few", desc: "Masuk dalam 10 besar", icon: "🌟", color: "text-amber-400", bg: "bg-amber-950/30 border-amber-900/50" };
+    if (rank <= 50) return { name: "Silent Powerhouse", desc: "Masuk dalam 50 besar", icon: "⚡", color: "text-indigo-400", bg: "bg-indigo-950/30 border-indigo-900/50" };
     return { name: "The Century Club", desc: "Masuk dalam 100 besar", icon: "🎖️", color: "text-zinc-300", bg: "bg-zinc-800/50 border-zinc-700/50" };
   };
 
-  const avatarFrame = getAvatarFrame(user.rank);
+  const avatarFrame = getAvatarFrame(rank);
   const specialtyBadge = userSpecialtyBadge;
   const secretAchievement = getSecretAchievement();
 
@@ -229,10 +244,10 @@ export function ProfileHeader({
           {/* Avatar frame ring for ranked players */}
           {avatarFrame && (
             <div className={`absolute -inset-1.5 rounded-[28px] bg-gradient-to-br ${
-              user.rank <= 3 ? "from-amber-400 via-yellow-300 to-nawa-warning" :
-              user.rank <= 10 ? "from-purple-400 via-fuchsia-400 to-purple-600" :
+              rank <= 3 ? "from-amber-400 via-yellow-300 to-nawa-warning" :
+              rank <= 10 ? "from-purple-400 via-fuchsia-400 to-purple-600" :
               "from-cyan-400 via-blue-400 to-cyan-600"
-            } ${user.rank <= 3 ? "animate-[spin_4s_linear_infinite]" : ""} opacity-80`} />
+            } ${rank <= 3 ? "animate-[spin_4s_linear_infinite]" : ""} opacity-80`} />
           )}
           <div className={`w-32 h-32 rounded-3xl bg-gradient-to-br ${selectedAvatar.bg} flex items-center justify-center shadow-lg border-4 border-white/10 relative transition-transform duration-300 group-hover:scale-105 group-hover:rotate-3 overflow-hidden ${avatarFrame ? avatarFrame.glow : "shadow-indigo-500/20"}`}>
             {/* Custom photo takes priority over SVG avatar */}
@@ -253,7 +268,7 @@ export function ProfileHeader({
               </button>
             )}
             {/* Custom photo edit/remove button (Top 10 perk) */}
-            {isOwnProfile && user.rank <= 10 && customPhoto && (
+            {isOwnProfile && rankPerkUnlocked && customPhoto && (
               <button
                 onClick={handleRemovePhoto}
                 aria-label="Hapus foto profil"
@@ -267,9 +282,9 @@ export function ProfileHeader({
 
 
           {/* Rank indicator badge */}
-          {user.rank <= 3 && (
+          {rank <= 3 && (
             <span className="absolute -top-3 -left-3 bg-nawa-warning text-zinc-950 px-2.5 py-0.5 rounded-lg text-[10px] font-black tracking-wider uppercase border border-amber-300 shadow-md">
-              #{user.rank}
+              #{rank}
             </span>
           )}
         </div>
@@ -362,7 +377,7 @@ export function ProfileHeader({
             )}
 
             {/* 📸 CUSTOM PHOTO UPLOAD (Top 10 perk) */}
-            {isOwnProfile && user.rank <= 10 && (
+            {isOwnProfile && rankPerkUnlocked && (
               <>
                 <input
                   ref={photoInputRef}

@@ -23,7 +23,15 @@ export interface UserProfile {
   role: "guest" | "student" | "contributor" | "moderator" | "admin";
   points: number;
   createdAt: string; // ISO string
-  rank: number;
+  /**
+   * Peringkat sekolah, atau `null` untuk staf manusia (M17).
+   *
+   * Staf tidak ikut dihitung di papan peringkat, jadi ia tidak punya peringkat.
+   * `null` harus diperlakukan sebagai "tidak ada", bukan sebagai nol: di
+   * JavaScript `null <= 3` bernilai `true`, sehingga perbandingan angka apa pun
+   * terhadap field ini akan memasang mahkota Top 3 di profil seorang moderator.
+   */
+  rank: number | null;
   totalStudents: number;
   // Profile customisation — stored in DB so other users can see them
   avatarIndex: number | null;
