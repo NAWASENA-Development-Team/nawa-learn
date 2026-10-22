@@ -163,9 +163,16 @@ To add new badges, edit `src/lib/badges/catalog.ts`:
 - Verbosity follows `LOG_LEVEL` (default: `info` in production, `debug` otherwise).
 
 ### Health check
-- `GET /api/health` is deliberately public (see `PUBLIC_ROUTES` in `src/proxy.ts`) so an uptime monitor can reach it without a session. It returns only coarse status — `{ status, checks: { database, auth }, timestamp }` — with `200` healthy / `503` degraded, and `cache-control: no-store`.
+- `GET /api/health` is deliberately public (see `PUBLIC_ROUTES` in `src/proxy.ts`) so an uptime monitor can reach it without a session. It returns only coarse status — `{ status, checks: { database, schema, auth }, timestamp }` — with `200` healthy / `503` degraded, and `cache-control: no-store`.
 - Do not add data to it. The real failure reason goes to the logs, never to the anonymous caller.
-- `tests/unit/health.test.ts` asserts that no database error detail leaks into the response body.
+- `schema` compares `count(*)` from `drizzle.__drizzle_migrations` against `journal.entries.length` in `src/db/migrations/meta/_journal.json`, so the expected number is derived from drizzle-kit's own journal and never hand-maintained. It is `>=`, not `===`: a database one migration **ahead** of the deployed build is a rollback window (additive migrations do not break older code), while one **behind** is an outage. An unreadable count is `stale`; when the database itself is down it reports `unknown` instead of asking a dead connection a second question.
+- That check exists because `select 1` cannot tell a migrated database from a stale one. On 2026-10-22 the M16 deploy shipped code selecting `users.season_role_key` while the production database was still at `0005`: every signed-in page threw `42703` and rendered `error.tsx` (`Kode kejadian: 2096463697`), and `/api/health` answered `200 {"status":"ok"}` throughout. A count is coarse — it cannot catch a migration file edited in place — but it turns "the migration was never applied" into a red monitor within a minute instead of a student's bug report.
+- `tests/unit/health.test.ts` asserts that no database error detail leaks into the response body, that a database one migration behind answers `503` with `schema: "stale"`, and that one migration ahead still answers `200`.
+
+### Applying migrations is a deploy step
+- Nothing applies migrations automatically. Vercel runs `next build` and no `db:migrate`, so **`npm run db:migrate` must run against the real database before the build that needs it is deployed**. CI cannot do it: the `verify` job is hermetic and holds no `DATABASE_URL`.
+- This has now been missed three times — `0002`/`0003` were found unapplied during M12 verification, and `0006` broke every signed-in page in production. The health `schema` check is the control that makes the next occurrence visible; it does not replace the step.
+- A migration that adds a column the root layout selects is never a "later" migration: `getCurrentUser()` runs on every request, so one missing column takes down every page at once while `select 1` stays perfectly green.
 
 ### Rate limiting & anti-abuse
 - `src/lib/rateLimit.ts` — fixed-window counters applied **per user and per IP** on the mutating routes. Budgets live in `RATE_LIMITS`.

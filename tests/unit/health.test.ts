@@ -9,16 +9,25 @@ vi.mock("@/db", () => ({
 }));
 
 import { GET } from "@/app/api/health/route";
+import journal from "@/db/migrations/meta/_journal.json";
+
+// The number the route derives from drizzle-kit's journal. Read here too, so the
+// tests break the day the journal stops being the source of truth.
+const EXPECTED = journal.entries.length;
 
 function configureAuth(present: boolean) {
   vi.stubEnv("CLERK_SECRET_KEY", present ? "sk_test_fake" : "");
   vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", present ? "pk_test_fake" : "");
 }
 
+function migrationCount(applied: number) {
+  return vi.fn().mockResolvedValue([{ applied }]);
+}
+
 beforeEach(() => {
   vi.unstubAllEnvs();
   vi.spyOn(console, "error").mockImplementation(() => {});
-  holder.db = { execute: vi.fn().mockResolvedValue([{ "?column?": 1 }]) };
+  holder.db = { execute: migrationCount(EXPECTED) };
 });
 
 afterEach(() => {
@@ -27,7 +36,7 @@ afterEach(() => {
 });
 
 describe("GET /api/health", () => {
-  it("reports ok when the database answers and auth is configured", async () => {
+  it("reports ok when the database answers, the schema is current and auth is configured", async () => {
     configureAuth(true);
 
     const response = await GET();
@@ -35,7 +44,43 @@ describe("GET /api/health", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
       status: "ok",
-      checks: { database: "ok", auth: "ok" },
+      checks: { database: "ok", schema: "ok", auth: "ok" },
+    });
+  });
+
+  // The regression this endpoint missed in production: a reachable database that
+  // is one migration behind the deployed code. `select 1` says "ok" to that.
+  it("reports 503 when the database is behind the migrations this build needs", async () => {
+    configureAuth(true);
+    holder.db = { execute: migrationCount(EXPECTED - 1) };
+
+    const response = await GET();
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      status: "degraded",
+      checks: { database: "ok", schema: "stale", auth: "ok" },
+    });
+  });
+
+  // A rollback window: the database is ahead of the deployed build. Additive
+  // migrations do not break older code, so this must not read as an outage.
+  it("treats a database one migration ahead as usable", async () => {
+    configureAuth(true);
+    holder.db = { execute: migrationCount(EXPECTED + 1) };
+
+    expect((await GET()).status).toBe(200);
+  });
+
+  it("reports stale when the migration count cannot be read", async () => {
+    configureAuth(true);
+    holder.db = { execute: vi.fn().mockResolvedValue([]) };
+
+    const response = await GET();
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      checks: { database: "ok", schema: "stale" },
     });
   });
 
@@ -51,6 +96,8 @@ describe("GET /api/health", () => {
     const body = await response.json();
     expect(body.status).toBe("degraded");
     expect(body.checks.database).toBe("down");
+    // Not "ok": an unreachable database says nothing about the schema.
+    expect(body.checks.schema).toBe("unknown");
   });
 
   // The endpoint is public, so its body must not become an intelligence feed.
@@ -75,7 +122,7 @@ describe("GET /api/health", () => {
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toMatchObject({
       status: "degraded",
-      checks: { database: "ok", auth: "down" },
+      checks: { database: "ok", schema: "ok", auth: "down" },
     });
   });
 
