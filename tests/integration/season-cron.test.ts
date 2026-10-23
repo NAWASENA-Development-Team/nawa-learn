@@ -156,6 +156,34 @@ describe("runSeasonCron — arsip podium", () => {
     expect(row.points).toBe(12);
   });
 
+  it("tidak mengarsipkan poin milik musim berjalan ketika cron tertinggal", async () => {
+    // Baris basi di sini hanya bertugas membuka blok arsip: tanpa satu pun baris
+    // basi, cron melewati langkah 1 sepenuhnya dan test ini akan lulus atas nol
+    // pekerjaan — gerbang yang gagal terbuka, bukan gagal tertutup. Poinnya 0
+    // supaya ia sendiri tidak ikut diarsipkan.
+    const stale = await seedUser(db, { clerkId: "arsip_basi" });
+    await setSeason(stale.id, 0, PREVIOUS_START);
+
+    const current = await seedUser(db, { clerkId: "arsip_musim_berjalan" });
+    await setSeason(current.id, 40, NOW);
+
+    const result = await runSeasonCron(db, log, NOW);
+
+    // Poin `current` lahir setelah musim berganti. `season_reset_at >= previousStart`
+    // saja akan mencatatnya sebagai juara musim **lalu** dan mengirim surel
+    // "hasil musim" — permanen, karena `ON CONFLICT DO NOTHING` membuat baris
+    // pertama menang. Ini yang terjadi ketika cron mati melewati batas kuartal.
+    expect(result.archived).toBe(0);
+    expect(await db.select().from(schema.seasonPodium)).toHaveLength(0);
+
+    const outbox = await db.select().from(schema.mailOutbox);
+    expect(outbox.filter((row) => row.kind === "season_result")).toHaveLength(0);
+
+    // Rollover juga tidak boleh menyentuhnya: barisnya bukan baris basi.
+    const [after] = await db.select().from(schema.users).where(eq(schema.users.id, current.id));
+    expect(after.seasonPoints).toBeGreaterThan(0);
+  });
+
   it("mengirim surel hasil musim ke tiap baris podium", async () => {
     const winner = await seedUser(db, { clerkId: "hasil_juara" });
     await setSeason(winner.id, 40, PREVIOUS_START);

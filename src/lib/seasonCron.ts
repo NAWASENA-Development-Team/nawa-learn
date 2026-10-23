@@ -113,6 +113,15 @@ export async function runSeasonCron(
         and(
           IS_PARTICIPANT,
           gte(schema.users.seasonResetAt, previousStart),
+          // Batas atas ini wajib, dan ketiadaannya adalah bug yang hanya muncul
+          // ketika cron mati. Pada cron yang sehat, putaran 1 Oktober 00:00
+          // berjalan sebelum siapa pun menulis poin kuartal baru, sehingga
+          // `>= previousStart` sudah cukup. Tetapi job yang tertinggal sehari
+          // akan menemukan baris yang `season_reset_at`-nya sudah jatuh di
+          // musim **berjalan**, dan mengarsipkannya sebagai juara musim lalu —
+          // lengkap dengan email "hasil musim", permanen karena
+          // `ON CONFLICT DO NOTHING` membuat baris pertama menang.
+          lt(schema.users.seasonResetAt, seasonStart),
           sql`${schema.users.seasonPoints} > 0`,
         ),
       )
