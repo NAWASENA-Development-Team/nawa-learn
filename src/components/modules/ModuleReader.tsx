@@ -261,12 +261,23 @@ function PdfPageReader({ src, title }: { src: string; title: string }) {
         const pdfjs = await import("pdfjs-dist");
         pdfjs.GlobalWorkerOptions.workerSrc = PDF_WORKER_SRC;
 
-        const task = pdfjs.getDocument({ url: src });
+        const task = pdfjs.getDocument({
+          url: src,
+          // Tidak ada opsi `enableScripting` di sini karena PDF.js 6 menghapusnya
+          // dari `DocumentInitParameters`: JavaScript di dalam dokumen hanya bisa
+          // hidup lewat `pdf_viewer` + `PDFScriptingManager`, yang tidak kita
+          // pakai. Itu penting, bukan detail: `enableScripting` dulu default
+          // `true`, dan jalur itulah yang menjadi CVE-2026-16633
+          // (GHSA-hq66-cqwq-w95j) — eksekusi JavaScript sembarang dari PDF jahat.
+          // Berkas di sini diunggah siswa, jadi ia masukan yang tidak dipercaya.
+          // Jangan menambahkan `pdf_viewer` ke komponen ini.
+        });
         loadingTask = task;
         const loaded = await task.promise;
 
         if (cancelled) {
-          void loaded.destroy();
+          // Cleanup sudah menjalankan `loadingTask.destroy()`; dokumen yang telat
+          // selesai dimuat tidak boleh dipakai lagi.
           return;
         }
         setDoc(loaded);

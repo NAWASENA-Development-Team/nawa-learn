@@ -19,6 +19,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { withoutComments } from "../helpers/source";
 
 const root = process.cwd();
 const installedPackage = join(root, "node_modules/pdfjs-dist/package.json");
@@ -80,5 +81,27 @@ describe("worker PDF.js", () => {
     // muncul untuk pengguna yang sesinya sedang diperbarui.
     const proxy = readFileSync(join(root, "src/proxy.ts"), "utf8");
     expect(proxy).toMatch(/js\(\?!on\)\|mjs/);
+  });
+
+  it("tidak memakai pdf_viewer, satu-satunya jalan scripting PDF hidup", () => {
+    // Berkas yang dirender di sini diunggah siswa, jadi ia masukan yang tidak
+    // dipercaya. CVE-2026-16633 (GHSA-hq66-cqwq-w95j, HIGH) adalah eksekusi
+    // JavaScript sembarang dari PDF jahat lewat `enableScripting`, yang dulu
+    // default `true`. PDF.js 6 menghapus opsi itu dari `DocumentInitParameters`:
+    // scripting kini hanya bisa dihidupkan lewat `pdf_viewer` +
+    // `PDFScriptingManager`, yang tidak kita pakai. Jadi yang dijaga tes ini
+    // adalah "jangan menambahkan komponen itu", bukan nama opsi lama yang sudah
+    // tidak ada di tipe.
+    //
+    // `npm run audit:gate` menjaga sisi versi: rilis `>=5.6.83 <6.2.108` ditolak,
+    // dan dependensinya dinaikkan, bukan di-allowlist.
+    //
+    // Komentar dibuang lebih dulu: penjelasan di `ModuleReader` justru menyebut
+    // `pdf_viewer` untuk mengatakan **jangan** memakainya, dan tanpa
+    // `withoutComments()` kalimat itu terbaca sebagai pelanggaran.
+    const source = withoutComments(
+      readFileSync(join(root, "src/components/modules/ModuleReader.tsx"), "utf8"),
+    );
+    expect(source).not.toMatch(/pdf_viewer|PDFScriptingManager/);
   });
 });
