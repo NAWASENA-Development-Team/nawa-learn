@@ -2,45 +2,24 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useMemo, useEffect } from "react";
-import { 
-  Search, 
-  BookOpen, 
-  Download, 
-  FileText, 
-  Image as ImageIcon, 
+import { useState, useMemo } from "react";
+import {
+  Search,
+  BookOpen,
+  Download,
+  FileText,
+  Image as ImageIcon,
   ExternalLink,
   Filter,
   ArrowRight,
   SlidersHorizontal,
   GraduationCap,
-  X,
-  Check,
   Bookmark,
   BookmarkCheck,
+  AlertTriangle,
 } from "lucide-react";
-
-// ─── Own-storage helpers ──────────────────────────────────────────────────────
-// Uploads now live in our own Vercel Blob store. These two helpers let the
-// reader tell a hosted PDF from a hosted image; the `data:`/external-URL paths
-// are kept for rows written before the upload change.
-const OWN_BLOB_HOST_SUFFIX = ".public.blob.vercel-storage.com";
-
-const isOwnBlobUrl = (url: string) => {
-  try {
-    return new URL(url).hostname.endsWith(OWN_BLOB_HOST_SUFFIX);
-  } catch {
-    return false;
-  }
-};
-
-/** Reads the media type off the file extension of a hosted object. */
-const blobFileKind = (url: string): "PDF" | "Foto" | null => {
-  const path = url.split("?")[0].toLowerCase();
-  if (path.endsWith(".pdf")) return "PDF";
-  if (/\.(png|jpe?g|webp)$/.test(path)) return "Foto";
-  return null;
-};
+import ModuleReader from "@/components/modules/ModuleReader";
+import type { ModuleSource } from "@/lib/moduleSource";
 
 interface Module {
   id: string;
@@ -48,10 +27,18 @@ interface Module {
   subject: string;
   grade: string;
   category: string;
-  contentUrl: string;
   downloads: number;
   uploaderName: string | null;
   createdAt: string; // ISO string from server
+  /**
+   * Bagaimana modul ini dibaca — ditentukan di server oleh `resolveModuleSource`.
+   *
+   * Sebelum M21 komponen ini memegang `contentUrl` mentah, termasuk tiga PDF
+   * base64 sepanjang ±1 MB yang ikut di payload halaman. Sekarang halaman hanya
+   * mengirim deskriptor kecil (`kind` + `src`), dan `src` untuk baris lama adalah
+   * rute `/api/modules/<id>/file` — bukan isi filenya.
+   */
+  source: ModuleSource;
 }
 
 interface ModulesLibraryClientProps {
@@ -79,7 +66,6 @@ export default function ModulesLibraryClient({
 
   // Reader Modal State
   const [selectedReaderModule, setSelectedReaderModule] = useState<Module | null>(null);
-  const [printSuccess, setPrintSuccess] = useState(false);
 
   // ─── Bookmark State ─────────────────────────────────────────────────────────────
   // Seeded from the server, not from `localStorage`: lihat catatan pada prop
@@ -126,61 +112,32 @@ export default function ModulesLibraryClient({
     }
   };
 
-  // A legacy `data:application/pdf` row has no URL to point an <iframe> at, so it
-  // is turned into a blob URL. This is derived state — computed from
-  // `selectedReaderModule` during render rather than assigned from an effect —
-  // and the object URL is revoked when the value it replaced goes away.
-  const pdfBlobUrl = useMemo(() => {
-    const mod = selectedReaderModule;
-    if (!mod || !mod.contentUrl.startsWith("data:application/pdf")) return null;
-    const parts = mod.contentUrl.split(",");
-    if (parts.length !== 2) return null;
-    try {
-      const byteString = atob(parts[1]);
-      const ab = new ArrayBuffer(byteString.length);
-      const ia = new Uint8Array(ab);
-      for (let i = 0; i < byteString.length; i++) {
-        ia[i] = byteString.charCodeAt(i);
-      }
-      return URL.createObjectURL(new Blob([ab], { type: "application/pdf" }));
-    } catch (e) {
-      console.error("Failed to parse PDF data URI", e);
-      return null;
-    }
-  }, [selectedReaderModule]);
+  /**
+   * Membuka modul **tidak** lagi dihitung sebagai unduhan.
+   *
+   * Sampai M20 setiap klik "buka" menaikkan `modules.downloads`, sehingga angka
+   * itu berarti "pernah dibuka" — dan siswa yang membaca sekali di layar
+   * terhitung sama dengan siswa yang menyimpan berkasnya. Sekarang hitungannya
+   * hanya bertambah saat tombol Unduh ditekan, jadi angka di kartu akhirnya
+   * menjawab pertanyaan yang ditulis di atasnya.
+   */
+  const handleDownload = (moduleId: string) => {
+    setModulesList((prev) =>
+      prev.map((m) => (m.id === moduleId ? { ...m, downloads: m.downloads + 1 } : m)),
+    );
 
-  useEffect(() => {
-    if (!pdfBlobUrl) return;
-    return () => URL.revokeObjectURL(pdfBlobUrl);
-  }, [pdfBlobUrl]);
+    void fetch("/api/modules/download", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ moduleId }),
+    }).catch((err) => {
+      console.error("Gagal menambah hitungan download:", err);
+    });
+  };
 
   // Unique lists for filtering
   const categories = ["Semua", "UTBK", "Olimpiade", "Reguler"];
   const grades = ["Semua", "X", "XI", "XII", "Umum"];
-
-  // Handle module click & increment download count in database and state
-  const handleOpenModule = async (moduleId: string) => {
-    const mod = modulesList.find(m => m.id === moduleId);
-    if (mod) {
-      setSelectedReaderModule(mod);
-    }
-
-    // Optimistically update local UI state download count
-    setModulesList(prev => 
-      prev.map(m => m.id === moduleId ? { ...m, downloads: m.downloads + 1 } : m)
-    );
-
-    // Trigger API POST call silently in background
-    try {
-      await fetch("/api/modules/download", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ moduleId }),
-      });
-    } catch (err) {
-      console.error("Gagal menambah hitungan download:", err);
-    }
-  };
 
   // Filter & Sort Logic
   const filteredAndSortedModules = useMemo(() => {
@@ -206,19 +163,29 @@ export default function ModulesLibraryClient({
       });
   }, [modulesList, searchQuery, selectedCategory, selectedGrade, sortBy, bookmarks, showBookmarksOnly]);
 
-  const getFileTypeDetails = (url: string) => {
-    const lowerUrl = url.toLowerCase();
-    // New uploads live in our own Vercel Blob store, so the media type has to be
-    // read off the file extension. The `data:` branches below stay because three
-    // modules were stored as base64 before uploads moved to object storage.
-    if (isOwnBlobUrl(url)) {
-      const kind = blobFileKind(url);
-      if (kind === "Foto") return { label: "Foto", color: "bg-emerald-50 text-emerald-600 border-emerald-100", icon: ImageIcon };
-      if (kind === "PDF") return { label: "PDF", color: "bg-red-50 text-red-600 border-red-100", icon: FileText };
+  /**
+   * Label di kartu dibaca dari `source.kind`, bukan dari string URL.
+   *
+   * `kind` sudah memutuskan hal yang sama sekali berbeda dengan `startsWith`:
+   * apakah bytes-nya milik kita dan bisa dirender, atau hanya tautan yang harus
+   * diserahkan ke peramban. Dua tempat yang menebak dari URL adalah cara
+   * keduanya mulai berbeda pendapat.
+   */
+  const getFileTypeDetails = (kind: ModuleSource["kind"]) => {
+    if (kind === "pdf-data" || kind === "pdf-blob") {
+      return { label: "PDF", color: "bg-red-50 text-red-600 border-red-100", icon: FileText };
     }
-    if (lowerUrl.startsWith("data:image/")) return { label: "Foto", color: "bg-emerald-50 text-emerald-600 border-emerald-100", icon: ImageIcon };
-    if (lowerUrl.startsWith("data:application/pdf")) return { label: "PDF", color: "bg-red-50 text-red-600 border-red-100", icon: FileText };
-    return { label: "Berkas", color: "bg-indigo-50 text-nawa-primary border-indigo-100", icon: FileText };
+    if (kind === "image-data" || kind === "image-blob") {
+      return { label: "Foto", color: "bg-emerald-50 text-emerald-600 border-emerald-100", icon: ImageIcon };
+    }
+    if (kind === "unknown") {
+      return {
+        label: "Rusak",
+        color: "bg-amber-50 text-amber-700 border-amber-200",
+        icon: AlertTriangle,
+      };
+    }
+    return { label: "Tautan", color: "bg-indigo-50 text-nawa-primary border-indigo-100", icon: ExternalLink };
   };
 
   return (
@@ -374,7 +341,7 @@ export default function ModulesLibraryClient({
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredAndSortedModules.map((mod) => {
-            const fileDetails = getFileTypeDetails(mod.contentUrl);
+            const fileDetails = getFileTypeDetails(mod.source.kind);
             const FileIcon = fileDetails.icon;
 
             return (
@@ -448,11 +415,12 @@ export default function ModulesLibraryClient({
 
                     <button 
                       type="button"
-                      onClick={() => handleOpenModule(mod.id)}
+                      onClick={() => setSelectedReaderModule(mod)}
                       className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-nawa-primary hover:bg-nawa-primary-hover text-white shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer border border-nawa-primary-hover"
-                      title="Buka Dokumen Modul"
+                      title="Baca modul"
+                      aria-label={`Baca modul: ${mod.title}`}
                     >
-                      <ExternalLink className="h-4.5 w-4.5" />
+                      <BookOpen className="h-4.5 w-4.5" />
                     </button>
                   </div>
                 </div>
@@ -462,388 +430,13 @@ export default function ModulesLibraryClient({
         </div>
       )}
 
-      {/* 📖 NAWA-READER: Premium Internal Document Viewer Modal */}
+      {/* 📖 NAWA-READER — see ModuleReader for why this is no longer an <embed>. */}
       {selectedReaderModule && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 backdrop-blur-md p-4 sm:p-6 md:p-8 animate-in fade-in duration-300">
-          <div className="max-w-4xl w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] sm:max-h-[85vh] relative animate-in zoom-in-95 duration-300">
-            {/* Header bar */}
-            <div className="p-5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50 dark:bg-zinc-950/50">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-nawa-primary dark:text-indigo-400 flex items-center justify-center border border-indigo-100 dark:border-indigo-900/40">
-                  <BookOpen className="h-5 w-5" />
-                </div>
-                <div className="text-left">
-                  <h4 className="font-extrabold text-zinc-900 dark:text-white line-clamp-1 text-sm sm:text-base">
-                    {selectedReaderModule.title}
-                  </h4>
-                  <div className="flex items-center gap-2 mt-0.5 text-xs text-zinc-500">
-                    <span className="font-semibold text-indigo-500">{selectedReaderModule.subject}</span>
-                    <span>•</span>
-                    <span>Kelas {selectedReaderModule.grade}</span>
-                    <span>•</span>
-                    <span className="bg-indigo-50 dark:bg-indigo-950/40 text-nawa-primary dark:text-indigo-400 text-[10px] px-2 py-0.5 rounded-md font-bold">
-                      {selectedReaderModule.category}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  setSelectedReaderModule(null);
-                  setPrintSuccess(false);
-                }}
-                aria-label="Tutup pembaca modul"
-                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-all shrink-0 cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Document sheet body */}
-            <div className="flex-1 overflow-y-auto p-6 sm:p-8 bg-zinc-50 dark:bg-zinc-950/85">
-              {isOwnBlobUrl(selectedReaderModule.contentUrl) ? (
-                /* HOSTED IN OUR OWN STORAGE: these bytes are ours, so render
-                   them directly rather than through the external-URL iframe. */
-                blobFileKind(selectedReaderModule.contentUrl) === "PDF" ? (
-                  <div className="flex flex-col h-full min-h-[500px] gap-2">
-                    <embed
-                      src={selectedReaderModule.contentUrl}
-                      type="application/pdf"
-                      className="w-full flex-1 min-h-[500px] rounded-xl border border-zinc-200 dark:border-zinc-700"
-                    />
-                    <p className="text-xs text-zinc-500 text-center">
-                      Diunggah oleh <span className="font-bold">{selectedReaderModule.uploaderName || "Anonim"}</span>
-                    </p>
-                  </div>
-                ) : (
-                  <div className="max-w-2xl mx-auto flex flex-col items-center gap-4">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={selectedReaderModule.contentUrl}
-                      alt={selectedReaderModule.title}
-                      className="rounded-2xl shadow-lg max-w-full object-contain border border-zinc-200 dark:border-zinc-700"
-                    />
-                    <p className="text-xs text-zinc-500 text-center">
-                      Diunggah oleh <span className="font-bold">{selectedReaderModule.uploaderName || "Anonim"}</span> •{" "}
-                      {new Date(selectedReaderModule.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
-                    </p>
-                  </div>
-                )
-              ) : selectedReaderModule.contentUrl.startsWith("http") && !selectedReaderModule.contentUrl.startsWith("https://nawa-learn.storage") ? (
-                /* EXTERNAL URL (Google Drive, Canva, etc.): Display in iframe */
-                <div className="flex flex-col h-full min-h-[500px] w-full gap-2">
-                  <iframe
-                    src={selectedReaderModule.contentUrl.replace("/view", "/preview")}
-                    className="w-full flex-1 min-h-[600px] rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white"
-                    allowFullScreen
-                  />
-                  <p className="text-xs text-zinc-500 text-center">
-                    Tampilan eksternal • Diunggah oleh <span className="font-bold">{selectedReaderModule.uploaderName || "Anonim"}</span>
-                  </p>
-                </div>
-              ) : selectedReaderModule.contentUrl.startsWith("data:image/") ? (
-                /* REAL PHOTO UPLOAD: Show actual captured/uploaded image */
-                <div className="max-w-2xl mx-auto flex flex-col items-center gap-4">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={selectedReaderModule.contentUrl}
-                    alt={selectedReaderModule.title}
-                    className="rounded-2xl shadow-lg max-w-full object-contain border border-zinc-200 dark:border-zinc-700"
-                  />
-                  <p className="text-xs text-zinc-500 text-center">
-                    Diunggah oleh <span className="font-bold">{selectedReaderModule.uploaderName || "Anonim"}</span> •{" "}
-                    {new Date(selectedReaderModule.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
-                  </p>
-                </div>
-              ) : selectedReaderModule.contentUrl.startsWith("data:application/pdf") ? (
-                /* REAL PDF UPLOAD: Embed actual PDF viewer */
-                <div className="flex flex-col h-full min-h-[500px] gap-2">
-                  {pdfBlobUrl ? (
-                    <embed
-                      src={pdfBlobUrl}
-                      type="application/pdf"
-                      className="w-full flex-1 min-h-[500px] rounded-xl border border-zinc-200 dark:border-zinc-700"
-                    />
-                  ) : (
-                    <div className="flex-1 flex items-center justify-center bg-zinc-100 dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800">
-                      <p className="text-sm text-zinc-500 flex items-center gap-2">Memuat Dokumen...</p>
-                    </div>
-                  )}
-                  <p className="text-xs text-zinc-500 text-center">
-                    Diunggah oleh <span className="font-bold">{selectedReaderModule.uploaderName || "Anonim"}</span>
-                  </p>
-                </div>
-              ) : getFileTypeDetails(selectedReaderModule.contentUrl).label === "Foto" ? (
-                /* MOCK CAMERA PHOTO PREVIEW: Display premium, highly catchy handwritten school notes scan mockup */
-                <div className="max-w-2xl mx-auto bg-[#faf8f5] text-zinc-800 border-2 border-[#e6dfd3] p-6 sm:p-8 rounded-2xl shadow-md relative overflow-hidden bg-[linear-gradient(#f1ece1_1px,transparent_1px)] bg-[size:100%_1.5rem] min-h-[500px]">
-                  {/* binder rings visual holes */}
-                  <div className="absolute left-4 top-0 bottom-0 w-2 flex flex-col justify-around py-8 pointer-events-none opacity-40">
-                    {[...Array(6)].map((_, i) => (
-                      <div key={i} className="h-4 w-4 rounded-full bg-zinc-400/40 border border-zinc-500 shadow-inner" />
-                    ))}
-                  </div>
-                  
-                  {/* Handwritten watermark or signature */}
-                  <div className="absolute top-2 right-4 text-xs font-semibold text-indigo-400/50 select-none uppercase tracking-widest font-mono">
-                    REC CAM LIVE // OSIS SMAN 2
-                  </div>
-
-                  <div className="pl-6 border-l-2 border-red-300 h-full text-left">
-                    <div className="mb-6 pb-4 border-b-2 border-[#e6dfd3]">
-                      <span className="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">
-                        Hasil Capture Foto Kamera
-                      </span>
-                      <h2 className="text-xl sm:text-2xl font-extrabold text-zinc-900 tracking-tight mt-2 flex items-center gap-2">
-                        {selectedReaderModule.title} 📝
-                      </h2>
-                      <p className="text-xs text-zinc-600 mt-1 font-mono">
-                        Discan oleh: <span className="font-bold">{selectedReaderModule.uploaderName || "Anonim"}</span> pada {new Date(selectedReaderModule.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
-                      </p>
-                    </div>
-
-                    {selectedReaderModule.subject.includes("Fisika") ? (
-                      /* Mock high-fidelity Physics handwritten note content */
-                      <div className="space-y-6 text-sm sm:text-base leading-relaxed font-sans text-zinc-700">
-                        <div>
-                          <h4 className="font-bold text-lg text-nawa-primary bg-indigo-50 border-b border-indigo-200 px-2 py-0.5 rounded inline-block">
-                            I. Hukum II Newton ⚖️
-                          </h4>
-                          <p className="mt-2 text-zinc-700">
-                            &quot;Percepatan dari suatu benda sebanding dengan resultan gaya yang bekerja pada benda tersebut dan berbanding terbalik dengan massanya.&quot;
-                          </p>
-                          <div className="bg-amber-50/85 border border-dashed border-amber-300 rounded-xl p-4 my-3 text-center">
-                            <span className="font-mono text-xl sm:text-2xl font-black text-indigo-800 select-all">
-                              ΣF = m · a
-                            </span>
-                            <p className="text-xs text-zinc-500 mt-1">Dimana: F = Gaya (N), m = Massa (kg), a = Percepatan (m/s²)</p>
-                          </div>
-                        </div>
-
-                        <div>
-                          <h4 className="font-bold text-lg text-nawa-primary bg-indigo-50 border-b border-indigo-200 px-2 py-0.5 rounded inline-block">
-                            II. Rotasi Benda Tegar (Dinamika Rotasi) 🌀
-                          </h4>
-                          <p className="mt-2 text-zinc-700">
-                            Pada gerak rotasi, padanan gaya adalah <b>Torsi (τ)</b>, dan padanan massa adalah <b>Momen Inersia (I)</b>.
-                          </p>
-                          <ul className="list-disc pl-5 mt-2 space-y-2 text-sm text-zinc-700">
-                            <li><b>Momen Inersia:</b> I = Σm·r² (Kecenderungan benda mempertahankan rotasinya)</li>
-                            <li><b>Torsi (Momen Gaya):</b> τ = r × F = I · α</li>
-                            <li><b>Percepatan Sudut (α):</b> α = a / r (rad/s²)</li>
-                          </ul>
-                        </div>
-
-                        <div className="bg-indigo-50/50 border border-indigo-200 rounded-xl p-4 mt-6">
-                          <p className="text-xs font-bold text-nawa-primary uppercase">💡 Tips Ujian SMAN 2 Jonggol:</p>
-                          <p className="text-xs text-zinc-600 mt-1 leading-relaxed">
-                            Jangan lupa untuk selalu menyamakan arah vektor gaya pada sumbu x dan sumbu y terlebih dahulu sebelum memasukkannya ke rumus ΣF = m·a!
-                          </p>
-                        </div>
-                      </div>
-                    ) : selectedReaderModule.subject.includes("Matematika") ? (
-                      /* Mock high-fidelity Math handwritten note content */
-                      <div className="space-y-6 text-sm sm:text-base leading-relaxed font-sans text-zinc-700">
-                        <div>
-                          <h4 className="font-bold text-lg text-nawa-primary bg-indigo-50 border-b border-indigo-200 px-2 py-0.5 rounded inline-block">
-                            I. Integral Substitusi 🧮
-                          </h4>
-                          <p className="mt-2 text-zinc-700">
-                            Metode ini digunakan jika integran dapat dipecah menjadi bentuk f(g(x)) · g&apos;(x) · dx. Caranya dengan memisalkan u = g(x), sehingga du = g&apos;(x)dx.
-                          </p>
-                          <div className="bg-amber-50/85 border border-dashed border-amber-300 rounded-xl p-4 my-3 text-center">
-                            <span className="font-mono text-lg sm:text-xl font-bold text-indigo-800">
-                              ∫ f(g(x)) g&apos;(x) dx = ∫ f(u) du = F(u) + C
-                            </span>
-                          </div>
-                        </div>
-
-                        <div>
-                          <h4 className="font-bold text-lg text-nawa-primary bg-indigo-50 border-b border-indigo-200 px-2 py-0.5 rounded inline-block">
-                            II. Integral Parsial (Metode Tanzalin) ⚡
-                          </h4>
-                          <p className="mt-2 text-zinc-700">
-                            Sangat praktis untuk integral perkalian dua fungsi aljabar & trigonometri ∫ u · dv. Buatlah tabel Turunan (Differentiate) dan Integral (Integrate):
-                          </p>
-                          
-                          <div className="overflow-hidden rounded-xl border border-zinc-200 my-4 text-center bg-white">
-                            <table className="min-w-full text-xs sm:text-sm">
-                              <thead className="bg-zinc-100">
-                                <tr>
-                                  <th className="py-2 px-3 border-b font-bold text-zinc-700">Turunan (u)</th>
-                                  <th className="py-2 px-3 border-b font-bold text-zinc-700">Tanda</th>
-                                  <th className="py-2 px-3 border-b font-bold text-zinc-700">Integral (dv)</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                <tr>
-                                  <td className="py-2 px-3 border-b font-mono">3x²</td>
-                                  <td className="py-2 px-3 border-b font-bold text-nawa-primary">(+)</td>
-                                  <td className="py-2 px-3 border-b font-mono">cos(x)</td>
-                                </tr>
-                                <tr>
-                                  <td className="py-2 px-3 border-b font-mono text-zinc-600">6x</td>
-                                  <td className="py-2 px-3 border-b font-bold text-red-500">(-)</td>
-                                  <td className="py-2 px-3 border-b font-mono text-zinc-600">sin(x)</td>
-                                </tr>
-                                <tr>
-                                  <td className="py-2 px-3 border-b font-mono text-zinc-400">6</td>
-                                  <td className="py-2 px-3 border-b font-bold text-nawa-primary">(+)</td>
-                                  <td className="py-2 px-3 border-b font-mono text-zinc-400">-cos(x)</td>
-                                </tr>
-                                <tr>
-                                  <td className="py-2 px-3 font-mono text-zinc-300">0</td>
-                                  <td className="py-2 px-3 font-bold text-red-400">(-)</td>
-                                  <td className="py-2 px-3 font-mono text-zinc-300">-sin(x)</td>
-                                </tr>
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      /* Fallback general subject handwritten note content */
-                      <div className="space-y-6 text-sm sm:text-base leading-relaxed font-sans text-zinc-700">
-                        <div>
-                          <h4 className="font-bold text-lg text-nawa-primary bg-indigo-50 border-b border-indigo-200 px-2 py-0.5 rounded inline-block">
-                            Ringkasan Materi Pelajaran 📖
-                          </h4>
-                          <p className="mt-2 text-zinc-700">
-                            Berikut adalah rangkuman materi catatan ringkas mata pelajaran <b>{selectedReaderModule.subject}</b> yang berhasil diupload ke NAWA-LEARN.
-                          </p>
-                          <ul className="list-disc pl-5 mt-3 space-y-2 text-zinc-700">
-                            <li><b>Definisi Inti:</b> Rangkuman materi pembelajaran komprehensif, terstruktur, dan mudah dipelajari menjelang ujian sekolah.</li>
-                            <li><b>Tips Belajar:</b> Buat catatan visual dengan menggarisbawahi poin-poin krusial dan kerjakan minimal 3 contoh soal latihan terkait.</li>
-                            <li><b>Kategori Materi:</b> Modul modul ini diklasifikasikan sebagai berkas {selectedReaderModule.category} untuk siswa {selectedReaderModule.grade}.</li>
-                          </ul>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                /* LOCAL FILE PREVIEW: Display premium digital textbook/notebook typed layout */
-                <div className="max-w-2xl mx-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 sm:p-8 rounded-2xl shadow-md text-left">
-                  <div className="mb-6 pb-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-start">
-                    <div>
-                      <span className="bg-indigo-50 dark:bg-indigo-950/40 text-nawa-primary dark:text-indigo-400 text-[10px] px-2.5 py-0.5 rounded font-bold uppercase tracking-wider">
-                        Dokumen Modul Terverifikasi
-                      </span>
-                      <h2 className="text-xl sm:text-2xl font-extrabold text-zinc-900 dark:text-white tracking-tight mt-2">
-                        {selectedReaderModule.title}
-                      </h2>
-                      <p className="text-xs text-zinc-500 mt-1">
-                        Kontributor: <span className="font-bold text-zinc-700 dark:text-zinc-300">{selectedReaderModule.uploaderName || "Anonim"}</span> • {new Date(selectedReaderModule.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Typed Mock textbook sheet */}
-                  <div className="space-y-6 text-sm sm:text-base leading-relaxed text-zinc-700 dark:text-zinc-300">
-                    <div>
-                      <h3 className="text-base font-extrabold text-nawa-primary dark:text-indigo-400 mb-2">1. Deskripsi & Silabus Materi</h3>
-                      <p>
-                        Modul ini dipersiapkan secara khusus untuk memandu siswa SMAN 2 Jonggol dalam memahami konsep dasar dari pelajaran <b>{selectedReaderModule.subject}</b>. Pembahasan dirancang agar berorientasi pada penyelesaian soal latihan ujian, penilaian harian, dan persiapan ujian akhir semester.
-                      </p>
-                    </div>
-
-                    <div>
-                      <h3 className="text-base font-extrabold text-nawa-primary dark:text-indigo-400 mb-2">2. Peta Konsep Esensial</h3>
-                      <div className="p-4 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl font-mono text-xs text-nawa-primary dark:text-indigo-400">
-                        <p className="font-bold">{"// RENCANA MATERI BELAJAR:"}</p>
-                        <p className="mt-1">→ Pendahuluan & Definisi Istilah Penting</p>
-                        <p>→ Teori Utama & Rumus Praktis Cepat</p>
-                        <p>→ Pembahasan Contoh Soal Standard Ujian Sekolah</p>
-                        <p>→ Kumpulan Soal Evaluasi Mandiri Mandiri</p>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="text-base font-extrabold text-nawa-primary dark:text-indigo-400 mb-2">3. Manfaat Belajar Bersama NAWA-LEARN</h3>
-                      <p>
-                        Dengan mempelajari modul yang dibagikan oleh kontributor berprestasi, Anda mendapatkan sudut pandang ringkas trik pengerjaan cepat yang tidak selalu diajarkan di buku teks standar komersial. Lakukan kolaborasi aktif di forum jika Anda mendapati bagian yang kurang jelas!
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Footer action bar */}
-            <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 flex items-center justify-between">
-              <button
-                onClick={() => {
-                  setSelectedReaderModule(null);
-                  setPrintSuccess(false);
-                }}
-                className="bg-zinc-200 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 font-bold py-2 px-4 rounded-xl text-xs transition-all shrink-0 cursor-pointer"
-              >
-                Tutup Reader
-              </button>
-
-              <button
-                onClick={() => {
-                  const url = selectedReaderModule.contentUrl;
-                  if (url.startsWith("data:")) {
-                    // Trigger actual file download for real uploaded files
-                    const ext = url.startsWith("data:image/png") ? ".png"
-                              : url.startsWith("data:image/jpeg") ? ".jpg"
-                              : url.startsWith("data:application/pdf") ? ".pdf"
-                              : url.includes("wordprocessingml") ? ".docx"
-                              : url.includes("presentationml") ? ".pptx"
-                              : ".dat";
-                              
-                    try {
-                      const parts = url.split(",");
-                      const byteString = atob(parts[1]);
-                      const ab = new ArrayBuffer(byteString.length);
-                      const ia = new Uint8Array(ab);
-                      for (let i = 0; i < byteString.length; i++) {
-                        ia[i] = byteString.charCodeAt(i);
-                      }
-                      const mime = parts[0].split(":")[1].split(";")[0];
-                      const blob = new Blob([ab], { type: mime });
-                      const blobUrl = URL.createObjectURL(blob);
-                      
-                      const link = document.createElement("a");
-                      link.href = blobUrl;
-                      link.download = `${selectedReaderModule.title}${ext}`;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                      
-                      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-                    } catch (err) {
-                      console.error("Failed to download data URI in reader", err);
-                    }
-                    
-                    setPrintSuccess(true);
-                    setTimeout(() => setPrintSuccess(false), 2000);
-                  } else {
-                    // For external or mock URLs, open in a new tab
-                    window.open(url, "_blank", "noopener,noreferrer");
-                    setPrintSuccess(true);
-                    setTimeout(() => setPrintSuccess(false), 2000);
-                  }
-                }}
-                className={`inline-flex items-center gap-1.5 font-bold py-2.5 px-5 rounded-xl text-xs transition-all shadow-md cursor-pointer ${
-                  printSuccess
-                    ? "bg-emerald-600 text-white hover:bg-nawa-success shadow-emerald-600/10 scale-95"
-                    : "bg-nawa-primary hover:bg-nawa-primary-hover text-white shadow-nawa-primary/10 hover:shadow-lg"
-                }`}
-              >
-                {printSuccess ? (
-                  <>
-                    <Check className="h-4 w-4 animate-ping" /> Sukses Tersimpan!
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-4 w-4" /> Unduh Dokumen / PDF
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ModuleReader
+          module={selectedReaderModule}
+          onClose={() => setSelectedReaderModule(null)}
+          onDownload={() => handleDownload(selectedReaderModule.id)}
+        />
       )}
     </div>
   );

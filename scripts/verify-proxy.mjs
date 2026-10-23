@@ -171,6 +171,35 @@ for (const path of CRON_PROBES) {
   console.log(`  ${path}: POST → ${result.res.status} ${result.res.headers.get("location") ?? "(no redirect)"}`);
 }
 
+// ─── Worker PDF.js ────────────────────────────────────────────────────────────
+// `/pdf/pdf.worker.min.mjs` is a static asset that did NOT exist before M21, and
+// it is the one file whose absence is invisible: the reader shows a spinner
+// forever, with no error, because a worker that fails to load never rejects
+// anything the page listens to.
+//
+// It must answer 200 **without a session**. It lives under `public/`, so the
+// right answer comes from the matcher excluding `.mjs` — if someone removes that
+// exclusion the request goes through Clerk's gate and answers a 307 to sign-in
+// for anyone whose session is expiring. `next start` would still be green, the
+// build would still be green, and the failure would only appear in the wild.
+const ASSET_PROBES = [
+  {
+    path: "/pdf/pdf.worker.min.mjs",
+    type: /^(application|text)\/javascript\b/i,
+    // A real worker module is over a megabyte and exports WorkerMessageHandler.
+    body: (b) => b.length > 100_000 && b.includes("WorkerMessageHandler"),
+  },
+];
+
+const assetResults = [];
+for (const spec of ASSET_PROBES) {
+  const result = await probe(spec.path);
+  assetResults.push({ spec, ...result });
+  console.log(
+    `  ${spec.path}: ${result.res.status} ${result.res.headers.get("content-type") ?? "(no type)"}`,
+  );
+}
+
 shutdown();
 
 if (res.status !== 401) {
@@ -213,6 +242,32 @@ for (const { spec, res: metaRes, body } of metadataResults) {
   }
 }
 
+// The worker is a precondition of the reader, not a nice-to-have: without it a
+// module opens to a spinner that never resolves and reports no error at all.
+for (const { spec, res: assetRes, body } of assetResults) {
+  const location = assetRes.headers.get("location");
+  if (assetRes.status !== 200) {
+    fail(
+      `Expected 200 from ${spec.path}, got ${assetRes.status}` +
+        `${location ? ` → ${location}` : ""}.\n` +
+        `  Either the file was never copied into public/ (run\n` +
+        `  \`node scripts/sync-pdf-worker.mjs\`, which postinstall/prebuild also run)\n` +
+        `  or the proxy matcher no longer excludes .mjs — a 307 to a sign-in page is\n` +
+        `  what that looks like from here.`,
+    );
+  }
+  const contentType = assetRes.headers.get("content-type") ?? "";
+  if (!spec.type.test(contentType)) {
+    fail(`Expected ${spec.path} to answer with ${spec.type}, got "${contentType || "(absent)"}".`);
+  }
+  if (!spec.body(body)) {
+    fail(
+      `The body of ${spec.path} does not look like the PDF.js worker.\n` +
+        `  Length: ${body.length}. First 200 characters:\n\n${body.slice(0, 200)}\n`,
+    );
+  }
+}
+
 for (const { path, res: cronRes } of cronResults) {
   const location = cronRes.headers.get("location");
   if (cronRes.status >= 300 && cronRes.status < 400) {
@@ -236,5 +291,6 @@ for (const { path, res: cronRes } of cronResults) {
 console.log(
   `\n✔ Proxy is live: unauthenticated ${PROBE_PATH} → 401, CSP nonce ${nonce.slice(0, 8)}…\n` +
     `✔ Public metadata routes answer without a session: ${METADATA_PROBES.map((p) => p.path).join(", ")}\n` +
-    `✔ Cron routes reach their own gate instead of a sign-in redirect: ${CRON_PROBES.join(", ")}\n`,
+    `✔ Cron routes reach their own gate instead of a sign-in redirect: ${CRON_PROBES.join(", ")}\n` +
+    `✔ Static assets the reader needs are served without a session: ${ASSET_PROBES.map((p) => p.path).join(", ")}\n`,
 );

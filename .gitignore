@@ -55,3 +55,10 @@ next-env.d.ts
 # carries its own bundled JavaScript that ESLint is told to skip - keeping it
 # out of `git status` stops it from looking like pending work. Added in M14a.
 /.opencode/
+
+# The PDF.js worker is copied out of node_modules by `scripts/sync-pdf-worker.mjs`
+# (postinstall + prebuild). It is a build artifact of a dependency: committing it
+# would add 1,3 MB to history on every pdfjs-dist bump, and a stale copy is worse
+# than no copy at all. `tests/unit/pdf-worker.test.ts` fails if it is missing or
+# its sha256 does not match the installed package.
+/public/pdf/

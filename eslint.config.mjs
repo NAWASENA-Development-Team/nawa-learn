@@ -20,6 +20,11 @@ const eslintConfig = defineConfig([
     // not shipped, not reviewable — linting it produced 94 of the 129 warnings
     // in the M14 baseline and drowned the ones that mattered.
     ".opencode/**",
+    // The PDF.js worker, copied out of node_modules by
+    // `scripts/sync-pdf-worker.mjs` (postinstall + prebuild). A 1,3 MB minified
+    // third-party bundle is not our source and not reviewable; linting it added
+    // ~1580 warnings that buried this repository's own. It is gitignored too.
+    "public/pdf/**",
   ]),
   {
     rules: {

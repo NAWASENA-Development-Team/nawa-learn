@@ -4,11 +4,13 @@ import { db } from "@/db";
 import { bookmarks, modules, users } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import ModulesLibraryClient from "@/components/modules/ModulesLibraryClient";
+import { resolveModuleSource } from "@/lib/moduleSource";
 
 export const dynamic = "force-dynamic";
 
 export default async function ModulesPage() {
-  // Query all approved modules with all details needed for the premium interactive library
+  // Query all approved modules with the columns the library needs. `contentUrl` is
+  // read only to be turned into a descriptor below — it is never sent as-is.
   const fetchedModules = await db
     .select({
       id: modules.id,
@@ -26,10 +28,24 @@ export default async function ModulesPage() {
     .where(eq(modules.status, "approved"))
     .orderBy(desc(modules.createdAt));
 
-  // Serialize Date objects to ISO strings for safe transmission to client component props
+  // Serialize Date objects to ISO strings for safe transmission to client component props,
+  // and turn `content_url` into a small descriptor.
+  //
+  // `contentUrl` must NOT be spread into the props. Three legacy rows hold a PDF as
+  // base64 (≈1,9 MB combined), so a spread shipped every one of those bytes on every
+  // library visit. `resolveModuleSource` replaces a `data:` row with
+  // `/api/modules/<id>/file`, which serves the bytes on demand. See M21 in
+  // docs/AUDIT-AND-ROADMAP.md.
   const serializedModules = fetchedModules.map((mod) => ({
-    ...mod,
+    id: mod.id,
+    title: mod.title,
+    subject: mod.subject,
+    grade: mod.grade,
+    category: mod.category,
+    downloads: mod.downloads,
+    uploaderName: mod.uploaderName,
     createdAt: mod.createdAt.toISOString(),
+    source: resolveModuleSource(mod.contentUrl, mod.id),
   }));
 
   // The reader's own bookmarks. This used to be one global `localStorage` key with

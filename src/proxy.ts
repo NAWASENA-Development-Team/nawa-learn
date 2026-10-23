@@ -108,8 +108,15 @@ export default clerkMiddleware(
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and all static files
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    // Skip Next.js internals and all static files.
+    //
+    // `mjs` is here because of the PDF.js worker at `/pdf/pdf.worker.min.mjs`
+    // (M21). The matcher used to exclude only `js`, so the worker request went
+    // through Clerk's auth gate on every module open — harmless for a signed-in
+    // student (a same-origin worker carries cookies), but a static asset
+    // answered by a 307 to sign-in is not a static asset. A gateway that can
+    // redirect a worker script is a gateway that can silently break the reader.
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|mjs|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
     // Always run for API routes
     '/(api|trpc)(.*)',
   ],

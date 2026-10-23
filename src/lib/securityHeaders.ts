@@ -29,24 +29,36 @@ export type CspDirectives = Record<string, string[]>;
  * What each entry is for:
  *
  *   object-src 'none'       no `<embed>`/`<object>`/`<applet>` plugin surface.
- *                           We only ever use `<embed>` for our own blob PDFs,
- *                           which is `frame-src`/`img-src` territory in modern
- *                           browsers, not a plugin.
+ *                           This is why the module reader renders PDFs to a
+ *                           `<canvas>` with PDF.js instead of `<embed>`: an
+ *                           `<embed type="application/pdf">` **is** governed by
+ *                           `object-src`, so the old reader was blocked by this
+ *                           very directive and showed an empty box. Do not
+ *                           loosen this to bring `<embed>` back.
  *   base-uri 'self'         stops an injected `<base>` from re-pointing every
  *                           relative URL on the page at an attacker's origin.
  *   frame-ancestors 'none'  clickjacking. `X-Frame-Options: DENY` covers old
  *                           browsers, this covers the ones that dropped it.
- *   img-src                 `data:` for the legacy base64 PDFs/photos still in
- *                           the database, `blob:` for the camera capture
- *                           preview, and our own Vercel Blob store for uploaded
- *                           avatars and module previews.
+ *   img-src                 `data:` for the legacy base64 photos still in the
+ *                           database, `blob:` for the camera capture preview,
+ *                           and our own Vercel Blob store for uploaded avatars
+ *                           and module previews.
  *   frame-src https:        the module reader embeds arbitrary approved external
  *                           content in an `<iframe>` (Google Drive, Canva,
  *                           YouTube…). Moderator-approved, but genuinely any
  *                           https host — see the M9 note in
  *                           docs/AUDIT-AND-ROADMAP.md for the trade-off.
- *   connect-src 'self'      every `fetch()` in the app is same-origin. Clerk's
- *                           default adds its own frontend API host.
+ *   connect-src             'self' for every API call, plus our own Blob store:
+ *                           a module uploaded after M10 is a PDF at
+ *                           `*.public.blob.vercel-storage.com`, and the reader
+ *                           fetches those bytes to draw them on a canvas. Without
+ *                           this the fetch is blocked and the PDF looks corrupt.
+ *                           It is one host suffix we own, not `*`.
+ *   worker-src 'self'       PDF.js parses the document in a module worker served
+ *                           from `/pdf/pdf.worker.min.mjs`. `script-src` is
+ *                           nonce + `'strict-dynamic'`, which a worker URL cannot
+ *                           satisfy; without this directive the worker is
+ *                           blocked and the reader never finishes loading.
  */
 export const CSP_DIRECTIVES: CspDirectives = {
   "object-src": ["'none'"],
@@ -54,7 +66,8 @@ export const CSP_DIRECTIVES: CspDirectives = {
   "frame-ancestors": ["'none'"],
   "img-src": ["'self'", "data:", "blob:", "https://*.blob.vercel-storage.com"],
   "frame-src": ["'self'", "https:"],
-  "connect-src": ["'self'"],
+  "connect-src": ["'self'", "https://*.blob.vercel-storage.com"],
+  "worker-src": ["'self'"],
 };
 
 /**

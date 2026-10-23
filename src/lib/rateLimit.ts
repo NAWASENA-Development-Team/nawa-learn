@@ -58,6 +58,9 @@ export const RATE_LIMITS = {
   "profile/update": { perUser: { limit: 10, windowMs: MINUTE }, perIp: { limit: 30, windowMs: MINUTE } },
   "profile/report": { perUser: { limit: 5, windowMs: HOUR }, perIp: { limit: 20, windowMs: HOUR } },
   "modules/download": { perUser: { limit: 60, windowMs: MINUTE }, perIp: { limit: 120, windowMs: MINUTE } },
+  // M21: the bytes of a legacy base64 module, served on demand instead of riding
+  // in the library payload. One open = one fetch, so 30/min is generous.
+  "modules/file": { perUser: { limit: 30, windowMs: MINUTE }, perIp: { limit: 60, windowMs: MINUTE } },
   "quiz/submit": { perUser: { limit: 30, windowMs: MINUTE }, perIp: { limit: 90, windowMs: MINUTE } },
   "quiz/daily-claim": { perUser: { limit: 3, windowMs: MINUTE }, perIp: { limit: 10, windowMs: MINUTE } },
   "exams/create": { perUser: { limit: 5, windowMs: MINUTE }, perIp: { limit: 15, windowMs: MINUTE } },
