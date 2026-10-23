@@ -6,9 +6,10 @@
 //
 //   1. `daily-create` dulu menyisipkan soal tanpa memeriksa apa pun, jadi tiga
 //      peninjau yang membuat soal pukul 03:00 menghasilkan tiga soal dan tidak
-//      ada satu pun yang bisa disebut "kuis hari ini". Sekarang primary key
-//      `daily_quiz_slot.window_start` yang memutuskan, dan yang kalah balapan
-//      menghapus soalnya sendiri.
+//      ada satu pun yang bisa disebut "kuis hari ini". Primary key
+//      `daily_quiz_slot.window_start` yang memutuskan. Sejak M18b kurasi
+//      **menggantikan** slot yang masih otomatis, dan yang kalah balapan tidak
+//      lagi menghapus soalnya — soalnya tetap tersimpan di bank.
 //   2. `daily-claim` dulu menyimpulkan "sudah mengerjakan" dari `points_log`,
 //      yang hanya berisi jawaban **dibayar** — jadi pengguna paling rajin justru
 //      kehilangan +25 secara permanen. Bukti sekarang `daily_activity`, ditulis
@@ -46,7 +47,7 @@ vi.mock("@clerk/nextjs/server", () => ({ auth: vi.fn() }));
 
 import { auth } from "@clerk/nextjs/server";
 import * as schema from "@/db/schema";
-import { POST as dailyCreate } from "@/app/api/questions/daily-create/route";
+import { POST as dailyCreate, GET as dailyList } from "@/app/api/questions/daily-create/route";
 import { POST as questionSubmit } from "@/app/api/questions/submit/route";
 import { POST as moduleSubmit } from "@/app/api/modules/submit/route";
 import { POST as quizSubmit } from "@/app/api/quiz/submit/route";
@@ -97,6 +98,16 @@ async function createDaily(clerkId: string, text: string) {
   return { status: response.status, data: await response.json() };
 }
 
+async function listDaily(clerkId: string) {
+  signIn(clerkId);
+  const response = await dailyList(
+    new Request("https://nawa.test/api/questions/daily-create", {
+      headers: { "x-request-id": "test" },
+    }),
+  );
+  return { status: response.status, data: await response.json() };
+}
+
 async function answer(questionId: string, key = "A") {
   const response = await quizSubmit(
     new Request("https://nawa.test/api/quiz/submit", {
@@ -138,7 +149,56 @@ describe("POST /api/questions/daily-create — satu hari, satu slot", () => {
     expect(slot.authorId).toBe(reviewer.id);
   });
 
-  it("menolak kurasi kedua pada hari yang sama dan menghapus soal yatimnya", async () => {
+  it("mengganti slot otomatis dan mengembalikan soal otomatis ke bank", async () => {
+    // Inilah cacat yang dilaporkan: `ensureDailySlot()` mengisi slot setiap
+    // jendela baru dengan `author_id = NULL`, jadi kurasi selalu ditolak 409 dan
+    // satu-satunya cara "mengganti" soal adalah menghapusnya dari bank. Sekarang
+    // kurasi mengalahkan pengisian otomatis, dan soal otomatis tetap utuh.
+    const reviewer = await seedUser(db, { clerkId: "kurator_ganti_auto", role: "moderator" });
+    const autoQuestion = await seedQuestion(db, { uploaderId: reviewer.id, difficulty: "mudah" });
+
+    await db.insert(schema.dailyQuizSlot).values({
+      windowStart: startOfDailyWindow(),
+      questionId: autoQuestion.id,
+      authorId: null,
+    });
+
+    const { status, data } = await createDaily(reviewer.clerkId, "Soal kurasi pengganti");
+
+    expect(status).toBe(200);
+    expect(data.replaced).toBe(true);
+
+    const slots = await db.select().from(schema.dailyQuizSlot);
+    expect(slots).toHaveLength(1);
+    expect(slots[0].questionId).toBe(data.questionId);
+    expect(slots[0].authorId).toBe(reviewer.id);
+
+    // Soal yang tadi dipilih otomatis tidak ikut mati: ia kembali menjadi stok
+    // bank dan boleh berputar lagi sebagai soal otomatis di hari lain.
+    const [auto] = await db
+      .select()
+      .from(schema.questions)
+      .where(eq(schema.questions.id, autoQuestion.id));
+    expect(auto.status).toBe("approved");
+  });
+
+  it("mengizinkan peninjau yang sama mengganti kurasinya sendiri", async () => {
+    const reviewer = await seedUser(db, { clerkId: "kurator_dua_kali", role: "moderator" });
+
+    const first = await createDaily(reviewer.clerkId, "Soal pertama hari ini");
+    expect(first.status).toBe(200);
+    expect(first.data.replaced).toBe(false);
+
+    const second = await createDaily(reviewer.clerkId, "Soal kedua hari ini");
+    expect(second.status).toBe(200);
+    expect(second.data.replaced).toBe(true);
+
+    const slots = await db.select().from(schema.dailyQuizSlot);
+    expect(slots).toHaveLength(1);
+    expect(slots[0].questionId).toBe(second.data.questionId);
+  });
+
+  it("menolak kurasi kedua dari peninjau lain tanpa menghapus soalnya", async () => {
     const first = await seedUser(db, { clerkId: "kurator_awal", role: "moderator" });
     const second = await seedUser(db, { clerkId: "kurator_kedua", role: "moderator" });
 
@@ -155,12 +215,42 @@ describe("POST /api/questions/daily-create — satu hari, satu slot", () => {
     expect(slots).toHaveLength(1);
     expect(slots[0].questionId).toBe(winner.data.questionId);
 
-    // ...dan soal yang kalah tidak tertinggal sebagai `approved` yatim.
-    const orphans = await db
+    // ...dan soal yang kalah **tetap tersimpan**. Menghapusnya (perilaku sampai
+    // M18a) berarti setiap kali dua moderator menulis berdekatan, bank soal
+    // menyusut satu soal — persis keluhan yang memicu perubahan ini.
+    const kept = await db
       .select()
       .from(schema.questions)
       .where(eq(schema.questions.questionText, "Soal siang yang kalah balapan"));
-    expect(orphans).toHaveLength(0);
+    expect(kept).toHaveLength(1);
+    expect(kept[0].status).toBe("approved");
+  });
+
+  it("membiarkan peninjau lain memperbaiki slot yang menunjuk soal terhapus", async () => {
+    // Kalau tidak, satu moderator yang menghapus soal aktif hari ini mengunci
+    // hari itu untuk semua orang, karena slotnya bukan milik siapa pun lagi.
+    const owner = await seedUser(db, { clerkId: "kurator_pemilik", role: "moderator" });
+    const repairer = await seedUser(db, { clerkId: "kurator_perbaiki", role: "moderator" });
+    const dead = await seedQuestion(db, {
+      uploaderId: owner.id,
+      difficulty: "mudah",
+      status: "rejected",
+    });
+
+    await db.insert(schema.dailyQuizSlot).values({
+      windowStart: startOfDailyWindow(),
+      questionId: dead.id,
+      authorId: owner.id,
+    });
+
+    const { status, data } = await createDaily(repairer.clerkId, "Soal pengganti slot basi");
+
+    expect(status).toBe(200);
+    expect(data.replaced).toBe(true);
+
+    const [slot] = await db.select().from(schema.dailyQuizSlot);
+    expect(slot.questionId).toBe(data.questionId);
+    expect(slot.authorId).toBe(repairer.id);
   });
 
   it("mengizinkan pemegang kursi Dewan Podium membuat soal kuis harian", async () => {
@@ -180,6 +270,70 @@ describe("POST /api/questions/daily-create — satu hari, satu slot", () => {
     const student = await seedUser(db, { clerkId: "siswa_kurator" });
     const { status } = await createDaily(student.clerkId, "Soal dari siswa");
     expect(status).toBe(403);
+  });
+});
+
+describe("GET /api/questions/daily-create — slot hari ini, bukan riwayat", () => {
+  it("mengembalikan soal hari ini walaupun kemarin ada kurasi lain", async () => {
+    // Cacat yang dilaporkan: panel menampilkan semua soal "Kuis Harian" lalu
+    // menjudulinya "aktif", sehingga soal kemarin tampak menjadi soal hari ini.
+    // `active` harus dibaca dari slot jendela berjalan.
+    const author = await seedUser(db, { clerkId: "kurator_kemarin", role: "moderator" });
+    const viewer = await seedUser(db, { clerkId: "kurator_pelihat", role: "moderator" });
+
+    const yesterdayQuestion = await seedQuestion(db, {
+      uploaderId: author.id,
+      difficulty: "mudah",
+      category: "Kuis Harian",
+    });
+    const todayQuestion = await seedQuestion(db, {
+      uploaderId: viewer.id,
+      difficulty: "sedang",
+    });
+
+    const today = startOfDailyWindow();
+    const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+
+    await db.insert(schema.dailyQuizSlot).values([
+      { windowStart: yesterday, questionId: yesterdayQuestion.id, authorId: author.id },
+      { windowStart: today, questionId: todayQuestion.id, authorId: null },
+    ]);
+
+    const { status, data } = await listDaily(viewer.clerkId);
+
+    expect(status).toBe(200);
+    expect(data.active.question.id).toBe(todayQuestion.id);
+    expect(data.active.source).toBe("auto");
+    expect(data.staleSlot).toBe(false);
+    expect(data.canReplace).toBe(true);
+
+    // Soal kemarin tetap ada — sebagai **stok bank**, bukan sebagai soal aktif.
+    expect(data.curated).toHaveLength(1);
+    expect(data.curated[0].id).toBe(yesterdayQuestion.id);
+  });
+
+  it("menandai kurasi peninjau lain sebagai tidak bisa diganti", async () => {
+    const owner = await seedUser(db, { clerkId: "kurator_pemilik_slot", role: "moderator" });
+    const viewer = await seedUser(db, { clerkId: "kurator_lain", role: "moderator" });
+    const question = await seedQuestion(db, {
+      uploaderId: owner.id,
+      difficulty: "mudah",
+      category: "Kuis Harian",
+    });
+
+    await db.insert(schema.dailyQuizSlot).values({
+      windowStart: startOfDailyWindow(),
+      questionId: question.id,
+      authorId: owner.id,
+    });
+
+    const { data } = await listDaily(viewer.clerkId);
+
+    expect(data.active.source).toBe("curated");
+    expect(data.active.authorName).toBe(owner.name);
+    // Panel memakai ini untuk memberi tahu sebelum menulis bahwa soalnya akan
+    // masuk bank, bukan menggantikan soal hari ini.
+    expect(data.canReplace).toBe(false);
   });
 });
 

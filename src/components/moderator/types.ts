@@ -112,6 +112,21 @@ export type DailyQuestion = {
   createdAt: string;
 };
 
+/**
+ * Slot kuis harian jendela berjalan — bukan "soal terakhir yang dibuat".
+ *
+ * `source` adalah asalnya: `auto` berarti `daily_quiz_slot.author_id` NULL dan
+ * soal dipilih `ensureDailySlot()` dari bank; `curated` berarti seorang peninjau
+ * memilihnya. Setiap soal kurasi boleh **menggantikan** slot `auto`, jadi panel
+ * perlu membedakannya agar "Ganti soal hari ini" terasa masuk akal.
+ */
+export type ActiveDailyQuestion = {
+  windowStart: string;
+  source: "auto" | "curated";
+  authorName: string | null;
+  question: DailyQuestion;
+};
+
 export type Difficulty = "mudah" | "sedang" | "sulit";
 
 /** Warna badge kesulitan untuk kartu soal di tab antrean. */

@@ -318,7 +318,9 @@ export const seasonPodium = pgTable("season_podium", {
  * pun, jadi tiga moderator yang membuat soal pukul 03:00 menghasilkan tiga soal.
  * `window_start` sebagai primary key membuat "satu hari, satu slot" menjadi
  * kenyataan di database, bukan harapan di kode. `author_id` NULL berarti slot
- * diisi fallback cron dari bank soal.
+ * diisi fallback cron dari bank soal — dan sejak M18b kolom itu juga yang
+ * memutuskan siapa boleh menggantinya: kurasi selalu boleh menggantikan slot
+ * otomatis (`NULL`), tetapi bukan kurasi peninjau lain.
  */
 export const dailyQuizSlot = pgTable("daily_quiz_slot", {
   windowStart: timestamp("window_start").primaryKey(),

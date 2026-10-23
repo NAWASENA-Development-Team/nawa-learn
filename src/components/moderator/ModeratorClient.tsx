@@ -31,10 +31,23 @@ import { TeamTab } from "./TeamTab";
 import type { DailyFormState } from "./DailyQuizTab";
 import type {
   PendingSubmission, PendingQuestion, PendingExam, HiddenBadgeHolder, DailyQuestion,
-  TeamSeatMember, TeamStaffMember,
+  ActiveDailyQuestion, TeamSeatMember, TeamStaffMember,
 } from "./types";
 
 type ModeratorTab = "modules" | "questions" | "exams" | "badges" | "daily" | "team";
+
+/** Form kosong, dipakai saat mount dan setiap penyimpanan berhasil. */
+const EMPTY_DAILY_FORM: DailyFormState = {
+  questionText: "",
+  optionA: "",
+  optionB: "",
+  optionC: "",
+  optionD: "",
+  optionE: "",
+  answerKey: "A",
+  difficulty: "sedang",
+  subject: "Umum",
+};
 
 export default function ModeratorClient({ seatKind = "human" }: { seatKind?: "human" | "seat" }) {
   const { success, error: toastError, info } = useToast();
@@ -91,20 +104,18 @@ export default function ModeratorClient({ seatKind = "human" }: { seatKind?: "hu
   const [teamError, setTeamError] = useState(false);
 
   // Daily Quiz State
+  //
+  // Tiga hal terpisah, dan dulu ketiganya tercampur jadi satu daftar:
+  //   • `activeDaily` — slot jendela berjalan (yang dilihat siswa sekarang),
+  //   • `staleDailySlot` — slot menunjuk soal yang sudah dihapus,
+  //   • `dailyQuestions` — stok bank kurasi, bukan jadwal.
+  const [activeDaily, setActiveDaily] = useState<ActiveDailyQuestion | null>(null);
+  const [staleDailySlot, setStaleDailySlot] = useState(false);
+  const [canReplaceDaily, setCanReplaceDaily] = useState(true);
   const [dailyQuestions, setDailyQuestions] = useState<DailyQuestion[]>([]);
   const [isLoadingDaily, setIsLoadingDaily] = useState(false);
   const [isSubmittingDaily, setIsSubmittingDaily] = useState(false);
-  const [dailyForm, setDailyForm] = useState<DailyFormState>({
-    questionText: "",
-    optionA: "",
-    optionB: "",
-    optionC: "",
-    optionD: "",
-    optionE: "",
-    answerKey: "A",
-    difficulty: "sedang",
-    subject: "Umum",
-  });
+  const [dailyForm, setDailyForm] = useState<DailyFormState>(EMPTY_DAILY_FORM);
 
   useEffect(() => {
     // Mount-only bootstrap. The server already proved this viewer is a reviewer,
@@ -365,8 +376,11 @@ export default function ModeratorClient({ seatKind = "human" }: { seatKind?: "hu
     try {
       const res = await fetch("/api/questions/daily-create");
       if (res.ok) {
-        const { data } = await res.json();
-        setDailyQuestions(data);
+        const payload = await res.json();
+        setActiveDaily(payload.active ?? null);
+        setStaleDailySlot(Boolean(payload.staleSlot));
+        setCanReplaceDaily(payload.canReplace !== false);
+        setDailyQuestions(payload.curated ?? []);
       }
     } catch (error) {
       console.error("Gagal mengambil soal kuis harian:", error);
@@ -402,26 +416,26 @@ export default function ModeratorClient({ seatKind = "human" }: { seatKind?: "hu
       });
 
       if (res.ok) {
-        success("Soal berhasil dibuat!", "Soal Kuis Harian baru sudah aktif dan siap dikerjakan siswa.");
-        setDailyForm({
-          questionText: "",
-          optionA: "",
-          optionB: "",
-          optionC: "",
-          optionD: "",
-          optionE: "",
-          answerKey: "A",
-          difficulty: "sedang",
-          subject: "Umum",
-        });
+        const data = await res.json();
+        if (data.replaced) {
+          success("Soal aktif berhasil diganti", "Siswa yang belum menjawab hari ini akan melihat soal barumu.");
+        } else {
+          success("Soal berhasil dibuat!", "Soal Kuis Harian baru sudah aktif dan siap dikerjakan siswa.");
+        }
+        setDailyForm(EMPTY_DAILY_FORM);
         fetchDailyQuestions();
       } else {
         const data = await res.json();
-        // 409 `daily_slot_taken`: hari ini sudah punya soal kurasi. Pesannya
-        // menyebut siapa yang lebih dulu, karena "gagal" tanpa sebab akan
-        // membuat peninjau berikutnya mencoba lagi dan lagi.
+        // 409 `daily_slot_taken`: hari ini sudah dikurasi peninjau lain. Sejak
+        // M18b soalmu **tetap tersimpan** di bank, jadi ini bukan pekerjaan yang
+        // hilang — pesannya harus mengatakan itu, bukan "gagal menyimpan".
         if (res.status === 409) {
-          info("Kuis harian hari ini sudah ada", "Soal kurasi hari ini sudah dibuat. Soalmu tidak disimpan.");
+          info(
+            "Hari ini sudah dikurasi peninjau lain",
+            "Soalmu tetap tersimpan di bank soal dan bisa dipakai hari lain.",
+          );
+          setDailyForm(EMPTY_DAILY_FORM);
+          fetchDailyQuestions();
         } else {
           toastError("Gagal membuat soal", data.error || "Terjadi kesalahan.");
         }
@@ -434,7 +448,15 @@ export default function ModeratorClient({ seatKind = "human" }: { seatKind?: "hu
   };
 
   const handleDeleteDailyQuestion = async (questionId: string) => {
-    if (!confirm("Hapus soal kuis harian ini? Aksi ini tidak bisa dibatalkan.")) return;
+    const isActive = activeDaily?.question.id === questionId;
+    // Menghapus soal aktif bukan "mengganti soal hari ini" — slotnya tetap
+    // menunjuk soal yang sudah mati, dan siswa mendapat soal pengganti dari
+    // jaring pengaman. Konfirmasinya harus mengatakan itu, karena itulah yang
+    // dulu disalahpahami: moderator menghapus soal untuk mengganti kuis hari ini.
+    const question = isActive
+      ? "Soal ini adalah soal AKTIF hari ini. Menghapusnya dari bank tidak mengosongkan kuis hari ini — siswa akan mendapat soal pengganti dari bank. Lanjutkan?"
+      : "Hapus soal ini dari bank soal Kuis Harian? Aksi ini tidak bisa dibatalkan.";
+    if (!confirm(question)) return;
     try {
       // We'll just change its status to rejected to soft-delete
       const res = await fetch("/api/questions/reject", {
@@ -447,8 +469,17 @@ export default function ModeratorClient({ seatKind = "human" }: { seatKind?: "hu
         }),
       });
       if (res.ok) {
-        setDailyQuestions(prev => prev.filter(q => q.id !== questionId));
-        info("Soal dihapus", "Soal telah dinonaktifkan dari Kuis Harian.");
+        info(
+          "Soal dihapus dari bank",
+          isActive
+            ? "Siswa sementara mendapat soal pengganti dari bank. Buat soal baru untuk mengisi slot hari ini."
+            : "Soal tidak lagi tersedia untuk Kuis Harian.",
+        );
+        // Muat ulang, bukan menyaring lokal: kalau soal yang dihapus adalah soal
+        // aktif, `activeDaily` juga berubah menjadi slot basi.
+        fetchDailyQuestions();
+      } else {
+        toastError("Gagal menghapus", "Server menolak permintaan. Coba lagi.");
       }
     } catch {
       toastError("Gagal menghapus", "Terjadi kesalahan jaringan.");
@@ -592,6 +623,9 @@ export default function ModeratorClient({ seatKind = "human" }: { seatKind?: "hu
       {/* 5. DAILY QUIZ CREATOR TAB */}
       {activeTab === "daily" && (
         <DailyQuizTab
+          activeDaily={activeDaily}
+          staleDailySlot={staleDailySlot}
+          canReplaceDaily={canReplaceDaily}
           dailyQuestions={dailyQuestions}
           isLoadingDaily={isLoadingDaily}
           isSubmittingDaily={isSubmittingDaily}
