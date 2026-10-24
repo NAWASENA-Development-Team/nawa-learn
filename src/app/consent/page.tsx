@@ -16,6 +16,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { hasAcceptedCurrentPolicy } from "@/lib/policy";
 import ConsentForm from "@/components/legal/ConsentForm";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 
 export const dynamic = "force-dynamic";
 
@@ -41,5 +42,10 @@ export default async function ConsentPage() {
     redirect("/modules");
   }
 
-  return <ConsentForm />;
+  return (
+    <>
+      <ConsentForm />
+      <SiteFooter />
+    </>
+  );
 }

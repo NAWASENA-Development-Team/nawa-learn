@@ -3,10 +3,13 @@
 // src/app/error.tsx
 // ─── Batas galat untuk seluruh halaman ────────────────────────────────────────
 // Satu berkas, bukan satu per segmen. Alasannya bukan kemalasan: `error.tsx`
-// dirender di dalam layout akar, jadi Navbar dan footer tetap ada di sini persis
-// seperti di halaman normal. Menambahkan salinan di `(dashboard)/` hanya akan
-// menghasilkan tampilan yang identik, karena layout grup itu sendiri tidak punya
-// kerangka visual — isinya hanya gerbang consent yang mengembalikan `children`.
+// dirender di dalam layout akar, jadi Navbar tetap ada di sini persis seperti di
+// halaman normal. Footer situs dulu juga otomatis dari layout akar; sekarang
+// dirender per layout/halaman (lihat `src/components/layout/SiteFooter.tsx`),
+// jadi berkas ini merendernya sendiri. Menambahkan salinan `error.tsx` di
+// `(dashboard)/` hanya akan menghasilkan tampilan yang identik, karena layout
+// grup itu sendiri tidak punya kerangka visual — isinya hanya gerbang consent
+// yang mengembalikan `children`.
 //
 // Yang **tidak** ditangkap di sini: galat di `src/app/layout.tsx`. Untuk itu ada
 // `global-error.tsx`, dan hanya untuk itu.
@@ -18,6 +21,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { House, RotateCcw, TriangleAlert } from "lucide-react";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 
 export default function AppError({
   error,
@@ -31,7 +35,8 @@ export default function AppError({
   }, [error]);
 
   return (
-    <div className="flex min-h-[70vh] w-full items-center justify-center px-4 py-16">
+    <>
+      <div className="flex min-h-[70vh] w-full items-center justify-center px-4 py-16">
       <div className="w-full max-w-md rounded-3xl border border-zinc-200 bg-white p-10 text-center shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-50 dark:bg-rose-950/40">
           <TriangleAlert className="h-7 w-7 text-rose-600 dark:text-rose-400" aria-hidden />
@@ -69,6 +74,8 @@ export default function AppError({
           </Link>
         </div>
       </div>
-    </div>
+      </div>
+      <SiteFooter />
+    </>
   );
 }

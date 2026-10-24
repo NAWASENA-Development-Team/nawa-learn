@@ -1,6 +1,5 @@
 // app/layout.tsx
 import type { Metadata, Viewport } from "next";
-import Link from "next/link";
 import { headers } from "next/headers";
 import { Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
@@ -103,26 +102,14 @@ export default async function RootLayout({
           <ThemeProvider nonce={nonce}>
             <ToastProvider>
               <Navbar isModerator={isModerator} />
-              <main className="flex-1 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50">
+              <main className="flex flex-1 flex-col bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50">
                 {children}
               </main>
-              <footer className="py-6 text-center text-sm text-zinc-400 dark:text-zinc-500 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
-                <p>
-                  © {new Date().getFullYear()} OSIS NAWASENA SMAN 2 Jonggol. Developed by the ICT Division.
-                </p>
-                {/* Dokumen hukum harus bisa dibaca sebelum mendaftar, jadi
-                    tautannya ada di footer yang tampil di setiap halaman —
-                    termasuk halaman masuk dan halaman publik. */}
-                <nav className="mt-2 flex items-center justify-center gap-4 text-xs font-semibold">
-                  <Link href="/privacy" className="hover:text-nawa-primary hover:underline dark:hover:text-indigo-400">
-                    Kebijakan Privasi
-                  </Link>
-                  <span aria-hidden className="text-zinc-300 dark:text-zinc-700">•</span>
-                  <Link href="/terms" className="hover:text-nawa-primary hover:underline dark:hover:text-indigo-400">
-                    Ketentuan Layanan
-                  </Link>
-                </nav>
-              </footer>
+              {/* Footer situs ada di `SiteFooter`, dirender per layout/halaman —
+                  bukan di sini. Layout akar tidak tahu rute mana yang sedang
+                  dirender, padahal landing page memiliki footernya sendiri
+                  (`LandingClient`) dan tidak boleh menumpuk dua footer.
+                  `src/components/layout/SiteFooter.tsx` menjelaskan alasannya. */}
             </ToastProvider>
           </ThemeProvider>
         </body>

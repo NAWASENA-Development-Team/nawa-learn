@@ -20,6 +20,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser, getSessionUserId } from "@/lib/currentUser";
 import { hasAcceptedCurrentPolicy } from "@/lib/policy";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const userId = await getSessionUserId();
@@ -39,5 +40,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect("/consent");
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      <SiteFooter />
+    </>
+  );
 }
