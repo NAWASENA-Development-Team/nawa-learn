@@ -1277,6 +1277,16 @@ Cacat ketiga bukan soal tampilan: `modules/page.tsx` mengirim **seluruh** `conte
 
 **Yang sengaja tidak dikerjakan:** lapisan teks / pencarian di dalam PDF / anotasi (canvas + navigasi halaman + zoom + putar + unduh adalah seluruh janji; pemilihan teks adalah pekerjaan berikutnya, bukan klaim hari ini), pengunduhan ulang PDF lintas-origin (Drive/Canva dilarang CORS — tidak ada pembaca yang bisa memperbaiki host yang menolak disematkan), validasi id Drive saat submit, normalisasi URL di `/submit`, tombol "lapor modul rusak", dan pemisahan baca/unduh yang lebih jauh dari yang di atas.
 
+#### M21b — CI merah di M21, dan advisory zod yang menyebabkannya ✅ SELESAI (2026-10-24)
+
+Kedua commit M21 (`e75c9c0`, `449e149`) gagal di CI — tetapi **bukan** di langkah yang baru saja ditambahkan. Kegagalan ada di langkah kelima, `Dependency advisories`, padahal `npm run audit:gate` hijau di verifikasi lokal sebelum push: advisory **GHSA-mrhx-c7xc-m3w5** (`zod <4.6.6`, HIGH — kelelahan memori saat memvalidasi koleksi berukuran besar yang dibatasi) **diterbitkan setelah** verifikasi lokal itu. Ini mengingatkan kembali pelajaran M10: hutan yang tidak dipantau adalah hutan yang terbakar diam-diam, dan gerbang baru saja membuktikan nilainya dengan menangkap sesuatu yang verifikasi satu kali lewatkan.
+
+Yang membuatnya tidak bisa di-upgrade begitu saja: `@vercel/cli-config` — ditarik masuk lewat `@vercel/blob → @vercel/oidc` — meminjam `zod` pada **tepat** `4.1.11`, dan `@vercel/blob@2.8.2` sudah versi terbaru. `npm audit fix` biasa tidak bisa menyentuhnya, dan `npm audit fix --force` menyelesaikannya dengan **menurunkan** `@vercel/blob` ke 2.4.0, `react-katex` ke 2.0.2, dan `drizzle-kit` ke 0.18.1 — tepat pola yang dilarang catatan advisories ini, yaitu memasang versi di luar rentang yang dideklarasikan induknya. Percobaan itu sempat tersimpan di stash lokal dan **dihapus**, bukan dikomit.
+
+**Yang dikirim:** `zod` langsung dinaikkan `^4.4.3 → ^4.6.7` (4.6.7 sudah terbit), dan rantai transitif diperbaiki dengan entri `overrides` ter-scoped di `package.json`: `"@vercel/cli-config": { "zod": "^4.6.6" }`. Ini mekanisme yang disahkan npm: dideklarasikan di manifes, terlihat saat review, dan deterministik di setiap instalasi — tiga sifat yang tidak dimiliki `--force`. Schema di `cli-config` hanya primitif `z.object`/`z.string`/`z.boolean`/`z.literal`/`z.union`, dan `zod` langsung kita berada di major 4.x yang sama, jadi override ini perbaikan nyata, bukan pertaruhan. Allowlist **tidak** dipakai — tetap kosong seperti yang dimaksudkan — dan entri ini didokumentasikan di AGENTS.md agar tidak diam-diam menjadi beban mati begitu `@vercel/blob` membawa `zod` sehat secara native.
+
+**Bukti:** `npm run audit:gate` → **OK** (0 critical, 0 high; 2 low — `katex` di bawah `react-katex` yang sengaja dibiarkan tercetak). `npm ci --dry-run` → exit 0 (lockfile dan manifes sepakat). `npx tsc --noEmit` bersih, `npm run lint` 0 masalah, `drizzle-kit generate` "no schema changes", dan seluruh suite — termasuk `tests/a11y/axe.test.tsx` — hijau. (Catatan: run penuh di mesin 2-core ini butuh ~43 menit, dan tepat setelahnya `axe.test.tsx` sempat melaporkan `Timeout waiting for worker to respond` karena mesin masih terbeban; dijalankan sendiri ia hijau dalam 63 detik. Runner CI 4-core menyelesaikan langkah test dalam ~20 detik.)
+
 ---
 
 ## 6. Urutan Eksekusi yang Disarankan
@@ -1287,6 +1297,7 @@ Minggu 2-5    M4 → M5 → M6 → M7 → M8 ✅       (fondasi + hardening: tes
 Minggu 6-8    M9 ✅ → M10 ✅                 (hardening keamanan lanjutan: header/CSP/CSRF selesai; rahasia & supply chain selesai — temuan C7 ditutup di sini)
 Minggu 9-11   M11 ✅ → M12 ✅                 (privasi & kepatuhan UU PDP — tata kelola data selesai)
 Minggu 12-19  M13 ✅ → M14 ✅ → M15 ✅ → M16 ✅ → M17 ✅ → M18 ✅ → M18b ✅ → M19 → M20  (produk & kemampuan operasi; M19 = operasional/dokumentasi, M20 = sisa yang butuh peramban/manusia atau bersifat mekanis)
+M21 ✅ (2026-10-23) → M21b ✅ (2026-10-24)  (pembaca modul yang merender; advisory zod yang membuat CI merah)
 ```
 
 ### 5 hal yang jika hanya sempat dikerjakan 5
