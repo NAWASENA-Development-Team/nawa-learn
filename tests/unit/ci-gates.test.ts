@@ -18,7 +18,11 @@ const root = process.cwd();
 const read = (relative: string) => readFileSync(path.join(root, relative), "utf8");
 
 const ci = read(".github/workflows/ci.yml");
-const pkg = JSON.parse(read("package.json")) as { scripts: Record<string, string> };
+const pkg = JSON.parse(read("package.json")) as {
+  scripts: Record<string, string>;
+  devDependencies?: Record<string, string>;
+  dependencies?: Record<string, string>;
+};
 
 /**
  * The workflow's executable content, with `#` comment lines removed.
@@ -124,6 +128,11 @@ describe("the scripts those steps call", () => {
     ["audit:gate", "scripts/audit-gate.mjs"],
     ["secrets:scan", "scripts/secret-scan.mjs"],
     ["verify:proxy", "scripts/verify-proxy.mjs"],
+    // `verify:blob` is deliberately **not** a CI step: it needs a real
+    // `BLOB_READ_WRITE_TOKEN` and writes to the real store, while the `verify`
+    // job is hermetic. It is listed here only so the local entry point cannot
+    // rot into a `npm run` that points at a deleted file.
+    ["verify:blob", "scripts/verify-blob.mjs"],
     ["hooks:install", "scripts/setup-git-hooks.mjs"],
     ["prepare", "scripts/setup-git-hooks.mjs"],
   ])("`npm run %s` resolves to an existing file", (script, file) => {
@@ -203,6 +212,51 @@ describe("dependency hygiene config", () => {
     // only, and this test keeps it that way.
     const gitleaks = read(".gitleaks.toml");
     expect(gitleaks).not.toMatch(/^\s*paths\s*=/m);
+  });
+
+  it("pins TypeScript to a major the lint toolchain can actually read", () => {
+    // CI #68 went red on `Lint` alone, and the cause was two steps away from the
+    // symptom: Dependabot bumped `typescript` to `^7`, which is the native (Go)
+    // compiler. Its package ships per-platform binaries, has no `main` and no
+    // `types`, and its entry point exports exactly two things — so
+    // `require("typescript").createSourceFile` is `undefined`. `typescript-eslint`
+    // parses files through that API, so every file it opened threw.
+    //
+    // `tsc --noEmit` stayed green throughout, and `npm ci` only *warned*
+    // ("overriding peer dependency"), so nothing failed until Lint. There is no
+    // version of `typescript-eslint` that accepts TS 7 yet — 8.64 through 8.72
+    // all declare `>=4.8.4 <6.1.0` — which makes this a hard ceiling, not a
+    // preference.
+    //
+    // This is the C6 shape once more: a green build, a green typecheck, and a
+    // toolchain that silently could not do its job. Asserted here so the next
+    // Dependabot major bump fails on a test that *says* why.
+    const ts = pkg.devDependencies?.typescript ?? "";
+    const major = Number(ts.match(/(\d+)/)?.[1]);
+    expect(Number.isFinite(major), `typescript spec "${ts}" has no version`).toBe(true);
+    expect(
+      major,
+      `typescript ${ts} is outside the range typescript-eslint supports ` +
+        `(>=4.8.4 <6.1.0). TS 7 is the native compiler and does not export the ` +
+        `parser API that ESLint needs, so \`npm run lint\` will fail.`,
+    ).toBeLessThan(6);
+  });
+
+  it("keeps @types/node on the runtime CI actually uses", () => {
+    // CI pins `node-version: 22` (see the two `setup-node` steps). Types for a
+    // newer Node describe APIs that the runner does not have, so a typecheck can
+    // pass on a machine running Node 24 and fail — or worse, pass in CI while the
+    // code calls something absent at runtime. Tolerated: the major may be >= 22,
+    // because newer `@types/node` still ships `typesVersions` shims for older
+    // compilers; what must not happen is types *older* than the runtime.
+    const ciNode = ci.match(/node-version:\s*(\d+)/)?.[1];
+    const typesMajor = Number((pkg.devDependencies?.["@types/node"] ?? "").match(/(\d+)/)?.[1]);
+    expect(ciNode, "no pinned node-version in the workflow").toBeTruthy();
+    expect(
+      typesMajor,
+      `@types/node is ${typesMajor} but CI runs Node ${ciNode}; the types would ` +
+        `describe a runtime the build never executes on.`,
+    ).toBeGreaterThanOrEqual(Number(ciNode));
   });
 });
 

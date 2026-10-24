@@ -1287,6 +1287,27 @@ Yang membuatnya tidak bisa di-upgrade begitu saja: `@vercel/cli-config` — dita
 
 **Bukti:** `npm run audit:gate` → **OK** (0 critical, 0 high; 2 low — `katex` di bawah `react-katex` yang sengaja dibiarkan tercetak). `npm ci --dry-run` → exit 0 (lockfile dan manifes sepakat). `npx tsc --noEmit` bersih, `npm run lint` 0 masalah, `drizzle-kit generate` "no schema changes", dan seluruh suite — termasuk `tests/a11y/axe.test.tsx` — hijau. (Catatan: run penuh di mesin 2-core ini butuh ~43 menit, dan tepat setelahnya `axe.test.tsx` sempat melaporkan `Timeout waiting for worker to respond` karena mesin masih terbeban; dijalankan sendiri ia hijau dalam 63 detik. Runner CI 4-core menyelesaikan langkah test dalam ~20 detik.)
 
+#### M21c — CI #68 merah di `Lint`: TypeScript 7 adalah kompiler native, bukan library ✅ SELESAI (2026-10-25)
+
+Batch Dependabot (#1–#9) di-merge ke `main`. Sembilan dari sepuluh run hijau; **CI #68** (`5cb5ea1`, bump `typescript` 5.9.3 → 7.0.2) merah, dan hanya di satu langkah: `Lint`. `Install dependencies`, `Dependency advisories`, `Type check`, dan `Migrations match the schema` semuanya lulus; tes, build, dan kedua gerbang proxy bahkan tidak sempat berjalan (di-skip).
+
+Kegagalan ini menipu justru karena `Type check` **hijau**. `tsc --noEmit` memakai **binary** `tsc`, sedangkan `typescript-eslint` meng-`import` TypeScript sebagai **library** dan memanggil `createSourceFile` untuk setiap file. TS 7 adalah port native (Go): paketnya berupa binary per-platform (`@typescript/typescript-*`), tanpa `main` dan tanpa `types`, dan entry point-nya mengekspor **tepat dua** hal:
+
+```
+node -e "console.log(Object.keys(require('typescript')))"
+→ [ 'version', 'versionMajorMinor' ]
+```
+
+Jadi `createSourceFile` adalah `undefined`, dan ESLint melempar pada file pertama yang dibukanya. `npm ci` pun tidak menolaknya — hanya `npm warn ERESOLVE overriding peer dependency` (`typescript-eslint@8.72.0` menuntut `>=4.8.4 <6.1.0`, pohon berisi 7.0.2), sehingga kegagalan baru muncul dua langkah kemudian dengan pesan yang tidak menyebut versi sama sekali.
+
+**Batasnya keras, bukan preferensi.** Diperiksa ke registry: **tidak ada** versi `typescript-eslint` yang menerima TS 7 — 8.64.0 sampai 8.72.0 (terbaru) semuanya mendeklarasikan `>=4.8.4 <6.1.0`. `eslint-config-next@16.4.2` sendiri longgar (`typescript: >=3.3.1`), jadi batasnya datang dari `typescript-eslint` yang dibundelnya.
+
+**Yang dikirim:** `typescript` dikembalikan ke `^5.9.3`, lockfile disinkronkan (`--package-lock-only --ignore-scripts`; diff-nya murni −20 entri: 19 binary platform TS 7 + entri `typescript@7.0.2`, lalu +1 entri `typescript@5.9.3`). Bump lain dari batch itu **dipertahankan**: `@types/node` 26.6.5 masih membawa `typesVersions` shim untuk TS ≤5.7 sehingga tidak bentrok, dan `katex` 0.19.0, `@clerk/nextjs` 7.9.18, `lucide-react` 1.61.0, `react-hook-form` 7.90.0, `drizzle-orm` 0.45.4, `@neondatabase/serverless` 1.2.0, `tailwind-merge` 3.7.0 semuanya sudah di versi terbaru saat itu.
+
+**Penjaga agar tidak terulang:** `tests/unit/ci-gates.test.ts` kini punya dua tripwire — satu menolak major `typescript` ≥ 6 dengan pesan yang menyebut `typescript-eslint` dan menyatakan bahwa `npm run lint` akan gagal, satu lagi memastikan `@types/node` tidak lebih tua daripada `node-version` yang dipatok CI. Keduanya diuji dengan **menyuntikkan kembali `^7`**: tes gagal dengan pesan yang dimaksud, lalu hijau lagi setelah dipulihkan — jadi penjaganya terbukti menggigit, bukan lulus kosong.
+
+**Bukti:** `npx eslint` → exit 0, tanpa keluaran. `npx tsc --noEmit` → exit 0. `npm run audit:gate` → OK (0 critical, 0 high, 0 moderate, 2 low `katex`). `vitest run tests/unit/ci-gates.test.ts` → 27 lulus.
+
 ---
 
 ## 6. Urutan Eksekusi yang Disarankan
@@ -1298,6 +1319,7 @@ Minggu 6-8    M9 ✅ → M10 ✅                 (hardening keamanan lanjutan: h
 Minggu 9-11   M11 ✅ → M12 ✅                 (privasi & kepatuhan UU PDP — tata kelola data selesai)
 Minggu 12-19  M13 ✅ → M14 ✅ → M15 ✅ → M16 ✅ → M17 ✅ → M18 ✅ → M18b ✅ → M19 → M20  (produk & kemampuan operasi; M19 = operasional/dokumentasi, M20 = sisa yang butuh peramban/manusia atau bersifat mekanis)
 M21 ✅ (2026-10-23) → M21b ✅ (2026-10-24)  (pembaca modul yang merender; advisory zod yang membuat CI merah)
+M21c ✅ (2026-10-25)                          (CI #68 merah di Lint: TypeScript 7 tidak mengekspor API parser)
 ```
 
 ### 5 hal yang jika hanya sempat dikerjakan 5

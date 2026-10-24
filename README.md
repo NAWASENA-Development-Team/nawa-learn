@@ -74,6 +74,7 @@ npm run build         # production build
 npm run audit:gate    # dependency advisories (HIGH/CRITICAL block)
 npm run secrets:scan  # gitleaks over the full git history
 npm run verify:proxy  # needs a prior build; proves the proxy is actually live
+npm run verify:blob   # needs a real Blob token; proves the store accepts uploads
 ```
 
 `npm run verify:proxy` exists because Next resolves `proxy.ts` **relative to the
@@ -81,6 +82,15 @@ directory holding `app/`** and fails silently when it is misplaced: the build
 stays green while the auth gate, the CSRF guard and the CSP never run. It starts
 a real server and asserts an unauthenticated `/api/*` request is refused with a
 nonce-bearing CSP header.
+
+`npm run verify:blob` is the same idea for object storage, and it exists for the
+same reason: every upload from M8 to M14g failed because the Blob store had been
+created **private** while the app uploads with `access: "public"`. The unit and
+integration tests mock `@vercel/blob`, and a mock cannot disagree with a store —
+so the suite was green the whole time. The script uploads one small object with
+the app's exact options, fetches it back **without credentials**, compares the
+bytes, and deletes it. It exits `2` (not `1`) when no token is configured, so a
+clone without credentials can skip it.
 
 `npm run audit:gate` is deliberately not `npm audit --audit-level=high`. That
 check goes red on every push for advisories nobody here can fix, and a gate that
