@@ -25,7 +25,7 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.19",
-    "@hookform/resolvers": "^5.2.2",
+    "@hookform/resolvers": "^6.0.0",
     "@neondatabase/serverless": "^1.2.0",
     "@types/canvas-confetti": "^1.9.0",
     "@vercel/analytics": "^2.0.1",
