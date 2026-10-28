@@ -24,7 +24,7 @@
     "verify:blob": "node scripts/verify-blob.mjs"
   },
   "dependencies": {
-    "@clerk/nextjs": "^7.9.18",
+    "@clerk/nextjs": "^7.9.19",
     "@hookform/resolvers": "^5.2.2",
     "@neondatabase/serverless": "^1.2.0",
     "@types/canvas-confetti": "^1.9.0",
@@ -54,7 +54,7 @@
     }
   },
   "devDependencies": {
-    "@electric-sql/pglite": "^0.5.10",
+    "@electric-sql/pglite": "^0.5.11",
     "@tailwindcss/postcss": "^4",
     "@types/node": "26.6.5",
     "@types/react": "^19",
