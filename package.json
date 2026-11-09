@@ -24,7 +24,7 @@
     "verify:blob": "node scripts/verify-blob.mjs"
   },
   "dependencies": {
-    "@clerk/nextjs": "^7.9.19",
+    "@clerk/nextjs": "^7.9.25",
     "@hookform/resolvers": "^6.0.0",
     "@neondatabase/serverless": "^1.2.0",
     "@types/canvas-confetti": "^1.9.0",
@@ -35,14 +35,14 @@
     "drizzle-orm": "^0.45.4",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
-    "katex": "^0.19.0",
-    "lucide-react": "^1.61.0",
-    "next": "16.4.2",
+    "katex": "^0.19.1",
+    "lucide-react": "^1.70.0",
+    "next": "16.4.5",
     "next-themes": "^0.4.6",
-    "pdfjs-dist": "^6.4.299",
+    "pdfjs-dist": "^6.5.438",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "react-hook-form": "^7.90.0",
+    "react-hook-form": "^7.91.0",
     "react-katex": "^3.1.0",
     "svix": "^1.93.0",
     "tailwind-merge": "^3.7.0",
@@ -54,22 +54,22 @@
     }
   },
   "devDependencies": {
-    "@electric-sql/pglite": "^0.5.11",
+    "@electric-sql/pglite": "^0.5.15",
     "@tailwindcss/postcss": "^4",
-    "@types/node": "26.6.5",
+    "@types/node": "26.6.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/react-katex": "^3.0.4",
-    "@vitest/coverage-v8": "5.0.5",
+    "@vitest/coverage-v8": "5.1.0",
     "axe-core": "^4.14.0",
     "dotenv": "^18.0.9",
     "drizzle-kit": "^0.31.10",
     "eslint": "^10",
-    "eslint-config-next": "16.4.2",
+    "eslint-config-next": "16.4.5",
     "jsdom": "^30.1.3",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
-    "vitest": "5.0.5"
+    "vitest": "5.1.0"
   }
 }
